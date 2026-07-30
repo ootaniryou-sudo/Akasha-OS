@@ -1,0 +1,33 @@
+{
+  "name": "akasha-os",
+  "version": "1.0.0",
+  "description": "Akasha — ultra-low-latency distributed AI orchestrator OS",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:edge": "esbuild src/edge/worker-inference.ts --bundle --outfile=public/worker-inference.js --format=esm --target=es2022 --platform=browser",
+    "build:all": "npm run build && npm run build:edge",
+    "start": "node dist/index.js",
+    "dev": "npm run build && node dist/index.js",
+    "edge": "npm run build:edge && npx --yes serve public -p 4173",
+    "sim": "npm run build && node dist/sim/demo.js",
+    "selftest": "tsx src/sim/selftest.ts",
+    "sim:failover": "npm run build && AKASHA_DEMO_FAILOVER=1 node dist/sim/demo.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "@webgpu/types": "^0.1.71",
+    "esbuild": "^0.28.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
