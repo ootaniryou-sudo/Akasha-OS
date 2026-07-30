@@ -37,6 +37,10 @@ export const enum Cmd {
   FAILOVER = 0x05,
   ACK = 0x06,
   DEREGISTER = 0x07,
+  /** Bootstrap: master → edge lightweight matmul probe */
+  BENCHMARK = 0x08,
+  /** Bootstrap: master → edge role + cluster appointment */
+  ASSIGN = 0x09,
 }
 
 /** Packet flags (offset 6, u16 LE). */
@@ -53,7 +57,17 @@ export const enum ClusterId {
   MATH = 2,
   CODE = 3,
   LANGUAGE = 4,
+  /** High-APS nodes: LLM head / context-critical layers */
+  HEAD_LAYER = 10,
   SHADOW_POOL = 99,
+}
+
+/** Bootstrap role appointment (carried in ASSIGN.seq). */
+export const enum NodeRole {
+  UNASSIGNED = 0,
+  CORE_ROUTER = 1,
+  ACTIVE_COMPUTE = 2,
+  SHADOW_BACKUP = 3,
 }
 
 export interface PacketHeaderView {
@@ -85,9 +99,24 @@ export function clusterName(id: number): string {
       return 'code_expert';
     case ClusterId.LANGUAGE:
       return 'language_expert';
+    case ClusterId.HEAD_LAYER:
+      return 'head_layer';
     case ClusterId.SHADOW_POOL:
       return 'shadow_pool';
     default:
       return `cluster_${id}`;
+  }
+}
+
+export function roleName(role: NodeRole): string {
+  switch (role) {
+    case NodeRole.CORE_ROUTER:
+      return 'core_router';
+    case NodeRole.ACTIVE_COMPUTE:
+      return 'active_compute';
+    case NodeRole.SHADOW_BACKUP:
+      return 'shadow_backup';
+    default:
+      return 'unassigned';
   }
 }
