@@ -124,3 +124,76 @@ export function roleName(role: NodeRole): string {
       return 'unassigned';
   }
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Extended 36-byte datagram header (WebTransport / QUIC P2P)
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * 36-byte extended datagram header for QUIC P2P relay.
+ *
+ * ┌────────┬──────┬──────────┬──────────────────────────────────────────────┐
+ * │ Offset │ Size │ Type     │ Field                                        │
+ * ├────────┼──────┼──────────┼──────────────────────────────────────────────┤
+ * │  0     │ 16   │ u128 LE  │ TX_ID        transaction id                   │
+ * │ 16     │  4   │ u32 LE   │ LAYER_ID     assigned layer index             │
+ * │ 20     │  8   │ u64 LE   │ SEQ          monotonic sequence number        │
+ * │ 28     │  4   │ u32 LE   │ PAYLOAD_LEN  Float32Array byte length         │
+ * │ 32     │  4   │ u32 LE   │ CHECKSUM     Fletcher32 over payload          │
+ * │ 36     │  N   │ f32[]    │ PAYLOAD      raw Float32Array                 │
+ * └────────┴──────┴──────────┴──────────────────────────────────────────────┘
+ */
+
+export const EX_HEADER_SIZE = 36;
+
+export interface ExtendedHeader {
+  txId: bigint;
+  layerId: number;
+  seq: number;
+  payloadLen: number;
+  checksum: number;
+}
+
+export function decodeExtendedHeader(buf: Uint8Array, offset = 0): ExtendedHeader {
+  const dv = new DataView(buf.buffer, buf.byteOffset + offset, EX_HEADER_SIZE);
+  const txLo = dv.getBigUint64(0, true);
+  const txHi = dv.getBigUint64(8, true);
+  const txId = (txHi << 64n) | txLo;
+  return {
+    txId,
+    layerId: dv.getUint32(16, true),
+    seq: Number(dv.getBigUint64(20, true)),
+    payloadLen: dv.getUint32(28, true),
+    checksum: dv.getUint32(32, true),
+  };
+}
+
+export function encodeExtendedHeader(hdr: ExtendedHeader, dst: Uint8Array, offset = 0): number {
+  const dv = new DataView(dst.buffer, dst.byteOffset + offset, EX_HEADER_SIZE);
+  dv.setBigUint64(0, hdr.txId & 0xffffffffffffffffn, true);
+  dv.setBigUint64(8, hdr.txId >> 64n, true);
+  dv.setUint32(16, hdr.layerId, true);
+  dv.setBigUint64(20, BigInt(hdr.seq), true);
+  dv.setUint32(28, hdr.payloadLen, true);
+  dv.setUint32(32, hdr.checksum, true);
+  return EX_HEADER_SIZE;
+}
+
+/**
+ * Fletcher-32 checksum (two 16-bit running sums mod 65535).
+ * Fast, detects all single-bit errors. O(N), zero allocation.
+ */
+export function fletcher32(data: Uint8Array, offset = 0, length = data.length - offset): number {
+  let sum1 = 0xffff, sum2 = 0xffff;
+  const end = offset + length;
+  let i = offset;
+  while (i < end) {
+    const blockLen = Math.min(360, end - i);
+    for (let j = 0; j < blockLen; j++) {
+      sum1 = (sum1 + data[i + j]) % 65535;
+      sum2 = (sum2 + sum1) % 65535;
+    }
+    i += blockLen;
+  }
+  return ((sum2 << 16) | sum1) >>> 0;
+}
