@@ -3,6 +3,7 @@ import { AkashaInferenceLoop } from './core/inference-loop.js';
 import { LogitTournament, HubAggregator, MasterSampler } from './core/logit-aggregator.js';
 import { ShardAllocator } from './core/shard-allocator.js';
 import { TorrentDistributor, StreamPipe, ChunkScheduler } from './core/torrent-distributor.js';
+import { NicMonitor, ClusterHandover, EmergencyDisconnect } from './core/cluster-guardian.js';
 import { AkashaBootstrapper } from './bootstrap/akasha-bootstrapper.js';
 import { AkashaEdgeNode } from './client/node-client.js';
 import { ClusterId } from './binary/protocol.js';
@@ -26,6 +27,9 @@ export {
   TorrentDistributor,
   StreamPipe,
   ChunkScheduler,
+  NicMonitor,
+  ClusterHandover,
+  EmergencyDisconnect,
   AkashaBootstrapper,
   AkashaEdgeNode,
   ClusterId,
@@ -73,6 +77,14 @@ export type {
   TorrentPeer,
   DistributorOptions,
 } from './core/torrent-distributor.js';
+export type {
+  NicType,
+  NicChangeEvent,
+  NicMonitorOptions,
+  HandoverTrigger,
+  PendingHandover,
+  HandoverOptions,
+} from './core/cluster-guardian.js';
 export type {
   AkashaExpertPlugin,
   AkashaLifecyclePlugin,
