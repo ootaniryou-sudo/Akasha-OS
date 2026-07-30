@@ -2,6 +2,7 @@ import { AkashaOrchestrator } from './core/orchestrator.js';
 import { AkashaInferenceLoop } from './core/inference-loop.js';
 import { LogitTournament, HubAggregator, MasterSampler } from './core/logit-aggregator.js';
 import { ShardAllocator } from './core/shard-allocator.js';
+import { TorrentDistributor, StreamPipe, ChunkScheduler } from './core/torrent-distributor.js';
 import { AkashaBootstrapper } from './bootstrap/akasha-bootstrapper.js';
 import { AkashaEdgeNode } from './client/node-client.js';
 import { ClusterId } from './binary/protocol.js';
@@ -22,6 +23,9 @@ export {
   HubAggregator,
   MasterSampler,
   ShardAllocator,
+  TorrentDistributor,
+  StreamPipe,
+  ChunkScheduler,
   AkashaBootstrapper,
   AkashaEdgeNode,
   ClusterId,
@@ -63,6 +67,12 @@ export type {
   ShardType,
 } from './core/shard-allocator.js';
 export { SHARD_TYPE_NAMES, layerBytes, totalModelBytes, buildNodeToShards, shardsForNode } from './core/shard-allocator.js';
+export { crc32, buildDistributionTree, DEFAULT_CHUNK_SIZE } from './core/torrent-distributor.js';
+export type {
+  TorrentManifest,
+  TorrentPeer,
+  DistributorOptions,
+} from './core/torrent-distributor.js';
 export type {
   AkashaExpertPlugin,
   AkashaLifecyclePlugin,
