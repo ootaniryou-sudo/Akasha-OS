@@ -4,6 +4,7 @@ import { LogitTournament, HubAggregator, MasterSampler } from './core/logit-aggr
 import { ShardAllocator } from './core/shard-allocator.js';
 import { TorrentDistributor, StreamPipe, ChunkScheduler } from './core/torrent-distributor.js';
 import { NicMonitor, ClusterHandover, EmergencyDisconnect } from './core/cluster-guardian.js';
+import { ModelCache } from './core/model-cache.js';
 import { AkashaBootstrapper } from './bootstrap/akasha-bootstrapper.js';
 import { AkashaEdgeNode } from './client/node-client.js';
 import { ClusterId } from './binary/protocol.js';
@@ -30,6 +31,7 @@ export {
   NicMonitor,
   ClusterHandover,
   EmergencyDisconnect,
+  ModelCache,
   AkashaBootstrapper,
   AkashaEdgeNode,
   ClusterId,
@@ -85,6 +87,11 @@ export type {
   PendingHandover,
   HandoverOptions,
 } from './core/cluster-guardian.js';
+export type {
+  CacheManifest,
+  CacheProgress,
+} from './core/model-cache.js';
+export { uploadToWebGPU, streamToWebGPU } from './core/model-cache.js';
 export type {
   AkashaExpertPlugin,
   AkashaLifecyclePlugin,
