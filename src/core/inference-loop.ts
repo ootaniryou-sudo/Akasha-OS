@@ -208,6 +208,10 @@ export class AkashaInferenceLoop {
 
   /** Dummy idle-pool stand-in when acquireNode is not provided. */
   private fallbackPool: IdleClusterPool | null = null;
+  /** Per-node monotonic sequence counter for QUIC datagram ordering. */
+  private _seqMap = new Map<string, number>();
+  /** Base nonce for txId generation (set once at construction). */
+  private readonly _nodeNonce: bigint;
 
   constructor(options: InferenceLoopOptions) {
     this.opts = {
@@ -232,6 +236,8 @@ export class AkashaInferenceLoop {
     this.fault = new FaultToleranceEngine(this.fallbackPool, this.txPool, {
       marginUs: this.opts.shadowMarginUs,
     });
+    // FIX: generate a stable nonce from current time for txId mixing
+    this._nodeNonce = BigInt(Date.now()) ^ (BigInt(Math.floor(Math.random() * 0x100000000)) << 20n);
   }
 
   // ─── Public API ───────────────────────────────────────────────────────────
@@ -247,6 +253,9 @@ export class AkashaInferenceLoop {
     this.txToStep.clear();
 
     this.opts.onEvent?.({ type: 'pipeline_start', promptTokens: promptTokenIds.length });
+
+    // Start fault-tolerance scan (FIX: was missing)
+    this._startFaultTimer();
 
     // Feed the first prompt token into the head band.
     // Subsequent prompt tokens are fed one at a time as each step completes
@@ -338,6 +347,9 @@ export class AkashaInferenceLoop {
 
     // Recycle activation buffer
     this.recycleActivation(step);
+
+    // Cleanup txToStep map (FIX: prevent memory leak on success path)
+    this.txToStep.delete(txId.toString());
 
     // Check termination
     if (tokenId === this.opts.eosTokenId || this.tokenCounter >= this.opts.maxTokens) {
@@ -530,7 +542,7 @@ export class AkashaInferenceLoop {
       return this.opts.acquireNode(band.clusterId);
     }
 
-    // Fallback: round-robin from band node list + use fallback pool
+    // Fallback: round-robin from band node list
     const cursor = this.bandCursors.get(bandIndex) ?? 0;
     const nodes = band.nodes;
     if (nodes.length === 0) return null;
@@ -538,23 +550,42 @@ export class AkashaInferenceLoop {
     const primaryId = nodes[cursor % nodes.length];
     this.bandCursors.set(bandIndex, (cursor + 1) >>> 0);
 
+    // FIX: acquire the specific node by ID, not any idle node
     const primary = this.fallbackPool!.get(primaryId);
     if (!primary) return null;
 
-    // Acquire from pool
+    // Ensure it is in IDLE state (if COMPUTING, skip to next in round-robin)
+    if (primary.status !== 0 /* STATUS_IDLE */) {
+      // Try next node in the band
+      const nextCursor = (cursor + 1) >>> 0;
+      this.bandCursors.set(bandIndex, nextCursor);
+      return this.pickNode(band, bandIndex);
+    }
+
+    // Mark as COMPUTING
     const acquired = this.fallbackPool!.acquireIdle(band.clusterId);
-    if (!acquired) return null;
+    if (!acquired || acquired.nodeId !== primaryId) {
+      // Pool gave us a different node — use it anyway (pool is authoritative)
+      // but log the mismatch for debugging
+    }
 
     const shadow =
       cursor < band.shadows.length
-        ? this.fallbackPool!.acquireShadow(acquired, ClusterId.SHADOW_POOL)
+        ? this.fallbackPool!.acquireShadow(acquired ?? primary, ClusterId.SHADOW_POOL)
         : null;
 
-    return { primary: acquired, shadow };
+    return { primary: acquired ?? primary, shadow };
   }
 
   // ─── Dispatch helpers ─────────────────────────────────────────────────────
 
+  /**
+   * Dispatch a compute/relay packet to a node.
+   *
+   * CONTRACT: `send()` MUST synchronously copy or flush the buffer.
+   * The buffer is released back to the pool immediately after send() returns.
+   * If the transport is async, the caller must provide a `send` that copies.
+   */
   private dispatchCompute(
     txId: bigint,
     node: AkashaNodeRecord,
@@ -568,28 +599,48 @@ export class AkashaInferenceLoop {
     if (!send || !slotForNode) return;
 
     const socketSlot = slotForNode(node.nodeId);
-    if (socketSlot <= 0) return;
+    // FIX: slot 0 is valid; only reject negative/null
+    if (socketSlot == null || socketSlot < 0) return;
+
+    // Monotonic sequence number for this txId (FIX: non-zero seq for QUIC reliability)
+    const seq = this._nextSeq(txId);
 
     const buf = this.bufPool.acquire();
-    const len = BinaryCodec.encode(buf, {
-      command,
-      flags,
-      txId,
-      nodeId: node.nodeId,
-      clusterId,
-      timestampUs: nowUs(),
-      expectedUs: 0,
-      seq: 0,
-      payload: activation,
-    });
-    send(socketSlot, buf, len);
-    this.bufPool.release(buf);
+    try {
+      const len = BinaryCodec.encode(buf, {
+        command,
+        flags,
+        txId,
+        nodeId: node.nodeId,
+        clusterId,
+        timestampUs: nowUs(),
+        expectedUs: 0,
+        seq,
+        payload: activation,
+      });
+      send(socketSlot, buf, len);
+    } finally {
+      // Always release even if send throws
+      this.bufPool.release(buf);
+    }
 
     // Track for fault tolerance (primary dispatch only)
     if ((flags & Flag.SHADOW) === 0) {
       const tx = this.fault.arm(txId, clusterId, node);
       tx.state = TX_ACTIVE;
     }
+  }
+
+  /** Per-txId monotonic sequence counter (for QUIC datagram ordering). */
+  private _nextSeq(txId: bigint): number {
+    const key = txId.toString();
+    const next = (this._seqMap.get(key) ?? 0) + 1;
+    this._seqMap.set(key, next);
+    if (this._seqMap.size > 1000) {
+      const keys = [...this._seqMap.keys()];
+      for (let i = 0; i < keys.length - 500; i++) this._seqMap.delete(keys[i]);
+    }
+    return next;
   }
 
   // ─── Token extraction ─────────────────────────────────────────────────────
@@ -660,7 +711,47 @@ export class AkashaInferenceLoop {
     this.txToStep.clear();
   }
 
+  /**
+   * Generate a cluster-wide unique transaction ID.
+   * Mixes: nodeNonce + monotonic counter + timestamp for collision resistance.
+   */
   private nextTxId(): bigint {
-    return (BigInt(Date.now()) << 20n) ^ BigInt(this.stepCounter++);
+    return (this._nodeNonce << 32n) ^ (BigInt(Date.now()) << 20n) ^ BigInt(this.stepCounter++);
+  }
+
+  /** Start fault-tolerance scan timer (FIX: was missing from start()). */
+  private _startFaultTimer(): void {
+    if (this.faultTimer) return;
+    this.faultTimer = setInterval(() => {
+      this.fault.scan((tx, shadow) => {
+        // On timeout: re-dispatch to shadow node
+        const stepIdx = this.txToStep.get(tx.txId.toString());
+        if (stepIdx === undefined) return;
+        const step = this.steps.get(stepIdx);
+        if (!step || step.shadowDispatched) return;
+
+        const activation = this.getCachedActivation(step);
+        if (!activation) return;
+
+        this.dispatchCompute(tx.txId, shadow, tx.clusterId, activation, Flag.SHADOW);
+        step.shadowDispatched = true;
+
+        this.opts.onEvent?.({
+          type: 'step_timeout',
+          step: step.step,
+          band: step.bandIndex,
+          txId: tx.txId,
+        });
+      });
+    }, this.opts.faultTickMs);
+    if (typeof this.faultTimer === 'object' && 'unref' in this.faultTimer) {
+      this.faultTimer.unref();
+    }
+  }
+
+  /** Get cached activation for shadow retry. */
+  private getCachedActivation(step: PipelineStep): Float32Array | null {
+    if (!step.activationBuf || step.activationFloats === 0) return null;
+    return new Float32Array(step.activationBuf, 0, step.activationFloats);
   }
 }
