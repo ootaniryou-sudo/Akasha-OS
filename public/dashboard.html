@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Akasha-OS — Master Dashboard</title>
+  <style>
+    :root {
+      --bg: #080c0f;
+      --panel: #0f161c;
+      --line: #1a2630;
+      --ink: #dce6f0;
+      --mute: #5e7488;
+      --go: #2fce7a;
+      --busy: #e0b84a;
+      --bad: #e05a4f;
+      --off: #3a4652;
+      --head: #4da6ff;
+      --mid: #a78bfa;
+      --tail: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "IBM Plex Mono", "SF Mono", ui-monospace, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      padding: 20px 24px;
+    }
+
+    /* ── Header ─────────────────────────────────────── */
+
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.04em; }
+    .header h1 span { color: var(--go); }
+    .header .stats {
+      display: flex; gap: 24px; font-size: 11px; color: var(--mute);
+    }
+    .header .stats b { color: var(--ink); font-size: 15px; }
+
+    /* ── Hub grid ──────────────────────────────────── */
+
+    .hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 12px;
+    }
+
+    .hub-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .hub-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .hub-header .hub-name { font-weight: 700; font-size: 14px; letter-spacing: 0.03em; }
+    .hub-header .hub-meta { font-size: 10px; color: var(--mute); }
+
+    /* ── Node row ──────────────────────────────────── */
+
+    .node-list { display: grid; gap: 6px; max-height: 320px; overflow-y: auto; }
+    .node-row {
+      display: grid;
+      grid-template-columns: 1fr 60px 50px 60px 55px;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 4px;
+      font-size: 11px;
+      transition: background 0.15s;
+    }
+    .node-row:hover { background: rgba(255,255,255,0.05); }
+
+    .node-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .node-aps  { text-align: right; font-family: inherit; color: var(--mute); }
+    .node-role { text-align: center; font-size: 10px; font-weight: 700; }
+    .node-lat  { text-align: right; color: var(--mute); }
+    .node-temp { text-align: right; color: var(--mute); }
+
+    /* ── Status badges ─────────────────────────────── */
+
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .badge-idle    { background: rgba(47,206,122,0.15); color: var(--go); }
+    .badge-compute { background: rgba(224,184,74,0.15); color: var(--busy); }
+    .badge-offline { background: rgba(58,70,82,0.2);    color: var(--off); }
+    .badge-head    { background: rgba(77,166,255,0.15); color: var(--head); }
+    .badge-mid     { background: rgba(167,139,250,0.15); color: var(--mid); }
+    .badge-tail    { background: rgba(245,158,11,0.15); color: var(--tail); }
+
+    /* ── Mini bar chart for APS ────────────────────── */
+
+    .aps-bar-wrap { width: 60px; height: 4px; background: var(--line); border-radius: 999px; overflow: hidden; }
+    .aps-bar-fill { height: 100%; border-radius: 999px; transition: width 0.4s; }
+    .aps-bar-fill.high { background: var(--go); }
+    .aps-bar-fill.mid  { background: var(--busy); }
+    .aps-bar-fill.low  { background: var(--bad); }
+
+    /* ── Log feed ──────────────────────────────────── */
+
+    .log-feed {
+      margin-top: 20px; padding-top: 16px;
+      border-top: 1px solid var(--line);
+      font-size: 11px; color: var(--mute);
+      max-height: 200px; overflow-y: auto;
+    }
+    .log-feed .line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.02); }
+    .log-feed .ts { color: var(--off); margin-right: 8px; }
+
+    /* ── Responsive ────────────────────────────────── */
+
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      .hub-grid { grid-template-columns: 1fr; }
+      .node-row { grid-template-columns: 1fr 50px 40px 50px 45px; font-size: 10px; }
+      .header .stats { gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>⬡</span> Akasha-OS Master</h1>
+  <div class="stats">
+    <div>Nodes<br><b id="statNodes">0</b></div>
+    <div>Idle<br><b id="statIdle" style="color:var(--go)">0</b></div>
+    <div>Computing<br><b id="statComputing" style="color:var(--busy)">0</b></div>
+    <div>Tokens/s<br><b id="statTps">0</b></div>
+  </div>
+</div>
+
+<div class="hub-grid" id="hubGrid"></div>
+
+<div class="log-feed" id="logFeed">
+  <div class="line"><span class="ts">--:--:--</span> Awaiting edge connections...</div>
+</div>
+
+<script type="module">
+// ─── Mock data generator ────────────────────────────────────────────────────
+
+const HUBS = [
+  { id: 1, name: 'Hub α — 192.168.10.0/24', nodes: 24 },
+  { id: 2, name: 'Hub β — 192.168.20.0/24', nodes: 24 },
+  { id: 3, name: 'Hub γ — 192.168.30.0/24', nodes: 24 },
+  { id: 4, name: 'Hub δ — 192.168.40.0/24', nodes: 24 },
+];
+
+const ROLES = ['CORE_ROUTER', 'ACTIVE_COMPUTE', 'SHADOW_BACKUP'];
+const STATUSES = ['IDLE', 'COMPUTING', 'OFFLINE'];
+
+let nodes = [];
+
+function generateMockData() {
+  nodes = [];
+  for (const hub of HUBS) {
+    for (let i = 1; i <= hub.nodes; i++) {
+      const aps = Math.floor(Math.random() * 100) + 5;
+      let role, badgeClass;
+      if (aps >= 80) { role = 'HEAD'; badgeClass = 'badge-head'; }
+      else if (aps >= 25) { role = 'MID'; badgeClass = 'badge-mid'; }
+      else { role = 'TAIL'; badgeClass = 'badge-tail'; }
+
+      nodes.push({
+        id: `N${hub.id}-${String(i).padStart(2,'0')}`,
+        hubId: hub.id,
+        aps,
+        role,
+        badgeClass,
+        status: Math.random() > 0.15 ? (Math.random() > 0.3 ? 'IDLE' : 'COMPUTING') : 'OFFLINE',
+        latencyUs: Math.floor(Math.random() * 4000) + 200,
+        temp: Math.floor(Math.random() * 30) + 35,
+      });
+    }
+  }
+}
+
+// ─── Render ──────────────────────────────────────────────────────────────────
+
+function badgeClass(status) {
+  if (status === 'IDLE') return 'badge-idle';
+  if (status === 'COMPUTING') return 'badge-compute';
+  return 'badge-offline';
+}
+
+function apsBarClass(aps) {
+  if (aps >= 80) return 'high';
+  if (aps >= 25) return 'mid';
+  return 'low';
+}
+
+function render() {
+  const grid = document.getElementById('hubGrid');
+  let html = '';
+
+  let totalIdle = 0, totalComputing = 0, totalNodes = nodes.length;
+
+  for (const hub of HUBS) {
+    const hubNodes = nodes.filter(n => n.hubId === hub.id);
+    const idle = hubNodes.filter(n => n.status === 'IDLE').length;
+    const comp = hubNodes.filter(n => n.status === 'COMPUTING').length;
+    totalIdle += idle;
+    totalComputing += comp;
+
+    html += `<div class="hub-card">
+      <div class="hub-header">
+        <span class="hub-name">${hub.name}</span>
+        <span class="hub-meta">${hubNodes.length} nodes · ${idle} idle · ${comp} busy</span>
+      </div>
+      <div class="node-list">`;
+
+    for (const n of hubNodes) {
+      html += `<div class="node-row">
+        <span class="node-name">${n.id}</span>
+        <span class="aps-bar-wrap"><div class="aps-bar-fill ${apsBarClass(n.aps)}" style="width:${n.aps}%"></div></span>
+        <span class="node-role"><span class="badge ${n.badgeClass}">${n.role}</span></span>
+        <span class="node-lat">${(n.latencyUs/1000).toFixed(1)}ms</span>
+        <span class="node-temp">${n.temp}°C</span>
+      </div>`;
+    }
+
+    html += `</div></div>`;
+  }
+
+  grid.innerHTML = html;
+
+  document.getElementById('statNodes').textContent = totalNodes;
+  document.getElementById('statIdle').textContent = totalIdle;
+  document.getElementById('statComputing').textContent = totalComputing;
+  document.getElementById('statTps').textContent = Math.floor(totalComputing * 2.5 + Math.random() * 10);
+}
+
+// ─── Log feed ────────────────────────────────────────────────────────────────
+
+function addLog(msg) {
+  const feed = document.getElementById('logFeed');
+  const now = new Date();
+  const ts = now.toTimeString().slice(0, 8);
+  const div = document.createElement('div');
+  div.className = 'line';
+  div.innerHTML = `<span class="ts">${ts}</span>${msg}`;
+  feed.prepend(div);
+  if (feed.children.length > 50) feed.lastChild?.remove();
+}
+
+// ─── Live simulation ─────────────────────────────────────────────────────────
+
+function tick() {
+  // Randomly toggle some node statuses for a live feel
+  for (const n of nodes) {
+    if (Math.random() < 0.05) {
+      n.status = STATUSES[Math.floor(Math.random() * 3)];
+    }
+    n.latencyUs += Math.floor((Math.random() - 0.5) * 200);
+    n.latencyUs = Math.max(50, Math.min(8000, n.latencyUs));
+    n.temp += Math.floor((Math.random() - 0.5) * 2);
+    n.temp = Math.max(30, Math.min(65, n.temp));
+  }
+
+  // Simulate occasional events
+  if (Math.random() < 0.1) {
+    const msgs = [
+      '📱 Node N1-03 joined Hub α · APS=87 · appointed HEAD',
+      '⚡ COMPUTE_TASK dispatched → Hub β · txId=0xA1F2',
+      '🛡️ Shadow failover: N3-12 → N3-24 · Hub γ',
+      '✅ Token #142: "関数" · latency=18.3ms',
+      '🔌 NIC violation detected: N2-07 switched to Wi-Fi → OFFLINE',
+      '🔄 Handover: Math → Code · context preserved',
+      '📦 Torrent: Hub δ 78% complete · 192/246 chunks',
+    ];
+    addLog(msgs[Math.floor(Math.random() * msgs.length)]);
+  }
+
+  render();
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+
+generateMockData();
+render();
+addLog('⬡ Akasha-OS Master online · port :8080');
+addLog(`📊 ${HUBS.length} hubs · ${nodes.length} simulated edge nodes`);
+
+setInterval(tick, 2000);
+
+// Simulate WebSocket connection to real master
+const wsUrl = localStorage.getItem('akasha-master-url') || 'ws://localhost:8080';
+try {
+  const ws = new WebSocket(wsUrl);
+  ws.onopen = () => addLog(`🔗 Connected to master at ${wsUrl}`);
+  ws.onclose = () => addLog('⚠ Master connection closed');
+  ws.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'register') addLog(`📱 Node joined: ${msg.nodeId} → ${msg.cluster}`);
+      if (msg.type === 'result') addLog(`✅ tx=${msg.txId} latency=${msg.latencyUs}μs`);
+      if (msg.type === 'stats') {
+        document.getElementById('statNodes').textContent = msg.nodes;
+        document.getElementById('statIdle').textContent = msg.idleGeneral + msg.idleMath + msg.idleShadow;
+      }
+    } catch {}
+  };
+} catch {
+  addLog('⚠ Running in mock mode (no master connection)');
+}
+</script>
+</body>
+</html>
