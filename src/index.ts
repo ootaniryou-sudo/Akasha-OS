@@ -1,16 +1,22 @@
 import { AkashaOrchestrator } from './core/orchestrator.js';
+import { AkashaInferenceLoop } from './core/inference-loop.js';
+import { AkashaBootstrapper } from './bootstrap/akasha-bootstrapper.js';
 import { AkashaEdgeNode } from './client/node-client.js';
 import { ClusterId } from './binary/protocol.js';
 import { BinaryCodec } from './binary/codec.js';
 import { IdleClusterPool } from './structures/idle-cluster-pool.js';
 import { SharedRingBuffer } from './ipc/ring-buffer.js';
 import { ObjectPool, BufferPool } from './pool/object-pool.js';
-import { FaultToleranceEngine, createTxPool, routeCluster } from './fault/fault-tolerance.js';
+import { FaultToleranceEngine, createTxPool, routeCluster, createDynamicRouter } from './fault/fault-tolerance.js';
 import { DoublyLinkedList } from './structures/doubly-linked-list.js';
 import { HEADER_SIZE, MAGIC, PROTOCOL_VERSION, Cmd, Flag, MAX_PACKET_BYTES } from './binary/protocol.js';
+import { PluginRegistry } from './plugin/registry.js';
+import { isLifecyclePlugin } from './plugin/types.js';
 
 export {
   AkashaOrchestrator,
+  AkashaInferenceLoop,
+  AkashaBootstrapper,
   AkashaEdgeNode,
   ClusterId,
   BinaryCodec,
@@ -21,6 +27,9 @@ export {
   FaultToleranceEngine,
   createTxPool,
   routeCluster,
+  createDynamicRouter,
+  PluginRegistry,
+  isLifecyclePlugin,
   DoublyLinkedList,
   HEADER_SIZE,
   MAGIC,
@@ -31,7 +40,19 @@ export {
 };
 
 export type { AkashaOptions, AkashaEvent } from './core/orchestrator.js';
+export type { InferenceLoopOptions, InferenceEvent, LayerBand, RelayTarget, PipelineStep } from './core/inference-loop.js';
+export type { BootstrapOptions, BootstrapEvent, BootstrapCtx } from './bootstrap/akasha-bootstrapper.js';
 export type { EdgeNodeOptions, EdgeComputeHandler } from './client/node-client.js';
+export type {
+  AkashaExpertPlugin,
+  AkashaLifecyclePlugin,
+  PluginMetadata,
+  PluginManifest,
+  PluginHealthStatus,
+  ExpertDomain,
+  PluginClusterId,
+} from './plugin/types.js';
+export type { PluginRegistryEvent } from './plugin/registry.js';
 
 /** CLI entry: `npm run dev` */
 async function main(): Promise<void> {

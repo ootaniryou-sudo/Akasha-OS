@@ -239,3 +239,37 @@ function includesInsensitive(hay: string, needle: string): boolean {
   }
   return false;
 }
+
+// ─── Dynamic router (plugin-aware) ──────────────────────────────────────────
+
+/**
+ * Create a semantic router that consults the plugin registry first,
+ * then falls back to the static `routeCluster` heuristics.
+ *
+ * Usage:
+ * ```ts
+ * const registry = new PluginRegistry();
+ * await registry.install(myMathPlugin);
+ * const router = createDynamicRouter(registry);
+ * const clusterId = router("solve 2x + 5 = 15"); // → math plugin cluster
+ * ```
+ *
+ * @param registry — PluginRegistry instance (optional; if omitted, behaves
+ *                   identically to the static `routeCluster`).
+ * @returns A `(prompt: string) => number` function suitable for use in
+ *          the router worker's dispatch path.
+ */
+export function createDynamicRouter(
+  registry?: { route: (prompt: string, fallback: number) => number } | null,
+): (prompt: string) => number {
+  if (!registry) return routeCluster;
+
+  return (prompt: string): number => {
+    // Try plugin registry first
+    const pluginCluster = registry.route(prompt, -1);
+    if (pluginCluster !== -1) return pluginCluster;
+
+    // Fall back to static routing
+    return routeCluster(prompt);
+  };
+}

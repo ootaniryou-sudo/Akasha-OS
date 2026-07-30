@@ -34,6 +34,12 @@ hidden states) that can be uploaded straight to WebGPU.
 | 0x05 | `FAILOVER`     | Master → Shadow  | same tensor as primary |
 | 0x06 | `ACK`          | either           | empty                  |
 | 0x07 | `DEREGISTER`   | Edge → Master    | empty                  |
+| 0x08 | `BENCHMARK`    | Master → Edge    | f32 probe tensor       |
+| 0x09 | `ASSIGN`       | Master → Edge    | role + cluster + telemetry |
+| 0x0A | `RELAY`        | Edge → Edge†     | `Float32Array` activation |
+| 0x0B | `TOKEN_OUT`    | Edge → Master    | `Float32Array` logits  |
+
+† RELAY may be proxied through the master when the edge cannot open a server socket.
 
 ## Flags
 

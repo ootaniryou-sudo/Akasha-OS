@@ -41,6 +41,10 @@ export const enum Cmd {
   BENCHMARK = 0x08,
   /** Bootstrap: master → edge role + cluster appointment */
   ASSIGN = 0x09,
+  /** Inference: inter-band activation relay (P2P or master-proxied) */
+  RELAY = 0x0a,
+  /** Inference: tail band → master streaming token output */
+  TOKEN_OUT = 0x0b,
 }
 
 /** Packet flags (offset 6, u16 LE). */
