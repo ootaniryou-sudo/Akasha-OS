@@ -1,5 +1,7 @@
 import { AkashaOrchestrator } from './core/orchestrator.js';
 import { AkashaInferenceLoop } from './core/inference-loop.js';
+import { LogitTournament, HubAggregator, MasterSampler } from './core/logit-aggregator.js';
+import { ShardAllocator } from './core/shard-allocator.js';
 import { AkashaBootstrapper } from './bootstrap/akasha-bootstrapper.js';
 import { AkashaEdgeNode } from './client/node-client.js';
 import { ClusterId } from './binary/protocol.js';
@@ -16,6 +18,10 @@ import { isLifecyclePlugin } from './plugin/types.js';
 export {
   AkashaOrchestrator,
   AkashaInferenceLoop,
+  LogitTournament,
+  HubAggregator,
+  MasterSampler,
+  ShardAllocator,
   AkashaBootstrapper,
   AkashaEdgeNode,
   ClusterId,
@@ -43,6 +49,20 @@ export type { AkashaOptions, AkashaEvent } from './core/orchestrator.js';
 export type { InferenceLoopOptions, InferenceEvent, LayerBand, RelayTarget, PipelineStep } from './core/inference-loop.js';
 export type { BootstrapOptions, BootstrapEvent, BootstrapCtx } from './bootstrap/akasha-bootstrapper.js';
 export type { EdgeNodeOptions, EdgeComputeHandler } from './client/node-client.js';
+export type {
+  TokenCandidate,
+  TopKPacket,
+  HubAggregation,
+  SamplingConfig,
+} from './core/logit-aggregator.js';
+export type {
+  ModelSpec,
+  DeviceSpec,
+  ShardRecord,
+  AllocationPlan,
+  ShardType,
+} from './core/shard-allocator.js';
+export { SHARD_TYPE_NAMES, layerBytes, totalModelBytes, buildNodeToShards, shardsForNode } from './core/shard-allocator.js';
 export type {
   AkashaExpertPlugin,
   AkashaLifecyclePlugin,
