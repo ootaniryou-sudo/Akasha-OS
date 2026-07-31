@@ -8,7 +8,21 @@
 
 ---
 
-## Core Result: Moderate Predictive Power (Same-Runtime)
+## Formal Conclusion
+
+> **Hypothesis**: Logit margin can predict cross-precision token divergence.
+>
+> **Result**: **Not supported** under same-runtime FP32→FP16.
+>
+> **Evidence**: 3,200 positions, only 44 divergence events (1.5%), AUC=0.57, F1=0.14.
+>
+> **Interpretation**: Per-step divergence prediction is limited by the rarity of the event and is not currently useful as a standalone predictor.
+>
+> **New direction**: Characterize numerical stability at the backend/precision level rather than predicting each divergence event online.
+
+---
+
+## Quantitative Results
 
 | Lookahead (k) | Valid Records | Divergent | Divergence Rate | AUC | Best Margin | Best F1 |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -17,7 +31,10 @@
 | k=5 | 2700 | 41 | 1.5% | 0.566 | 0.0027 | 0.091 |
 | k=10 | 2200 | 36 | 1.6% | 0.543 | 0.0027 | 0.053 |
 
-**Verdict**: MODERATE — margin has some predictive power (AUC > 0.5), but insufficient for reliable Shadow policy on its own.
+AUC=0.57 indicates marginal signal above random (0.50), but **insufficient for operational use**.
+F1=0.14 reflects the fundamental difficulty of predicting rare events (1.5% base rate).
+
+**This is not a failure.** The experiment correctly identified that per-step prediction is the wrong abstraction level. The right approach is backend/precision-level characterization (see EXP-0001.7).
 
 ### Why MODERATE and not STRONG?
 

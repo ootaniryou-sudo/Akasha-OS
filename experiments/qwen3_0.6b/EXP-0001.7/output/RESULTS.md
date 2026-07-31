@@ -26,29 +26,29 @@
 
 ---
 
-## 🔬 Critical Finding: BF16 is UNEXPECTEDLY Divergent on MPS
+## 🔬 Critical Finding: BF16 Shows Platform-Dependent Divergence
 
-### The Surprise
+### Observation
 
-BF16 (Brain Float 16) is designed to preserve FP32's exponent range while reducing mantissa precision. It's widely used for training due to better numerical stability than FP16.
+BF16 (Brain Float 16) is designed to preserve FP32's exponent range. On NVIDIA/x86, it typically shows lower divergence than FP16.
 
-**But on MPS (Apple Silicon), BF16 shows 20.9% divergence vs FP32 — 26× worse than FP16's 0.8%!**
+**Under the tested Apple Silicon MPS configuration, BF16 showed 20.9% divergence vs FP32 — substantially higher than FP16's 0.8% under the same configuration.**
 
-### Root Cause Analysis
+### Interpretation (with appropriate caution)
 
-MPS (Metal Performance Shaders) on Apple Silicon:
-- **FP16**: Native hardware support — optimized matmul kernels
-- **BF16**: Likely emulated or uses different code paths — PyTorch's MPS backend may not have optimized BF16 kernels
-- The 20.9% divergence suggests BF16 operations on MPS use different numerical paths than FP32/FP16
+- MPS on Apple Silicon showed different numerical behavior for BF16 vs FP16
+- The internal kernel implementation was not directly observed — we measure only external behavior
+- **Safe statement**: "BF16 showed larger numerical deviation than FP16 under the tested MPS configuration"
+- **Avoid**: claiming specific kernel causes without direct observation
 
-### Comparison: Expected vs Observed
+### Comparison: Observed Results
 
-| | Expected (x86/NVIDIA) | Observed (Apple MPS) |
+| | Observed (Apple MPS) | Expected (NVIDIA CUDA, literature) |
 |---|---|---|
-| FP16 divergence | ~1-5% | **0.8%** ✅ |
-| BF16 divergence | ~0.5-2% | **20.9%** ❌ |
+| FP16 divergence | **0.8%** | ~1-5% |
+| BF16 divergence | **20.9%** | ~0.5-2% |
 
-**This is a platform-specific finding**: BF16 behavior depends heavily on hardware backend.
+**Key insight**: Numerical behavior is platform/backend/precision dependent. No single precision format is universally optimal — it depends on the execution configuration.
 
 ---
 

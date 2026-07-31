@@ -1,6 +1,6 @@
 # ArcAsha — Experiment Conclusions
 
-> **EXP-0001 through EXP-0001.5: three-line summary**
+> **EXP-0000 through EXP-0001.7: cumulative findings**
 
 ---
 
@@ -14,13 +14,53 @@
 
 ---
 
+## New Design Principle (EXP-0001.6/1.7)
+
+> **Numerical Stability is a property of an execution configuration, not of a model alone.**
+
+```
+Numerical Stability = f(platform, backend, kernel, precision, device, model)
+```
+
+See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md) for full specification.
+
+### Key Finding: Platform-Dependent Precision Behavior
+
+| Platform | FP16 Divergence | BF16 Divergence | Best Choice |
+|----------|:---:|:---:|:---:|
+| Apple MPS | 0.8% ✅ | 20.9% ⚠️ | FP16 |
+| NVIDIA CUDA | ~1-5% (TBD) | ~0.5-2% (TBD) | BF16 (expected) |
+| x86 CPU | ~0% (TBD) | ~0% (TBD) | Either |
+
+> **Safe statement**: "BF16 showed larger numerical deviation than FP16 under the tested MPS configuration." Kernel implementation was not directly observed.
+
+---
+
 ## Execution Modes
 
 | Mode | Definition | Shadow Type | When |
 |------|-----------|-------------|------|
-| **Exact Replication** | Same backend + same precision → identical tokens | Exact Shadow | logit_margin > threshold |
-| **Approximate Redundancy** | Same model, different precision → ~93.75% token match | Exact Shadow (with tolerance) | FP32/FP16 within same runtime |
-| **Independent Verification** | Different backend → semantically equivalent output | Independent Shadow + Verifier | Cross-runtime, critical tasks |
+| **Exact Replication** | Same backend + same precision → identical tokens | Exact Shadow | Critical tasks |
+| **Approximate Redundancy** | Same model, different precision → 99.2% token match (FP16) | Exact Shadow (tolerant) | Standard tasks |
+| **Independent Verification** | Different backend → semantically equivalent output | Independent Shadow + Verifier | Cross-runtime |
+
+---
+
+## EXP-0001.6 Formal Conclusion
+
+> **Hypothesis**: Logit margin can predict cross-precision token divergence.  
+> **Result**: **Not supported** under same-runtime FP32→FP16.  
+> **Evidence**: 3,200 positions, 44 divergences (1.5%), AUC=0.57, F1=0.14.  
+> **Interpretation**: Per-step prediction is the wrong abstraction level.  
+> **New direction**: Backend/precision-level characterization (Numerical Stability Profile).
+
+---
+
+## EXP-0001.7 Formal Conclusion
+
+> **Key finding**: Numerical behavior is platform/backend/precision dependent.  
+> **Observation**: Under Apple Silicon MPS, FP16 showed substantially higher stability (0.8% divergence) than BF16 (20.9% divergence) despite both being reduced-precision modes.  
+> **Design implication**: Numerical stability must be modeled as an execution-configuration property, not a universal property of model or precision format.
 
 ---
 
@@ -28,15 +68,15 @@
 
 | Metric | Same Runtime (FP32→FP16) | Cross Runtime (PyTorch→ONNX) |
 |--------|:---:|:---:|
-| Top-1 match rate | 93.75% | 15–44% |
-| Mean top-5 overlap | 4.7/5 | — |
-| Mean logit correlation | 0.9731 | — |
-| Divergence trigger | logit_margin < 0.02 | Different matmul kernel |
-| Divergence predictability | High (margin-based) | Deterministic (always diverges) |
+| Top-1 match rate | 99.2% (EXP-0001.7, 50 prompts) | 15–44% (EXP-0001, 10 prompts) |
+| Mean top-5 overlap | 5.0/5 | — |
+| Mean logit correlation | 0.9974 | — |
+| Divergence mechanism | Rare (1.5%), margin-driven | Always (100%), kernel-driven |
+| Per-step prediction | Not viable (AUC=0.57) | Untested |
 
 ---
 
-## Router: New Dimension — Numerical Reliability
+## Router: Numerical Stability Dimension
 
 ```
 RoutingScore =
@@ -46,20 +86,16 @@ RoutingScore =
   × HardwareFit
   × NetworkQuality
   × Reliability
-  × NumericalStability  ← NEW
+  × NumericalStability(platform, backend, precision)  ← Execution-configuration-aware
   ÷ Cost
 ```
 
-Where **NumericalStability** is derived from:
-- Backend (PyTorch / ONNX / WebGPU)
-- Precision (FP32 / BF16 / FP16 / INT8 / INT4)
-- Measured divergence rate vs baseline
-- logit_margin distribution at runtime
+This enables:
+- **Execution Configuration Routing** — not just which model, but which precision/backend/platform
+- **Task Sensitivity Matching** — critical tasks → exact replication, throughput tasks → fp16
+- **Platform-Aware Decisions** — BF16 on MPS → avoid, BF16 on CUDA → preferred
 
-This enables ArcAsha to distinguish:
-- **"Fast but numerically unstable"** nodes (INT8 ONNX)
-- **"Slow but exactly reproducible"** nodes (FP32 PyTorch)
-- And route tasks accordingly based on precision requirements.
+See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 
 ---
 
@@ -69,13 +105,18 @@ This enables ArcAsha to distinguish:
 EXP-0000:    Golden Reference ✅
 EXP-0001:    Python vs JS/ONNX token comparison ✅
 EXP-0001.5:  Logit-level precision analysis ✅
-EXP-0001.6:  Divergence PREDICTION (margin → future divergence?)
-EXP-0001.7:  Precision Ladder (all precisions × all backends)
-EXP-0002:    Multi-node with standardized runtime
+EXP-0001.6:  Divergence Prediction — NOT SUPPORTED (per-step), new direction found ✅
+EXP-0001.7:  Precision Ladder — platform-dependent profiles ✅
+EXP-0001.8:  Replication (BF16 stability confirmation) 📐
+EXP-0001.9:  Platform Matrix (Apple vs NVIDIA vs CPU) 📐
+EXP-0002:    Multi-node with standardized runtime ⏳
 ```
 
 ---
 
 ## Publication-Ready Statements
 
-> "Cross-runtime LLM inference is functional but token-level reproducibility is backend-sensitive. Numerical divergence is triggered by small logit margins (< 0.02) and amplified by backend-specific kernel implementations. This motivates distinct execution modes — exact replication, approximate redundancy, and independent verification — as first-class primitives in distributed inference systems."
+> "Cross-runtime LLM inference is functional but token-level reproducibility is backend-sensitive. Numerical behavior is platform/backend/precision dependent — no single precision format is universally optimal. This motivates execution-configuration-aware routing, where numerical stability is modeled as a property of the full execution stack rather than of the model alone."
+
+> "Per-step divergence prediction via logit margin is not viable under same-runtime conditions due to the rarity of divergence events (1.5%). Backend-level numerical characterization provides a more robust foundation for distributed inference system design."
+
