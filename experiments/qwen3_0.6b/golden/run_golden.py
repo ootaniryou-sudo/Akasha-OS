@@ -96,11 +96,16 @@ def main() -> None:
 
     # Qwen3 requires trust_remote_code=False (natively supported in transformers >= 4.51.0)
     tokenizer = AutoTokenizer.from_pretrained(args.model)
+
+    # Resolve device
+    device = _resolve_device(args.device)
+    print(f"  Device: {device}")
+
     model = AutoModelForCausalLM.from_pretrained(
         args.model,
-        torch_dtype=torch.float32,
-        device_map=args.device,
+        dtype=torch.float32,
     )
+    model.to(device)
     model.eval()
 
     # Collect version info
@@ -111,7 +116,7 @@ def main() -> None:
         "model_revision": model_revision,
         "transformers_version": transformers.__version__,
         "torch_version": torch.__version__,
-        "device": str(model.device) if hasattr(model, "device") else args.device,
+        "device": str(device),
         "python_version": sys.version,
     }
     load_sec = time.time() - t0
@@ -130,7 +135,7 @@ def main() -> None:
 
         # Tokenize
         t_tok = time.time()
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        inputs = tokenizer(prompt, return_tensors="pt").to(device)
         input_ids: list[int] = inputs["input_ids"][0].tolist()
         tok_ms = (time.time() - t_tok) * 1000
 
@@ -144,8 +149,6 @@ def main() -> None:
                 do_sample=INFERENCE_PARAMS["do_sample"],
                 top_p=INFERENCE_PARAMS["top_p"],
                 pad_token_id=tokenizer.eos_token_id,
-                # Qwen3 thinking=False (ignored if not supported)
-                **{k: v for k, v in QWEN3_EXTRA.items() if k in model.generate.__code__.co_varnames},
             )
         gen_ms = (time.time() - t_gen) * 1000
 
@@ -276,17 +279,29 @@ def _load_prompts(path: Path) -> list[str]:
     return prompts
 
 
+def _resolve_device(device_str: str) -> str:
+    """Resolve device string to a valid torch device."""
+    import torch
+    if device_str == "auto":
+        if torch.cuda.is_available():
+            return "cuda"
+        elif torch.backends.mps.is_available():
+            return "mps"
+        else:
+            return "cpu"
+    return device_str
+
+
 def _get_model_revision(model_id: str) -> str:
     """Get the current revision hash of the model from local cache."""
     try:
         from transformers.utils import cached_file
+        from pathlib import Path
         config_path = cached_file(model_id, "config.json")
-        # Read commit hash from the cached path
         parts = Path(config_path).parts
         for i, p in enumerate(parts):
-            if p == "models--" + model_id.replace("/", "--"):
-                if i + 1 < len(parts):
-                    return parts[i + 1]
+            if p == "snapshots" and i + 1 < len(parts):
+                return parts[i + 1]
         return "unknown"
     except Exception:
         return "unknown"

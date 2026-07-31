@@ -1,0 +1,61 @@
+{
+  "index": 3,
+  "prompt": "Write a Python factorial function.",
+  "input_token_ids": [
+    7985,
+    264,
+    13027,
+    52962,
+    729,
+    13
+  ],
+  "input_token_count": 6,
+  "output_token_ids": [
+    481,
+    1967,
+    89260,
+    198,
+    7985,
+    264,
+    13027,
+    52962,
+    729,
+    624,
+    2304,
+    89260,
+    198,
+    31198,
+    198,
+    36842,
+    198,
+    96554,
+    198,
+    3136,
+    5176,
+    198,
+    2304,
+    89260,
+    198,
+    7985,
+    264,
+    13027,
+    52962,
+    729,
+    624,
+    2304
+  ],
+  "output_token_count": 32,
+  "decoded_text": " - LeetCode\nWrite a Python factorial function.\nLeetCode\nProblem\nSolution\nDiscuss\nSubmissions\nLeetCode\nWrite a Python factorial function.\nLe",
+  "timing_ms": {
+    "tokenize": 1.232,
+    "generate": 1244.456,
+    "total": 1245.688
+  },
+  "params": {
+    "max_new_tokens": 32,
+    "temperature": 0.0,
+    "do_sample": false,
+    "top_p": 1.0,
+    "thinking": false
+  }
+}
