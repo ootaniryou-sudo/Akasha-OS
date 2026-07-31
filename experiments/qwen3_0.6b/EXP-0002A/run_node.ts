@@ -77,6 +77,11 @@ async function main() {
         return;
       }
 
+      if (req.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong', t: (req as any).t }));
+        return;
+      }
+
       if (req.type !== 'compute') return;
 
       const t0 = performance.now();
