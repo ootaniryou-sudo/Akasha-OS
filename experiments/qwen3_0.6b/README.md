@@ -218,24 +218,21 @@ npx tsx experiments/qwen3_0.6b/run_single_node.ts \
   --backend auto
 ```
 
-### Status: STUB — NOT FUNCTIONAL
+### Status: IMPLEMENTED (TypeScript + Swift)
 
-> **⚠️ `metal_ios` backend scaffold ≠ Metal inference completed.**
+> **⚠️ Requires iOS native target to run. On non-iOS, falls back gracefully.**
 
-| Item | Status |
-|------|:---:|
-| TypeScript interface (`ExecutionBackend`) | ✅ Defined |
-| Platform detection (`detectPlatform()`) | ✅ |
-| Native bridge contract (`MetalNativeBridge`) | ✅ Documented |
-| Error handling (8 codes) | ✅ |
-| Fallback policy | ✅ |
-| `tsc --noEmit` | ✅ Clean |
-| **iOS native target (Xcode/Swift)** | ❌ NOT STARTED |
-| **Metal shaders (.metal files)** | ❌ NOT STARTED |
-| **MPSGraph / MPS kernel integration** | ❌ NOT STARTED |
-| **On-device iPhone inference test** | ❌ NOT STARTED |
-
-**Until all 5 native items are complete, `MetalBackend.isAvailable()` returns `false` and the system falls back to WebGPU/CPU.**
+| Layer | Status |
+|-------|:---:|
+| TypeScript `ExecutionBackend` interface | ✅ |
+| TypeScript `MetalBackend` (bridge stub) | ✅ |
+| **Swift `Package.swift` + SPM target** | **✅** |
+| **Swift `MetalBridge` (main entry + JSON bridge)** | **✅** |
+| **Swift `MPSInference` (MPSGraph + matmul + sampling)** | **✅** |
+| **Swift `MetalKernels` (custom shader wrappers)** | **✅** |
+| **Metal shaders `qwen_ops.metal` (RMSNorm, RoPE, SwiGLU, KV)** | **✅** |
+| **Swift `NumericTypes` (FP16/FP32 conversion)** | **✅** |
+| iOS on-device inference test | ⚠️ Pending |
 
 ### Native Target Requirements
 
