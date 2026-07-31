@@ -92,6 +92,7 @@
 | **Transmutation** | Model Quantization | `training/quantize.py` |
 | **Resonance Compression** | Activation Compression | 将来実装（Feature Flag） |
 | **Adaptive Resonance** | Adaptive Activation Precision | 将来実装 |
+| **Future Sight** | Speculative Decoding | `src/core/inference-loop.ts` (speculative path), 将来実装 |
 
 ## MoE / Specialist
 
@@ -117,7 +118,8 @@ ArcAsha
 ├── Shadow of Wisdom    (Shadow Execution)
 ├── Divine Safeguard    (Fault Protection)
 ├── Wisdom Engine       (LLM Runtime)
-└── Constellation Mind  (Distributed MoE)
+├── Constellation Mind  (Distributed MoE)
+└── Future Sight        (Speculative Decoding)
 ```
 
 ## Naming Rule

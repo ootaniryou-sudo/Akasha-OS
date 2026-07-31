@@ -1,24 +1,38 @@
 # Akasha-OS (ArcAsha)
 
+> **📜 Master Specification**: [`MASTER_SPEC.md`](MASTER_SPEC.md) — the authoritative architecture, research roadmap, and design principles.
+> This README is the implementation-facing overview. For the full vision, read the master spec.
+
 > **"Democratising Big Tech's data centers — from your own room."**
 >
-> A hyper-distributed edge AI orchestration operating system that unites tens of thousands of used smartphones and cheap wired networks into a single massive virtual **6.7-trillion-parameter class** collective intelligence.
+> ArcAsha is a **distributed expert intelligence fabric** — not one model split across phones, but many specialized small models (~0.6B each) dynamically coordinated by an intelligent runtime into a single adaptive intelligence system with **~6.7T aggregate parameters**.
 >
-> **🎯 Roadmap target**: Match or exceed current frontier-class LLM parameter counts (DeepSeek-V3: 671B MoE / GPT-4: ~1.8T estimated) using nothing but household power outlets and a pile of used smartphones — ultimately aiming for **10T+ parameters** in fully distributed inference.
+> **🎯 Core research question**: Can a large population of specialized small language models, coordinated by an intelligent distributed runtime, achieve useful frontier-level capabilities without requiring any individual node to host a frontier-scale model?
 
 ---
 
-## 🌌 1. Project Background & Vision
+## 🌌 1. Core Concept: Expert Fabric, Not Model Sharding
 
-The AI industry today is dominated by Big Tech's capital — trillion-yen data centers, exclusive access to cutting-edge GPUs (NVIDIA H100, etc.), and enormous power consumption.
+**What ArcAsha is NOT**: One 6.7T model split across smartphones.
 
-**Akasha-OS** is the **technical antithesis** to this centralized structure.
+**What ArcAsha IS**: Many independent ~0.6B models, each an **Expert Node** with its own capability profile, dynamically coordinated by the **Heart of Wisdom (Core Orchestrator)** and **Eye of Wisdom (Intelligent Router)** into a collective intelligence fabric.
 
-One source of inspiration is the **Akasha System** from the Sumeru region in *Genshin Impact* — a fictional network where all citizens wear "Akasha Terminals" that collect and integrate knowledge, thoughts, and experiences in real-time, functioning as a massive collective intelligence. "Each terminal is weak alone, but countless connected terminals approach divine intelligence" — we aim to realize this with real-world edge devices.
+```
+Many independent ~0.6B models
++ Specialized training (fine-tuning, distillation)
++ Capability-aware routing (task vector × expert profile)
++ Master orchestration (Heart of Wisdom)
++ Distributed memory (Realm of Knowledge)
++ Fault tolerance (Shadow of Wisdom, Divine Safeguard)
++ Expert collaboration (parallel → critic → verify → synthesize)
+= Large distributed intelligence fabric (~6.7T aggregate params)
+```
 
-Every year, hundreds of millions of still-working used smartphones are discarded. We collect them, chain them with wired LAN, and run 0.1B–1B specialized AI models on each via the browser. Our ultra-low-latency routing harmonizes them into **frontier-class intelligence at a fraction of the cost and power**.
+Each smartphone is not a "GPU worker" — it is an **independent Expert Node** containing: Model + Capability Profile + Hardware Profile + Runtime + Local KV Cache + Health State + Network State.
 
-> 📖 **ArcAsha Naming System**: All components have lore names. See [`NAMING.md`](NAMING.md). Core: **Heart of Wisdom (Orchestrator)**, **Eye of Wisdom (Router)**, **Shadow of Wisdom (Shadow Execution)**, **Realm of Knowledge (Memory Fabric)**, **Echo (KV Cache)** — 12 components total.
+The AI industry today is dominated by Big Tech's capital. **ArcAsha** is the **technical antithesis** — inspired by the **Akasha System** from Sumeru (*Genshin Impact*), where countless connected terminals approach divine intelligence.
+
+> 📖 **ArcAsha Naming System**: All components have lore names. See [`NAMING.md`](NAMING.md) and [`MASTER_SPEC.md` §11`](MASTER_SPEC.md#11-arcasha-naming).
 
 ---
 
@@ -166,10 +180,11 @@ APS ≥ 80 → HEAD layers | 25–80 → MID layers | < 25 → SHADOW backup.
 
 ```
 Akasha-OS/
+├── MASTER_SPEC.md          # Authoritative architecture & research spec
 ├── README.md, NAMING.md, LICENSE, CONTRIBUTING.md
-├── akasha-master/          # TypeScript orchestrator
-├── akasha-client-web/      # Browser edge node
-├── akasha-kernel-native/   # Rust native kernel
+├── akasha-master/          # TypeScript orchestrator (Heart of Wisdom)
+├── akasha-client-web/      # Browser edge node (Akasha Terminal)
+├── akasha-kernel-native/   # Rust native kernel (Core Terminal)
 └── examples/               # Plugin templates
 ```
 
