@@ -1,7 +1,7 @@
 /**
- * router.ts
+ * router.ts — Heart of Wisdom (Core Orchestrator) + Eye of Wisdom (Intelligent Router)
  *
- * Akasha-OS — Unified Master Router（統合マスタールーター）
+ * ArcAsha 全体を統括する最上位制御系。
  * ─────────────────────────────────────────────────────────
  * 全コンポーネントを単一のエントリポイントに結線する統合ファサード。
  *

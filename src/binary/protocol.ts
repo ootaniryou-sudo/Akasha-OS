@@ -1,5 +1,7 @@
 /**
- * Akasha Wire Protocol — fixed-offset binary packet layout.
+ * Akasha Wire Protocol — Knowledge Edict (Binary Wire Protocol)
+ *
+ * ArcAsha Node 間で使用する共通バイナリプロトコル。
  *
  * ┌────────┬──────┬──────────────────────────────────────────────┐
  * │ Offset │ Size │ Field                                        │

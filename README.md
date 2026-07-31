@@ -20,6 +20,8 @@
 
 世界中で毎年数億台廃棄される「まだ動く型落ちスマートフォン（エッジ資源）」を回収し、部屋の中に敷き詰めた有線LAN網で数珠繋ぎ（クラスター化）にします。1台1台には0.1B〜1Bクラスの極小専門家AIモデルをブラウザ上で実行させ、独自の超低遅延ルーティングによってそれらを調和。トータルで**フロンティア級の知能を、数十分の一のコストと電力で実現**します。
 
+> 📖 **ArcAsha Naming System**: Akasha-OS の全コンポーネントには、世界観に根ざした名称（Lore Name）が与えられています。詳細は [`NAMING.md`](NAMING.md) を参照。中核となる構成要素は **Heart of Wisdom (Core Orchestrator)**、**Eye of Wisdom (Intelligent Router)**、**Shadow of Wisdom (Shadow Execution)**、**Realm of Knowledge (Memory Fabric)**、**Echo (Runtime KV Cache)** の12コンポーネントです。
+
 ---
 
 ## 🛠️ 2. コアアーキテクチャ（4層構造）

@@ -1,7 +1,7 @@
 /**
- * memory/store.ts
+ * memory/store.ts — Realm of Knowledge (Memory Fabric)
  *
- * Akasha-OS — Memory Store Abstraction
+ * ArcAsha 全体の Memory / Context / Cache を統合管理する基盤。
  * ────────────────────────────────────
  * 会話履歴・長期記憶・KV Cache を同一概念として扱わない
  * Memory subsystem の基盤インターフェース。
@@ -88,7 +88,7 @@ export interface MemoryRetriever {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 3. Runtime KV Cache
+// 3. Echo (Runtime KV Cache) + Echo Prime (Prefix KV Cache)
 // ═════════════════════════════════════════════════════════════════════════════
 
 export interface KVCachePage {

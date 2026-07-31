@@ -1,7 +1,7 @@
 /**
- * memory/context.ts
+ * memory/context.ts — Endless Knowledge (Long-Context Engine) + Memory Page (Context Page)
  *
- * Akasha-OS — Context Manager
+ * Context を OS の Memory Page のように扱う階層型コンテキスト管理。
  * ───────────────────────────
  * Context を OS の Memory Page のように扱う階層型コンテキスト管理。
  *

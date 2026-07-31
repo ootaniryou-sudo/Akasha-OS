@@ -57,9 +57,9 @@ export function createTxPool(size: number): ObjectPool<InferenceTx> {
 }
 
 /**
- * Sliding-window dynamic fault tolerance.
+ * fault-tolerance.ts — Shadow of Wisdom (Shadow Execution) + Divine Safeguard (Fault Protection)
  *
- * Monitors in-flight txs every tick (default 100μs via setImmediate/hrtime loop).
+ * 同一計算を Primary Node と Shadow Node（Guardian Terminal）に同時送信し、
  * If now > start + (EWMA + margin), immediately fan-out the same binary tensor
  * to a shadow node — non-blocking, primary result wins (first RESULT completes).
  */
