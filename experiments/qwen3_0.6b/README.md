@@ -1,9 +1,10 @@
 # Qwen3-0.6B — ArcAsha Experiment Log
 
-> **Phase 1 complete (EXP-0000〜0001.9): LLM Numerical Characterization**
+> **Phase 1 complete (EXP-0000〜0001.9): LLM Numerical Characterization**  
+> **Phase 2 in progress (EXP-0002A): Distributed Inference**
 
-**[`CONCLUSIONS.md`](CONCLUSIONS.md)** — 3-line formal conclusion + design principles.  
-**[`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md)** — Multi-dimensional profile specification.
+**[`CONCLUSIONS.md`](CONCLUSIONS.md)** — Formal conclusions + design principles.  
+**[`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md)** — Multi-dimensional profile spec.
 
 ---
 
@@ -12,12 +13,58 @@
 | # | Experiment | Status | Key Finding |
 |---|-----------|:---:|------|
 | 0000 | Golden Reference | ✅ | Qwen3-0.6B base model, 10 prompts, T=0, deterministic |
-| 0001 | Python vs JS/ONNX | ✅ | Tokenizer IDENTICAL (10/10). Output: 15-44% match (ONNX fp16 ≠ PyTorch fp32) |
-| 0001.5 | Logit-Level Analysis | ✅ | FP32→FP16: 93.75% top-1 match. Divergence at logit_margin < 0.02 |
-| 0001.6 | Divergence Prediction | ✅ | **Not supported.** AUC=0.57, F1=0.14. Per-step prediction is wrong abstraction |
-| 0001.7 | Precision Ladder | ✅ | FP16: 99.2% stable, 42% faster. BF16 on MPS: 20.9% divergence ⚠️ |
-| 0001.8 | Replication | ✅ | σ=0.0000 — perfectly reproducible. BF16 20.88% is a stable measurement |
-| 0001.9 | Platform Matrix | ✅ | macOS MPS completed. CUDA/CPU/WebGPU pending |
+| 0001 | Python vs JS/ONNX | ✅ | Tokenizer IDENTICAL. Output: 15-44% match (cross-runtime) |
+| 0001.5 | Logit-Level Analysis | ✅ | FP32→FP16: 93.75% match. Divergence at logit_margin < 0.02 |
+| 0001.6 | Divergence Prediction | ✅ | Per-step NOT viable (AUC=0.57). Backend-level characterization is right |
+| 0001.7 | Precision Ladder | ✅ | FP16: 99.2%, 1.42× faster. BF16 on MPS: 20.9% divergence |
+| 0001.8 | Replication | ✅ | σ=0.0000 — BF16 20.88% perfectly reproducible |
+| 0001.9 | Platform Matrix | ✅ | macOS MPS completed. CUDA/CPU pending |
+| 0002A | Remote Expert | ✅ | Mac Node: Qwen3-0.6B via WebSocket. Network overhead 2ms |
+| 0002A-iPhone | iPhone 12 mini Relay | ✅ | **iPhone joins ArcAsha network.** WiFi 20ms. Lightweight relay |
+
+---
+
+## Node Type Architecture (EXP-0002A)
+
+> **"Node = 必ずモデルを持つ"ではない。** ArcAsha には3種類の Node が存在する。
+
+| Type | Has Model? | Inference? | Example | Role |
+|------|:---:|:---:|------|------|
+| **Expert Node** | ✅ | ✅ | Mac + Qwen3-0.6B | LLM inference execution |
+| **Relay Node** | ❌ | ❌ | iPhone 12 mini | Connectivity, forwarding, health, metadata |
+| **Hybrid Node** | ✅ | ✅ | Future iPhone 15 Pro | Expert + Relay combined |
+
+### EXP-0002A Architecture
+
+```
+                Master Mac
+            Heart of Wisdom
+                    │
+              Wi-Fi / LAN
+                    │
+          ┌─────────┴─────────┐
+          │                   │
+      Mac Expert          iPhone 12 mini
+      Qwen3-0.6B          Lightweight Relay
+      772ms/10tokens       20ms RTT WiFi
+          │                   │
+          └─────────┬─────────┘
+                    ↓
+               ArcAsha Network
+```
+
+### iPhone 12 mini — Connection Log
+
+```
+Device:     iPhone 12 mini, iOS 18, 4 cores
+Connection: WebSocket via WiFi (192.168.0.11 → 192.168.0.17:8081)
+Latency:    20ms RTT (3 pings)
+WebGPU:     ❌ iOS Safari API not exposed
+WASM Model: ❌ 200MB CDN download impractical on mobile
+Node Type:  Lightweight Relay (no model)
+```
+
+**Key finding**: Low-performance devices CAN join ArcAsha as relay nodes. Not every edge device needs to run the full model — this is core to the heterogeneous architecture.
 
 ---
 

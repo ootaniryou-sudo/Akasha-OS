@@ -1,4 +1,4 @@
-# ArcAsha-OS (ArcAsha)
+# Akasha-OS (ArcAsha)
 
 > **📜 Master Specification**: [`MASTER_SPEC.md`](MASTER_SPEC.md) — the authoritative architecture, research roadmap, and design principles.
 > This README is the implementation-facing overview. For the full vision, read the master spec.
@@ -172,6 +172,55 @@ curl http://localhost:9090/metrics
 ## 📡 6. Binary Protocol
 
 48-byte fixed header + Float32Array. See [`PROTOCOL.md`](PROTOCOL.md). Commands: REGISTER, COMPUTE_TASK, RESULT, RELAY, TOKEN_OUT.
+
+---
+
+## 🔬 7.5 Phase 1 Experiments — Complete (Jul 2026)
+
+> Full details: [`experiments/qwen3_0.6b/README.md`](akasha-master/experiments/qwen3_0.6b/README.md) | Conclusions: [`CONCLUSIONS.md`](akasha-master/experiments/qwen3_0.6b/CONCLUSIONS.md)
+
+### Phase 1: LLM Numerical Characterization (EXP-0000〜0001.9)
+
+| # | Experiment | Result | Key Finding |
+|---|-----------|:---:|------|
+| 0000 | Golden Reference | ✅ | Qwen3-0.6B base model, 10 prompts, T=0 deterministic, MPS |
+| 0001 | Python vs JS/ONNX | ✅ | Tokenizer 10/10 match. Output 15-44% (ONNX fp16 ≠ PyTorch fp32) |
+| 0001.5 | Logit-Level Analysis | ✅ | FP32→FP16: 93.75% top-1 match. Divergence at logit_margin < 0.02 |
+| 0001.6 | Divergence Prediction | ⚠️ | Per-step prediction NOT viable (AUC=0.57). Backend-level characterization is the right abstraction |
+| 0001.7 | Precision Ladder | ✅ | FP16: 99.2% stable, 1.42× faster. BF16 on MPS: 20.9% divergence |
+| 0001.8 | Replication | ✅ | σ=0.0000 — BF16 20.88% perfectly reproducible |
+| 0001.9 | Platform Matrix | ✅ | macOS MPS completed (fp32/fp16/bf16). CUDA/CPU pending |
+
+**Three-line conclusion:**
+1. Cross-runtime inference is functional, but token-level reproducibility is backend-sensitive.
+2. Divergence is triggered by numerical ambiguity (logit_margin < 0.02) and amplified by backend/kernel differences.
+3. Exact replication, approximate redundancy, and independent verification should be distinct execution modes.
+
+**Design principle:** *Numerical Stability is a property of an execution configuration (platform + backend + precision), not of a model alone.*
+
+### Phase 2: Distributed Inference (EXP-0002A)
+
+| # | Experiment | Result | Key Finding |
+|---|-----------|:---:|------|
+| 0002A | Remote Single Expert | ✅ | Mac Node: Qwen3-0.6B via WebSocket. Network overhead 2ms (localhost) |
+| 0002A-iPhone | iPhone 12 mini Relay | ✅ | **iPhone joins ArcAsha network.** WiFi 20ms RTT. Lightweight relay — no model needed |
+
+**Node Type Architecture:**
+
+| Type | Has Model? | Example | Role |
+|------|:---:|------|------|
+| **Expert Node** | ✅ | Mac + Qwen3-0.6B | Inference execution |
+| **Relay Node** | ❌ | iPhone 12 mini | Connectivity, forwarding, health |
+| **Hybrid Node** | ✅ | Future iPhone 15 Pro | Expert + Relay combined |
+
+### Phase 2-4: Planned
+
+| # | Experiment | Target |
+|---|-----------|--------|
+| 0002B | Two Expert Routing | 2 Mac Nodes, request distribution |
+| 0002C | Capability-Aware Routing | Math→Math Expert, Code→Code Expert |
+| 0003 | Cooperative Inference | 2 Experts → Synthesis |
+| 0004 | Active Expert Scaling | 1→2→4→8→16 Experts |
 
 ---
 
