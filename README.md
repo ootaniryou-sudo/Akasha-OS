@@ -1,4 +1,4 @@
-# Akasha-OS (ArcAsha)
+# ArcAsha-OS (ArcAsha)
 
 > **📜 Master Specification**: [`MASTER_SPEC.md`](MASTER_SPEC.md) — the authoritative architecture, research roadmap, and design principles.
 > This README is the implementation-facing overview. For the full vision, read the master spec.
