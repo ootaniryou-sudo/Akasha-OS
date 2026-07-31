@@ -1,0 +1,11 @@
+{
+  "experiment": "EXP-0001.6",
+  "pair": "fp32_vs_fp16",
+  "model_id": "Qwen/Qwen3-0.6B",
+  "transformers_version": "5.14.1",
+  "torch_version": "2.13.0",
+  "device": "mps",
+  "max_new_tokens": 32,
+  "num_prompts": 100,
+  "total_records": 3200
+}

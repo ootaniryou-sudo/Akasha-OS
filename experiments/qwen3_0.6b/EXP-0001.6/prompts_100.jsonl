@@ -1,0 +1,100 @@
+{"prompt": "Solve 82x + 15 = 0."}
+{"prompt": "What is 4 mod 95?"}
+{"prompt": "What is the square root of 36?"}
+{"prompt": "Compute 29 factorial."}
+{"prompt": "Solve 95x + 14 = 0."}
+{"prompt": "What is 87 * 95?"}
+{"prompt": "What is 70 * 12?"}
+{"prompt": "What is the derivative of x^76?"}
+{"prompt": "What is 5 * 4?"}
+{"prompt": "Solve 12x + 28 = 0."}
+{"prompt": "Solve 30x + 65 = 0."}
+{"prompt": "What is 78 ^ 4?"}
+{"prompt": "What is 72 mod 26?"}
+{"prompt": "What is 92 + 84?"}
+{"prompt": "What is the integral of x^90?"}
+{"prompt": "What is log(54)?"}
+{"prompt": "What is 58 * 76?"}
+{"prompt": "What is the derivative of x^36?"}
+{"prompt": "What is 98 * 21?"}
+{"prompt": "What is log(90)?"}
+{"prompt": "What is the time complexity of reverse a linked list?"}
+{"prompt": "What is a closure?"}
+{"prompt": "Explain merge vs egrem."}
+{"prompt": "What is a closure?"}
+{"prompt": "Write a SQL query to quick."}
+{"prompt": "Explain the bubble algorithm."}
+{"prompt": "Write a function to email validation."}
+{"prompt": "Write a SQL query to JSON."}
+{"prompt": "What is the time complexity of merge sort vs quick sort?"}
+{"prompt": "Explain the parse CSV algorithm."}
+{"prompt": "Write a SQL query to matrix multiplication."}
+{"prompt": "Explain the find primes algorithm."}
+{"prompt": "Write a regex for palindrome check."}
+{"prompt": "What is the time complexity of depth-first search?"}
+{"prompt": "How to parse FizzBuzz in Python?"}
+{"prompt": "Why is France important?"}
+{"prompt": "What is the meaning of gravity?"}
+{"prompt": "Why is democracy important?"}
+{"prompt": "Why is photosynthesis important?"}
+{"prompt": "How does DNA and RNA work?"}
+{"prompt": "What is the difference between climate change and ?"}
+{"prompt": "Explain the internet briefly."}
+{"prompt": "What is blockchain theory?"}
+{"prompt": "What is the meaning of quantum physics?"}
+{"prompt": "Explain the concept of the Renaissance."}
+{"prompt": "How does machine learning work?"}
+{"prompt": "What is the meaning of evolution?"}
+{"prompt": "What are the benefits of electricity?"}
+{"prompt": "Describe the history of the Big Bang."}
+{"prompt": "What is the difference between artificial intelligence and ?"}
+{"prompt": "82 の 15 乗は？"}
+{"prompt": "4 の階乗を計算してください。"}
+{"prompt": "36x + 32 = 0 を解いてください。"}
+{"prompt": "29 + 18 は何ですか？"}
+{"prompt": "95 の階乗を計算してください。"}
+{"prompt": "87 + 95 は何ですか？"}
+{"prompt": "70x + 12 = 0 を解いてください。"}
+{"prompt": "x^76 の微分は？"}
+{"prompt": "5 を 4 で割った余りは？"}
+{"prompt": "12 × 28 は何ですか？"}
+{"prompt": "30 の階乗を計算してください。"}
+{"prompt": "1から78までの合計は？"}
+{"prompt": "72x + 26 = 0 を解いてください。"}
+{"prompt": "92 の階乗を計算してください。"}
+{"prompt": "90 の対数は？"}
+{"prompt": "x^54 の微分は？"}
+{"prompt": "58 の対数は？"}
+{"prompt": "36 の平方根は？"}
+{"prompt": "98 を 21 で割った余りは？"}
+{"prompt": "90 の平方根は？"}
+{"prompt": "日本との違いは？"}
+{"prompt": "重力はなぜ重要ですか？"}
+{"prompt": "民主主義はなぜ重要ですか？"}
+{"prompt": "光合成の歴史を説明してください。"}
+{"prompt": "DNAの仕組みを説明してください。"}
+{"prompt": "気候変動の概念を説明してください。"}
+{"prompt": "インターネットの仕組みを説明してください。"}
+{"prompt": "ブロックチェーンの概念を説明してください。"}
+{"prompt": "量子力学の利点は何ですか？"}
+{"prompt": "ルネサンスとの違いは？"}
+{"prompt": "機械学習とは何ですか？"}
+{"prompt": "進化論はなぜ重要ですか？"}
+{"prompt": "電気理論とは？"}
+{"prompt": "ビッグバンについて簡単に説明してください。"}
+{"prompt": "人工知能の首都はどこですか？"}
+{"prompt": "What is the speed of light?"}
+{"prompt": "Explain TCP vs UDP."}
+{"prompt": "Write a haiku about code."}
+{"prompt": "What is pi to 5 decimal places?"}
+{"prompt": "Explain O(n log n) complexity."}
+{"prompt": "What is a REST API?"}
+{"prompt": "How does garbage collection work?"}
+{"prompt": "What is Docker?"}
+{"prompt": "Explain the CAP theorem."}
+{"prompt": "What is a Fourier transform?"}
+{"prompt": "コンピュータの仕組みを説明してください。"}
+{"prompt": "TCPとUDPの違いは？"}
+{"prompt": "REST APIとは何ですか？"}
+{"prompt": "Dockerの使い方を説明してください。"}
+{"prompt": "フーリエ変換とは何ですか？"}
