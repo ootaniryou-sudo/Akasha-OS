@@ -75,7 +75,13 @@ A single scalar (`stability = 1 - divergence_rate`) is useful as a research prox
 
 ## Stability Score Derivation
 
-The composite **Stability Score** (0–1) can be derived as a weighted combination:
+> **⚠️ `stability = 1 − divergence_rate` is a RESEARCH PROXY only, NOT the final metric.**
+
+A single scalar (`stability = 1 - divergence_rate`) is useful for quick comparisons during experiments, but it collapses too much information. A single token difference counts as "diverged" regardless of severity — a near-synonym at position 30 is treated the same as a completely different continuation at position 2.
+
+### Composite Stability Score
+
+The production **Stability Score** (0–1) is derived from the full Numerical Profile:
 
 ```
 Stability Score = w1 × sequence_exact_match

@@ -102,15 +102,31 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 ## Research Roadmap
 
 ```
-EXP-0000:    Golden Reference ✅
-EXP-0001:    Python vs JS/ONNX token comparison ✅
-EXP-0001.5:  Logit-level precision analysis ✅
-EXP-0001.6:  Divergence Prediction — NOT SUPPORTED (per-step), new direction found ✅
-EXP-0001.7:  Precision Ladder — platform-dependent profiles ✅
-EXP-0001.8:  Replication (BF16 stability confirmation) 📐
-EXP-0001.9:  Platform Matrix (Apple vs NVIDIA vs CPU) 📐
-EXP-0002:    Multi-node with standardized runtime ⏳
+✅ EXP-0000    Golden Reference (PyTorch FP32)
+✅ EXP-0001    Python vs JS/ONNX token comparison
+✅ EXP-0001.5  Logit-level precision analysis
+✅ EXP-0001.6  Divergence Prediction — NOT SUPPORTED (per-step), new direction found
+✅ EXP-0001.7  Precision Ladder — platform-dependent profiles
+✅ EXP-0001.8  Replication — BF16 σ=0.0000, perfectly reproducible
+✅ EXP-0001.9  Platform Matrix — 1/4 platforms completed
+─────────────────────────────────────────────────────
+📐 EXP-0002A   Remote Single Expert (1 Master + 1 Node)
+📐 EXP-0002B   Two Experts (routing with multiple nodes)
+📐 EXP-0002C   Specialized Experts (Capability Profile routing)
+📐 EXP-0003    Two-Expert Cooperative Inference
+📐 EXP-0004    Active Expert Scaling (1→2→4→8→16)
+⏳ EXP-0005+   Fault tolerance, Memory Fabric, Long Context
 ```
+
+### Phase Summary
+
+| Phase | Experiments | Theme |
+|-------|------------|-------|
+| **Phase 1** | EXP-0000 〜 0001.9 | LLM numerical characterization |
+| **Phase 2** | EXP-0002A/B/C | Distributed single/multi-node |
+| **Phase 3** | EXP-0003 | Cooperative inference |
+| **Phase 4** | EXP-0004 | Active expert scaling |
+| **Phase 5+** | EXP-0005+ | Fault tolerance, memory, long context |
 
 ---
 
