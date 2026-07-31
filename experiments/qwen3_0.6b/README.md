@@ -49,3 +49,20 @@ npx tsx experiments/qwen3_0.6b/run_single_node.ts \
 | **Akasha Path** | Master → Router → Binary Protocol → Node → Qwen | `--akasha` |
 
 EXP-0001 is primarily an **adapter validation experiment**. True distributed inference validation will come in EXP-0002 (multi-node).
+
+### Explicitly Out of Scope for EXP-0001
+
+The following are **deliberately deferred** to avoid confounding results:
+
+| Deferred Item | Reason | Target Phase |
+|---------------|--------|--------------|
+| 1M Context | Requires hierarchical paging (HOT/WARM/COLD) — not needed for adapter validation | Phase 6+ |
+| MoE (Constellation Mind) | Requires multi-expert routing — single-node test first | Phase 8+ |
+| Activation Compression | Premature optimization — validate baseline first | Phase 8+ |
+| Adaptive Precision | Premature optimization — validate baseline first | Phase 8+ |
+| Rust native kernel | WebGPU/TS path sufficient for adapter validation | Phase 4+ |
+| 10,000 nodes | Scaling experiment — meaningless before single-node works | Phase 5+ |
+| Smartphone swarm | Physical deployment — validate logic in simulation first | Phase 5+ |
+
+> **Principle**: If you touch these now, you won't know what succeeded.
+> EXP-0001 answers exactly one question: *"Does Qwen3-0.6B run correctly through the Akasha LLM Adapter?"*
