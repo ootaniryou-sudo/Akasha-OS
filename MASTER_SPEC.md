@@ -445,6 +445,8 @@ Context Compatibility
 Cost / Energy
 +
 Failure Probability
++
+Numerical Stability  ← backend + precision divergence risk
 ```
 
 Conceptual score:
@@ -457,8 +459,21 @@ CapabilityMatch
 × HardwareFit
 × NetworkQuality
 × Reliability
+× NumericalStability
 ÷ Cost
 ```
+
+Where **NumericalStability** is derived from:
+- Backend (PyTorch / ONNX / WebGPU)
+- Precision (FP32 / BF16 / FP16 / INT8 / INT4)
+- Measured divergence rate vs baseline (see EXP-0001.5/1.6/1.7)
+- Runtime logit_margin distribution
+
+This enables ArcAsha to distinguish:
+- **"Fast but numerically unstable"** nodes → high-throughput, low-precision tasks
+- **"Slow but exactly reproducible"** nodes → critical verification, Exact Shadow
+
+See experiments: [`EXP-0001.5`](akasha-master/experiments/qwen3_0.6b/EXP-0001.5/), [`EXP-0001.6`](akasha-master/experiments/qwen3_0.6b/EXP-0001.6/), [`EXP-0001.7`](akasha-master/experiments/qwen3_0.6b/EXP-0001.7/).
 
 The exact formula must be treated as a research variable.
 

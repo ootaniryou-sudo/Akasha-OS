@@ -27,6 +27,7 @@
 | **Mandate Weaver** | Task Scheduler | `src/core/shard-allocator.ts` |
 | **Knowledge Constellation** | Load Balancer | `src/structures/idle-cluster-pool.ts` |
 | **Path Oracle** | Route Selector | `src/core/inference-loop.ts` (pickNode) |
+| **Numerical Stability** | Backend Precision Reliability | Router score dimension — backend + precision divergence risk (EXP-0001.5/1.6/1.7) |
 
 ## Node / Cluster
 

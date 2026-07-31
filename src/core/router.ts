@@ -12,6 +12,8 @@
  *   ③ ローカルファーストパス — IP サブネット逆引きによる同一ハブ優先ルーティング
  *   ④ クラスター間ハンドオーバー — 専門領域横断トークンを検出しコンテキスト転送
  *   ⑤ ゼロアロケーション — ObjectPool + BufferPool で GC スパイク完全排除
+ *   ⑥ Numerical Stability — バックエンド・精度ごとの分岐リスクを加味した Shadow 選択
+ *   ⑦ Shadow Modes — Exact Shadow (同一 backend) / Independent Shadow (クロス backend + Verifier)
  *
  * ## 依存モジュール（すべて src/core/ 配下）
  *
