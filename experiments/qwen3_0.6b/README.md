@@ -1,38 +1,50 @@
 # Qwen3-0.6B Akasha Integration Experiment
 
+## ⚠️ Prerequisite: EXP-0000
+
+**Before running EXP-0001, you MUST run EXP-0000 first.**
+
+[`golden/README.md`](golden/README.md) — establishes the Golden Reference:
+pure Qwen3-0.6B via Python Transformers, no ArcAsha.
+
+```
+EXP-0000 (golden/)  →  EXP-0001 (this)  →  EXP-0002+ (future)
+```
+
+If EXP-0000 fails, EXP-0001 is meaningless. See [`golden/README.md`](golden/README.md).
+
+---
+
 ## EXP-0001 — Akasha Single-Node LLM Integration
 
-**Goal**: Prove that Qwen3-0.6B can run on Akasha-OS and produce token-identical output to standalone PyTorch inference.
+**Goal**: Prove that Qwen3-0.6B can run on Akasha-OS and produce token-identical output to the EXP-0000 Golden Reference.
 
 ### Success Criteria
 
-- [ ] Qwen3-0.6B standalone inference works (reference)
+- [ ] EXP-0000 Golden Reference completed (prerequisite)
 - [ ] Qwen via Akasha LLM Adapter works (direct mode)
 - [ ] Qwen via full Akasha path works (--akasha mode): Master → Router → Protocol → Node → Qwen
-- [ ] Token IDs match between Akasha and reference
+- [ ] Token IDs match between Akasha and EXP-0000 Golden Reference
 - [ ] Token-level timing recorded
 
 ### Running
 
 ```bash
-# 1. Golden Reference (PyTorch, standalone)
-python experiments/qwen3_0.6b/reference/run_reference.py \
-  --model Qwen/Qwen3-0.6B \
-  --prompt-file experiments/qwen3_0.6b/prompts/basic.jsonl \
-  --output-dir experiments/qwen3_0.6b/reference/golden
+# 0. Prerequisite — Golden Reference (run first!)
+python experiments/qwen3_0.6b/golden/run_golden.py
 
-# 2. Akasha — Direct Adapter Mode (validates LLM Adapter API)
+# 1. Akasha — Direct Adapter Mode (validates LLM Adapter API)
 npx tsx experiments/qwen3_0.6b/run_single_node.ts \
   --model Qwen/Qwen3-0.6B \
-  --prompt-file experiments/qwen3_0.6b/prompts/basic.jsonl \
-  --golden-dir experiments/qwen3_0.6b/reference/golden
+  --prompt-file experiments/qwen3_0.6b/golden/prompts.jsonl \
+  --golden-dir experiments/qwen3_0.6b/golden/output
 
-# 3. Akasha — Full Integration Path (validates distributed path)
+# 2. Akasha — Full Integration Path (validates distributed path)
 npx tsx experiments/qwen3_0.6b/run_single_node.ts \
   --akasha \
   --model Qwen/Qwen3-0.6B \
-  --prompt-file experiments/qwen3_0.6b/prompts/basic.jsonl \
-  --golden-dir experiments/qwen3_0.6b/reference/golden
+  --prompt-file experiments/qwen3_0.6b/golden/prompts.jsonl \
+  --golden-dir experiments/qwen3_0.6b/golden/output
 ```
 
 ### Configs
