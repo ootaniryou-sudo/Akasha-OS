@@ -336,6 +336,64 @@ AKASHA_PORT=9090 npm run dev
 
 ---
 
+## 🧪 5.5. PoC 実機検証ガイド / Proof-of-Concept Guide
+
+2〜4台の実機スマホ + ギガビットスイッチでエンドツーエンド検証を行う手順です。
+
+### 必要機材 / Required Hardware
+
+| 機材 | 推奨 | 数量 |
+|------|------|------|
+| ギガビット L2 スイッチ | セルフパワード（PoE不要） | 1 |
+| USB-C → Ethernet アダプタ | ASIX AX88179 / Realtek RTL8153 チップ | スマホの数 |
+| Android スマホ | Android 12+, Chrome 120+ | 2台以上 |
+| マスター PC | Linux / macOS, Node.js 20+ | 1 |
+
+### 手順 / Steps
+
+```bash
+# ── 1. エッジ端末セットアップ（各スマホで実行） ──
+# Termux をインストール後:
+pkg install iperf3 curl
+bash poc/edge-setup.sh
+
+# ── 2. マスター起動 ──
+cd akasha-master
+npm install && npm run build
+npm run dev
+
+# ── 3. 計測実行（マスター PC で） ──
+chmod +x poc/measure.sh
+./poc/measure.sh <edge-ip-1> <edge-ip-2>
+
+# ── 4. WebTransport RTT 単体テスト ──
+node poc/wt-rtt-measure.mjs <master-ip> 8080
+
+# ── 5. メトリクス確認 ──
+curl http://localhost:9090/metrics
+```
+
+### 成功基準 / Success Criteria
+
+| 指標 | 目標 | 測定方法 |
+|------|------|---------|
+| **ICMP RTT（中央値）** | < 2ms | `ping -c 20 <edge-ip>` |
+| **TCP スループット** | > 800 Mbps | `iperf3 -c <edge-ip> -t 10` |
+| **WebTransport datagram RTT（中央値）** | < 5ms | `node poc/wt-rtt-measure.mjs` |
+| **E2E 推論レイテンシ（中央値/トークン）** | < 30ms | Prometheus `/metrics` の `akasha_latency_us` |
+| **パケットロス率** | < 0.1% | datagram echo テスト |
+
+### トラブルシューティング / Troubleshooting
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| WebTransport 接続不可 | Chrome フラグ未有効 | `chrome://flags/#enable-webtransport` を Enabled に |
+| Ethernet 認識せず | アダプタ非対応 | ASIX AX88179 チップのアダプタに交換 |
+| iOS Safari で WebTransport 不可 | Safari 未対応 | Chrome for iOS を使用（制限あり）/ Android を主戦場に |
+| パケットロス多発 | MTU 不整合 | `ip link set eth0 mtu 1500` でMTU統一 |
+
+---
+
 ## 📡 6. バイナリプロトコル仕様 / Binary Protocol
 
 全通信は48バイト固定ヘッダ + Float32Arrayペイロードのバイナリフレームです。詳細は [`PROTOCOL.md`](PROTOCOL.md) を参照。
