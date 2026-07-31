@@ -1,0 +1,17 @@
+{
+  "run_id": 2,
+  "bf16": {
+    "precision": "bf16",
+    "top1_match_rate": 0.7912,
+    "divergence_rate": 0.2088,
+    "mean_first_divergence": 13.8,
+    "speed_ms_avg": 810.0
+  },
+  "fp16": {
+    "precision": "fp16",
+    "top1_match_rate": 0.9919,
+    "divergence_rate": 0.0081,
+    "mean_first_divergence": 25.5,
+    "speed_ms_avg": 732.0
+  }
+}

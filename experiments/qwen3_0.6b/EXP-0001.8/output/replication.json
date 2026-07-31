@@ -1,0 +1,18 @@
+{
+  "experiment": "EXP-0001.8",
+  "runs": 5,
+  "prompts": 50,
+  "bf16": {
+    "div_mean": 0.2088,
+    "div_std": 0.0,
+    "div_min": 0.2088,
+    "div_max": 0.2088
+  },
+  "fp16": {
+    "div_mean": 0.0081,
+    "div_std": 0.0,
+    "div_min": 0.0081,
+    "div_max": 0.0081
+  },
+  "reproducible": true
+}
