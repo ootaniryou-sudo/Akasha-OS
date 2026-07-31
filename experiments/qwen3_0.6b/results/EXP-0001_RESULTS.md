@@ -91,17 +91,69 @@ This is NOT a bug. It is a **documented characteristic** of ONNX vs PyTorch infe
 - At some point (~5–10 tokens), a different top-1 token is selected
 - After divergence, trajectories completely separate
 
-**This means**: For base models (no instruction tuning), the Golden Reference from EXP-0000 is **runtime-specific**. You cannot expect exact token match between PyTorch and ONNX.
+## ⚠️ Note on Token Match Rate
+
+The 15.6–43.8% token match rate should NOT be interpreted as "the models barely agree."
+
+In **greedy autoregressive generation**, a single token difference at position *k* means every subsequent token is also different. Token exact match is a **poor quality metric** for this setting.
+
+A better analysis would measure **logit-level agreement**:
+- Top-1 / Top-5 / Top-10 overlap
+- KL divergence between output distributions
+- Logit margin (gap between top-1 and top-2)
+
+Example of what logit-level data reveals:
+```
+Position 0: Top-1 same, Top-5 overlap 5/5, KL=0.0002  ← nearly identical
+Position 8: Top-1 different, Top-5 overlap 4/5, KL=0.003  ← drifting apart
+```
+
+This tells us **when and how much** the numerical divergence occurs, which is far more informative than a single match rate. See EXP-0001.5.
 
 ## Implications for ArcAsha
 
-1. **For the Akasha Adapter**: The `QwenAdapter` works correctly — it loads the model, tokenizes identically, and generates text. The output differences are due to ONNX vs PyTorch, not adapter bugs.
+### 1. Input Tokenizer: Fully Portable ✅
 
-2. **For Golden Reference**: EXP-0000's Python golden is valid for comparing against other PyTorch runs. For JS/ONNX, we need a **separate JS Golden Reference**.
+Python `transformers` and JS `@huggingface/transformers` produce byte-identical input tokens. The tokenizer layer is cross-runtime safe.
 
-3. **For distributed inference**: If different nodes run different backends (PyTorch/ONNX/WebGPU), they may produce different tokens even with the same prompt. Shadow execution must account for this.
+### 2. Output: Separate "Identity" from "Correctness"
 
-4. **Recommendation**: Standardize on ONE runtime per experiment. For EXP-0001's purpose (adapter validation), the JS/ONNX behavior is correct — the adapter faithfully proxies the ONNX runtime.
+ArcAsha should distinguish two concepts:
+
+| Concept | Definition | Requirement |
+|---------|-----------|-------------|
+| **Token Identity** | Same model + same backend + same precision + same config → same tokens | Exact Shadow only |
+| **Semantic Correctness** | Different backend → different tokens, but semantically valid answer | Independent Shadow |
+
+### 3. Two Shadow Types for Fault Tolerance
+
+#### Exact Shadow (Divine Safeguard — Token Identity)
+
+```
+Primary (ONNX fp16) → Shadow (ONNX fp16, same config)
+Purpose: Reproduce exact token sequence on primary failure
+Requires: Same backend, same precision, same config
+```
+
+#### Independent Shadow (Divine Safeguard — Semantic Verification)
+
+```
+Primary (ONNX fp16) → Shadow (PyTorch fp32)
+Purpose: Verify output quality via independent implementation
+Structure: Primary → Verifier → accept/reject
+Does NOT require: Same backend or same precision
+```
+
+This is a key architectural distinction for ArcAsha's fault tolerance design.
+
+### 4. For Golden Reference
+
+EXP-0000's Python golden is valid for comparing against other PyTorch runs. For cross-runtime comparison, logit-level metrics (EXP-0001.5) are more appropriate than token exact match.
+
+### 5. Next Experiment: EXP-0001.5
+
+See [`EXP-0001.5/README.md`](../EXP-0001.5/README.md) — Backend Numerical Consistency.
+Measures logit agreement (top-1/5/10 overlap, KL divergence, logit margin) across multiple backends.
 
 ## Success Criteria Check (revised)
 

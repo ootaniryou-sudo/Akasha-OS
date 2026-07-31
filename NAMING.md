@@ -53,6 +53,8 @@
 | 世界観名 | 正式名称 | コード上の主な該当箇所 |
 |---------|---------|---------------------|
 | **Shadow of Wisdom** | Shadow Execution | `src/fault/fault-tolerance.ts` |
+| **Exact Shadow** | Same-backend Shadow (token identity) | `src/fault/fault-tolerance.ts` — same model + backend + precision → exact token reproduction |
+| **Independent Shadow** | Cross-backend Shadow (semantic verification) | `src/fault/fault-tolerance.ts` — different backend → Verifier → accept/reject |
 | **Shadow Ascension** | Shadow Promotion | `FaultToleranceEngine.scan()` |
 | **Divine Safeguard** | Fault Protection | `src/fault/fault-tolerance.ts` |
 | **Second Awakening** | Recovery / Retry | `src/core/inference-loop.ts` (retry) |
