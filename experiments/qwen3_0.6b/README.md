@@ -134,6 +134,33 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 
 ---
 
+## Research Roadmap
+
+```
+✅ EXP-0000〜0001.9   Phase 1: LLM Numerical Characterization
+✅ EXP-0002A          Phase 2: Remote Expert + iPhone Relay
+📐 EXP-0002B          Two Mac Experts (request distribution)
+📐 EXP-0002C          Capability-Aware Routing
+📐 EXP-0002D          iPhone 12 mini Relay (常設)
+📐 EXP-0002E          iPhone 15 Pro Native Expert (Asha Metal Phase 1)
+📐 EXP-0002F          Metal vs Core ML/Core AI (Asha Neural Phase 2)
+📐 EXP-0002G          Metal Precision Matrix
+📐 EXP-0003           2〜4 Expert Collaboration
+📐 EXP-0004           Active Expert Scaling (1→2→4→8→16)
+```
+
+### Apple Backend Phases
+
+| Phase | Name | Target |
+|-------|------|--------|
+| 1 | **Asha Metal** | Qwen3-0.6B on iPhone GPU via Metal/MPS |
+| 2 | **Asha Neural** | Core ML / Core AI — CPU+GPU+Neural Engine |
+| 3 | **Asha Metal Kernel Lab** | Custom Metal shaders for attention, KV cache, quantized matmul |
+
+See [`APPLE_BACKEND_DESIGN.md`](APPLE_BACKEND_DESIGN.md).
+
+---
+
 ## Running
 
 ```bash

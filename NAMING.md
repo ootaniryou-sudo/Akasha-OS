@@ -97,6 +97,14 @@
 | **Adaptive Resonance** | Adaptive Activation Precision | 将来実装 |
 | **Future Sight** | Speculative Decoding | `src/core/inference-loop.ts` (speculative path), 将来実装 |
 
+## Apple Backend
+
+| 世界観名 | 正式名称 | コード上の主な該当箇所 |
+|---------|---------|---------------------|
+| **Asha Metal** | Metal/MPS Inference Backend | 将来実装 — Qwen3-0.6B on iPhone GPU via Metal Performance Shaders |
+| **Asha Neural** | Core ML / Core AI Backend | 将来実装 — Apple Neural Engine + CPU + GPU orchestration |
+| **Asha Metal Kernel Lab** | Custom Metal Shader Research | 将来実装 — Custom attention, KV cache, quantized matmul in Metal |
+
 ## MoE / Specialist
 
 | 世界観名 | 正式名称 | コード上の主な該当箇所 |
@@ -122,7 +130,9 @@ ArcAsha
 ├── Divine Safeguard    (Fault Protection)
 ├── Wisdom Engine       (LLM Runtime)
 ├── Constellation Mind  (Distributed MoE)
-└── Future Sight        (Speculative Decoding)
+├── Future Sight        (Speculative Decoding)
+├── Asha Metal          (Metal/MPS Backend)
+└── Asha Neural         (Core ML/Core AI Backend)
 ```
 
 ## Naming Rule

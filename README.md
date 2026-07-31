@@ -219,8 +219,27 @@ curl http://localhost:9090/metrics
 |---|-----------|--------|
 | 0002B | Two Expert Routing | 2 Mac Nodes, request distribution |
 | 0002C | Capability-Aware Routing | Math→Math Expert, Code→Code Expert |
+| 0002D | iPhone 12 mini Relay | Low-power relay, health monitoring |
+| 0002E | iPhone 15 Pro Native Expert | Asha Metal Phase 1 — iPhone GPU inference |
+| 0002F | Metal vs Core ML/Core AI | Asha Neural Phase 2 — Apple backend comparison |
+| 0002G | Metal Precision Matrix | backend × precision on Apple Silicon |
 | 0003 | Cooperative Inference | 2 Experts → Synthesis |
 | 0004 | Active Expert Scaling | 1→2→4→8→16 Experts |
+
+### Apple Backend Architecture
+
+```
+ArcAsha Runtime
+  ├── CUDA Backend
+  ├── CPU Backend
+  ├── WebGPU Backend
+  └── Apple Backend ← NEW
+        ├── Asha Metal (Metal/MPS)
+        ├── Asha Neural (Core ML/Core AI)
+        └── Asha Metal Kernel Lab (Custom Shaders)
+```
+
+See [`APPLE_BACKEND_DESIGN.md`](akasha-master/experiments/qwen3_0.6b/APPLE_BACKEND_DESIGN.md).
 
 ---
 
