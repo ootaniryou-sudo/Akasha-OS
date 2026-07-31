@@ -6,6 +6,10 @@ import { TorrentDistributor, StreamPipe, ChunkScheduler } from './core/torrent-d
 import { NicMonitor, ClusterHandover, EmergencyDisconnect } from './core/cluster-guardian.js';
 import { ModelCache } from './core/model-cache.js';
 import { AkashaRouter } from './core/router.js';
+import { QwenAdapter } from './llm/adapters/qwen.js';
+import { InMemoryConversationStore, InMemoryPrefixCache } from './memory/store.js';
+import { ContextManager, hashTokenIds } from './memory/context.js';
+import { ExperimentLogger } from './experiments/logger.js';
 import { AkashaBootstrapper } from './bootstrap/akasha-bootstrapper.js';
 import { AkashaEdgeNode } from './client/node-client.js';
 import { ClusterId } from './binary/protocol.js';
@@ -35,6 +39,12 @@ export {
   EmergencyDisconnect,
   ModelCache,
   AkashaRouter,
+  QwenAdapter,
+  InMemoryConversationStore,
+  InMemoryPrefixCache,
+  ContextManager,
+  ExperimentLogger,
+  hashTokenIds,
   AkashaBootstrapper,
   AkashaEdgeNode,
   ClusterId,
@@ -102,6 +112,25 @@ export type {
   RouterConfig,
   RouterEvent,
 } from './core/router.js';
+export type {
+  LLMAdapter,
+  ModelMetadata,
+  CacheMetadata,
+  TokenizeResult,
+  GenerateInput,
+  GenerateOutput,
+  LatencyBreakdown,
+  PrefillResult,
+  DecodeResult,
+} from './llm/adapter.js';
+export type { QwenAdapterConfig } from './llm/adapters/qwen.js';
+export type {
+  Message, Conversation, ConversationRepository,
+  SearchMemory, MemoryIndexer, MemoryRetriever,
+  KVCachePage, PrefixCache,
+} from './memory/store.js';
+export type { ContextPage, ContextConfig } from './memory/context.js';
+export type { ExperimentConfig, ExperimentRun, EnvironmentInfo } from './experiments/logger.js';
 export type {
   AkashaExpertPlugin,
   AkashaLifecyclePlugin,
