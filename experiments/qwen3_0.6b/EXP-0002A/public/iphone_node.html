@@ -1,101 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ArcAsha Node — iPhone 15 Pro</title>
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ArcAsha Node v3</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#000;color:#0f0;font:12px monospace;padding:8px;min-height:100vh}
-  h3{color:#0f0;margin:6px 0 3px;font-size:13px}
-  .card{background:#111;border:1px solid #222;padding:6px;margin:3px 0;border-radius:3px}
-  .val{color:#0ff}.warn{color:#f80}.err{color:#f00}.ok{color:#0f0}
-  .pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:#0f0;animation:pulse 2s infinite;margin-right:6px}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
-  button{background:#0f0;color:#000;border:none;padding:6px 12px;margin:4px;border-radius:3px;font:bold 12px monospace}
-  button:disabled{background:#333;color:#666}
-</style>
-</head>
-<body>
-<div><span class="pulse" id="dot"></span><span id="status">Initializing...</span></div>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#0f0;font:13px monospace;padding:10px;min-height:100vh}
+.card{background:#111;border:1px solid #222;padding:6px;margin:3px 0;border-radius:3px}
+.val{color:#0ff}.warn{color:#f80}.err{color:#f00}.ok{color:#0f0}
+.pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:#0f0;animation:pulse 2s infinite;margin-right:6px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
+</style></head><body>
+<div><span class="pulse" id="dot"></span><span id="status">v3 — Starting...</span></div>
 <div id="info"></div>
-<script type="importmap">
-{ "imports": { "@huggingface/transformers": "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/+esm" } }
-</script>
 <script type="module">
-import { pipeline } from '@huggingface/transformers';
-
-const $=id=>document.getElementById(id), info=$('info'), stat=$('status'), dot=$('dot');
-function card(t,c,col='#0f0'){const d=document.createElement('div');d.className='card';d.innerHTML=`<b>${t}</b><br><span style="color:${col}">${c}</span>`;info.appendChild(d)}
+var $=function(id){return document.getElementById(id)},info=$('info'),stat=$('status'),dot=$('dot');
+function card(t,c,col){col=col||'#0f0';var d=document.createElement('div');d.className='card';d.innerHTML='<b>'+t+'</b><br><span style="color:'+col+'">'+c+'</span>';info.appendChild(d)}
 function up(s,c){stat.textContent=s;stat.style.color=c||'#0f0'}
-
-// ── System ──────────────────────────────────────────────────────
-card('Platform',navigator.platform,'#0ff');
-card('CPU',(navigator.hardwareConcurrency||'?')+' cores','#0ff');
-card('Memory',(navigator.deviceMemory||'?')+' GB','#0ff');
-const WS_URL=location.hash.slice(1)||'ws://192.168.0.17:8081';
+card('Device',navigator.platform+' | '+(navigator.hardwareConcurrency||'?')+' cores','#0ff');
+card('WebGPU','iOS: API not exposed','#f80');
+card('Backend','WASM (q4 quantized)','#0ff');
+var WS_URL=location.hash.slice(1)||'ws://192.168.0.17:8081';
 card('Master',WS_URL,'#0ff');
 
-// ── WebGPU ──────────────────────────────────────────────────────
-let gpuOk=false;
-if('gpu' in navigator){
-  try{const a=await navigator.gpu.requestAdapter();gpuOk=!!a;card('WebGPU',gpuOk?'✅ A17 Pro':'⚠️ no adapter',gpuOk?'#0f0':'#f80')}
-  catch(e){card('WebGPU','❌ blocked','#f80')}
-}else{card('WebGPU','❌ not supported','#f80')}
-if(!gpuOk) card('Hint','Safari → Settings → Advanced → Feature Flags → WebGPU','#f80');
+var ws,generator=null,modelOk=false;
 
-// ── Load Model ──────────────────────────────────────────────────
-up('Loading Qwen3-0.6B...');
-card('Model','Qwen3-0.6B (onnx-community)','#0ff');
-const tLoad=performance.now();
-let generator;
-try{
-  generator=await pipeline('text-generation','onnx-community/Qwen3-0.6B-ONNX',{
-    device:gpuOk?'webgpu':'wasm',dtype:'q4f16'
-  });
-  card('Model Loaded',((performance.now()-tLoad)/1000).toFixed(1)+'s',gpuOk?'#0f0':'#f80');
-  card('Backend',gpuOk?'WebGPU ⚡':'WASM 🐢',gpuOk?'#0f0':'#f80');
-}catch(e){
-  card('Load Error',e.message,'#f00');up('Model load failed','#f00');
-}
+// Step 1: WebSocket
+up('Step 1: WebSocket...');
+ws=new WebSocket(WS_URL);
+ws.onopen=function(){
+  up('Connected ✅');card('WS','Connected','#0f0');
+  // Ping test
+  var count=0,sum=0;
+  function doPing(){
+    if(count>=3){card('📡 Latency',Math.round(sum/3)+'ms','#0f0');return}
+    var t0=performance.now();ws.send(JSON.stringify({type:'ping',t:t0}));
+    ws.addEventListener('message',function h(e){try{if(JSON.parse(e.data).type==='pong'){ws.removeEventListener('message',h);sum+=performance.now()-t0;count++;doPing()}}catch(e){}},{once:true});
+  }
+  doPing();
+};
+ws.onmessage=function(e){try{var m=JSON.parse(e.data);if(m.type==='compute'){
+  card('📥 '+m.request_id,m.prompt.slice(0,40)+'...','#0ff');
+  if(modelOk&&generator){var t0=performance.now();generator(m.prompt,{max_new_tokens:m.max_new_tokens||16,temperature:0}).then(function(o){var txt=o[0]?o[0].generated_text||'':'';ws.send(JSON.stringify({type:'result',request_id:m.request_id,text:txt,timing:{total_ms:Math.round(performance.now()-t0)},metadata:{node_id:'iphone15pro',backend:'wasm',platform:'iOS'}}));card('📤',txt.slice(0,35)+'...','#0f0')}).catch(function(x){card('Err',x.message,'#f00')})}
+  else{ws.send(JSON.stringify({type:'result',request_id:m.request_id,text:'[loading]',timing:{total_ms:0},metadata:{node_id:'iphone15pro',backend:'loading',platform:'iOS'}}));card('📤','ack (model pending)','#f80')}
+}}catch(e){}}
+ws.onerror=function(){up('WS Error','#f00');dot.style.background='#f00'};
+ws.onclose=function(){up('Disconnected','#f80');dot.style.background='#f80'};
 
-// ── WebSocket ───────────────────────────────────────────────────
-let ws;
-function connectWS(){
-  return new Promise((res,rej)=>{
-    ws=new WebSocket(WS_URL);
-    const t=setTimeout(()=>rej(new Error('timeout')),8000);
-    ws.onopen=()=>{clearTimeout(t);up('Connected ✅');card('WebSocket','Connected','#0f0');res()};
-    ws.onmessage=async ev=>{
-      try{const m=JSON.parse(ev.data);
-        if(m.type==='compute'&&generator){
-          card('📥 '+m.request_id,m.prompt.slice(0,40)+'...','#0ff');
-          const t0=performance.now();
-          try{
-            const out=await generator(m.prompt,{max_new_tokens:m.max_new_tokens||16,temperature:0,do_sample:false});
-            const text=out[0].generated_text||'';
-            const tokens=text.split(' ').length; // approximate
-            const ms=performance.now()-t0;
-            ws.send(JSON.stringify({type:'result',request_id:m.request_id,
-              tokens:[],text, timing:{total_ms:Math.round(ms)},
-              metadata:{node_id:'iphone15pro',backend:gpuOk?'webgpu':'wasm',platform:'iOS-Safari',cores:navigator.hardwareConcurrency||4}
-            }));
-            card('📤 '+m.request_id,`${tokens} tokens, ${ms.toFixed(0)}ms`,'#0f0');
-          }catch(e){card('Infer Error',e.message,'#f00')}
-        }
-      }catch(e){}
-    };
-    ws.onerror=()=>{clearTimeout(t);up('WS Error ❌','#f00');dot.style.background='#f00';rej(new Error('ws'))};
-    ws.onclose=()=>{up('Disconnected','#f80');dot.style.background='#f80'};
-  });
-}
-
-// ── Main ─────────────────────────────────────────────────────────
-(async()=>{
-  up('Connecting WS...');
-  try{await connectWS();up('Ready ✅ — waiting for compute');}
-  catch(e){up('WS failed: '+e.message,'#f00')}
-})().catch(e=>up(e.message,'#f00'));
-</script>
-</body>
-</html>
+// Step 2: Model (background)
+up('Step 2: Loading model...');
+card('Model','onnx-community/Qwen3-0.6B-ONNX (WASM q4)','#0ff');
+var t0=performance.now();
+import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/+esm').then(function(t){
+  return t.pipeline('text-generation','onnx-community/Qwen3-0.6B-ONNX',{device:'wasm',dtype:'q4'})
+}).then(function(g){
+  generator=g;modelOk=true;
+  card('Model Ready',Math.round((performance.now()-t0)/1000)+'s (WASM)','#0f0');
+  up('Ready ✅');
+}).catch(function(e){
+  card('Model Error',e.message.slice(0,70),'#f00');
+  up('Model failed — ack only','#f80');
+});
+</script></body></html>
