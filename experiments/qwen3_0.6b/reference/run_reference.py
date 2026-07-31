@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Golden Reference — standalone Qwen inference for output comparison.
+Golden Reference — standalone Qwen3-0.6B inference for output comparison.
 
 Usage:
-  python run_reference.py --model Qwen/Qwen2.5-0.5B-Instruct --prompt-file prompts/basic.jsonl --output-dir golden/
+  python run_reference.py --model Qwen/Qwen3-0.6B --prompt-file prompts/basic.jsonl --output-dir golden/
 
 Output:
   golden/{index}.json  → {prompt, input_tokens, output_tokens, decoded_text, timing_ms}
@@ -14,7 +14,7 @@ from pathlib import Path
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', default='Qwen/Qwen2.5-0.5B-Instruct')
+    parser.add_argument('--model', default='Qwen/Qwen3-0.6B')
     parser.add_argument('--prompt-file', required=True)
     parser.add_argument('--output-dir', required=True)
     parser.add_argument('--device', default='cpu')

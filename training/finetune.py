@@ -4,12 +4,12 @@ Akasha-OS — QLoRA Fine-Tuning Pipeline (Python)
 Base model → domain-specific LoRA adapter via 4-bit quantised training.
 
 Supports:
-  - Qwen2.5-0.5B / Qwen2.5-1.5B
+  - Qwen3-0.6B / Qwen3-1.7B
   - Llama-3.2-1B / Llama-3.2-3B
   - Any HuggingFace causal LM compatible with `peft` + `bitsandbytes`
 
 Usage:
-  python finetune.py --base Qwen/Qwen2.5-0.5B --domain math --epochs 3
+  python finetune.py --base Qwen/Qwen3-0.6B --domain math --epochs 3
 
 Output:
   ./output/{domain}-lora/  — LoRA adapter weights (SafeTensors)

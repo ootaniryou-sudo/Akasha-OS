@@ -8,19 +8,27 @@
  * ## Runtime dependency
  *
  * This adapter uses the Transformers.js library for browser/Node.js inference.
- * Install: `npm install @xenova/transformers` or `npm install @huggingface/transformers`
+ * Install: `npm install @huggingface/transformers`
  *
  * ## Model
  *
- *   Qwen/Qwen2.5-0.5B-Instruct (closest available; Qwen3-0.6B when released)
- *   - 0.5B params, 24 layers, hidden 896, vocab 151936
- *   - GQA: 14 Q heads, 2 KV heads
+ *   Qwen/Qwen3-0.6B
+ *   - 0.6B params, 28 layers, hidden 1024, vocab 151936
+ *   - GQA: 16 Q heads, 8 KV heads, head dim 64
+ *   - Intermediate: 3072 (SwiGLU)
+ *   - Max context: 32,768 tokens
  *   - RMSNorm, RoPE, SwiGLU
  *
  * ## Golden Reference
  *
  *   Compare output with standalone PyTorch Qwen inference.
  *   See: experiments/qwen3_0.6b/reference/run_reference.py
+ *
+ * ## Status: MVP Adapter
+ *
+ *   Current implementation uses Transformers.js pipeline for convenience.
+ *   Future: native prefill/decode with explicit KV cache management for
+ *   Akasha Runtime control (required for true distributed inference).
  */
 
 import type {
@@ -40,17 +48,19 @@ import type {
 export interface QwenAdapterConfig {
   /** HuggingFace model ID. */
   modelId: string;
-  /** Quantization: "fp16", "int8", "int4". */
-  quantization: string;
+  /** Data type: "fp16", "q8", "q4", "fp32". Uses @huggingface/transformers dtype option. */
+  dtype: string;
   /** Device: "webgpu", "cpu", "auto". */
   device: string;
   /** Max context length (overrides model default). */
   maxContextLength?: number;
+  /** Quantization bits (legacy flag, prefer `dtype`). */
+  quantization?: string;
 }
 
 const DEFAULT_CONFIG: QwenAdapterConfig = {
-  modelId: 'Qwen/Qwen2.5-0.5B-Instruct',
-  quantization: 'fp16',
+  modelId: 'Qwen/Qwen3-0.6B',
+  dtype: 'fp16',
   device: 'auto',
 };
 
@@ -72,7 +82,7 @@ export class QwenAdapter implements LLMAdapter {
   async loadModel(): Promise<void> {
     if (this.loaded) return;
 
-    // Dynamic import to avoid requiring transformers at module load time
+    // Dynamic import — @huggingface/transformers is an optional runtime dependency
     let transformers: {
       pipeline: (task: string, model: string, opts?: Record<string, unknown>) => Promise<unknown>;
       AutoTokenizer: { from_pretrained: (model: string) => Promise<unknown> };
@@ -80,11 +90,11 @@ export class QwenAdapter implements LLMAdapter {
     };
 
     try {
-      // @ts-expect-error — @xenova/transformers is an optional runtime dependency
-      transformers = await import('@xenova/transformers');
+      // @ts-expect-error — @huggingface/transformers is an optional runtime dependency
+      transformers = await import('@huggingface/transformers');
     } catch {
       throw new Error(
-        'Transformers.js not installed. Run: npm install @xenova/transformers',
+        'Transformers.js not installed. Run: npm install @huggingface/transformers',
       );
     }
 
@@ -92,12 +102,12 @@ export class QwenAdapter implements LLMAdapter {
     transformers.env.remoteHost = 'https://huggingface.co';
     transformers.env.remotePathTemplate = '{model}/resolve/{revision}/{file}';
 
-    // Load tokenizer and model via pipeline
+    // Load model via pipeline with dtype-based quantisation
     this.pipeline = await transformers.pipeline(
       'text-generation',
       this.config.modelId,
       {
-        quantized: this.config.quantization !== 'fp16',
+        dtype: this.config.dtype,
         device: this.config.device,
       },
     );
@@ -107,7 +117,46 @@ export class QwenAdapter implements LLMAdapter {
       this.config.modelId,
     );
 
+    // Dynamically read model config for metadata
+    this._loadMetadataFromConfig();
+
     this.loaded = true;
+  }
+
+  /**
+   * Read model architecture metadata from the loaded model config.
+   * This avoids hard-coded outdated values.
+   */
+  private _loadMetadataFromConfig(): void {
+    const pipe = this.pipeline as { model?: { config?: Record<string, unknown> } } | null;
+    const cfg = (pipe as any)?.model?.config;
+
+    this._metadata = {
+      name: this.config.modelId,
+      revision: 'main',
+      paramCount: (cfg?.num_parameters as number) ?? 600_000_000,
+      hiddenSize: (cfg?.hidden_size as number) ?? 1024,
+      numLayers: (cfg?.num_hidden_layers as number) ?? 28,
+      numHeads: (cfg?.num_attention_heads as number) ?? 16,
+      numKvHeads: (cfg?.num_key_value_heads as number) ?? 8,
+      headDim: (cfg?.head_dim as number) ?? 64,
+      intermediateSize: (cfg?.intermediate_size as number) ?? 3072,
+      vocabSize: (cfg?.vocab_size as number) ?? 151936,
+      maxContextLength: this.config.maxContextLength
+        ?? (cfg?.max_position_embeddings as number)
+        ?? 32768,
+      quantization: this.config.dtype,
+      bytesPerParam: this._bytesPerParam(this.config.dtype),
+    };
+  }
+
+  private _bytesPerParam(dtype: string): number {
+    switch (dtype) {
+      case 'q4': return 0.5;
+      case 'q8': return 1;
+      case 'fp32': return 4;
+      default: return 2; // fp16
+    }
   }
 
   async tokenize(text: string): Promise<TokenizeResult> {
@@ -126,32 +175,43 @@ export class QwenAdapter implements LLMAdapter {
   async prefill(tokenIds: number[]): Promise<PrefillResult> {
     this._ensureLoaded();
     const pipe = this.pipeline as {
-      _forward?: (inputIds: number[]) => Promise<{ logits: Float32Array; pastKeyValues: unknown }>;
+      _forward?: (inputIds: number[]) => Promise<{
+        logits: Float32Array;
+        pastKeyValues: unknown;
+      }>;
     };
 
     const start = performance.now();
 
-    // Qwen prefill: process all prompt tokens at once
-    // Returns first-token logits + KV cache
     let logits: Float32Array;
     let kvCache: ArrayBuffer | null = null;
 
     if (pipe._forward) {
+      // Native _forward path: process all prompt tokens, get KV cache
       const result = await pipe._forward(tokenIds);
       logits = result.logits;
-      // Serialize pastKeyValues to ArrayBuffer (implementation-specific)
-      kvCache = null; // KV cache managed by Transformers.js internally
+      // NOTE: pastKeyValues is managed internally by Transformers.js.
+      // For true distributed Akasha inference, we must:
+      //   1. Serialize pastKeyValues to ArrayBuffer (shared with Runtime).
+      //   2. Transfer to Akasha Runtime for subsequent decode steps.
+      //   3. Support cross-node KV transfer for handover / shadow execution.
+      // See: MASTER_SPEC.md §16–18 (Memory Architecture / Long Context / KV Reuse)
+      kvCache = null; // MVP: managed by Transformers.js internally
     } else {
-      // Fallback: use the text-generation pipeline for single-token prediction
+      // Fallback: single-token prediction via text-generation pipeline
+      // This path is only for compatibility testing; not suitable for production.
       const text = await this.detokenize(tokenIds);
       const pipeFn = this.pipeline as unknown as (
         text: string,
         opts: Record<string, unknown>,
       ) => Promise<{ generated_text?: string }[]>;
-      const gen = await pipeFn(text, { max_new_tokens: 1, return_full_text: false });
-      // Pseudo-logits: just a placeholder
-      logits = new Float32Array(this.getModelMetadata().vocabSize);
-      // Set the predicted token to 1.0
+      const gen = await pipeFn(text, {
+        max_new_tokens: 1,
+        return_full_text: false,
+      });
+      const vocabSize = this.getModelMetadata().vocabSize;
+      logits = new Float32Array(vocabSize);
+      // Set the predicted token to 1.0 as a pseudo-logit
       const nextText = gen[0]?.generated_text ?? '';
       const nextIds = await this.tokenize(nextText);
       if (nextIds.tokenIds.length > 0) {
@@ -160,7 +220,6 @@ export class QwenAdapter implements LLMAdapter {
     }
 
     const elapsed = performance.now() - start;
-
     return { kvCache, firstTokenLogits: logits, elapsedMs: elapsed };
   }
 
@@ -168,9 +227,12 @@ export class QwenAdapter implements LLMAdapter {
     this._ensureLoaded();
     const start = performance.now();
 
-    // In Transformers.js, KV cache is managed internally.
-    // A full re-implementation would track pastKeyValues explicitly.
-    // For the MVP, we use the pipeline for each decode step.
+    // MVP: Transformers.js manages KV cache internally via the pipeline.
+    // A production Akasha Runtime implementation would:
+    //   1. Receive pastKeyValues from Akasha Runtime.
+    //   2. Execute single-token decode with explicit KV state.
+    //   3. Return next token + updated pastKeyValues.
+    // See: MASTER_SPEC.md §18 (Prefix/KV Reuse) — Echo Prime architecture.
 
     const pipe = this.pipeline as unknown as (
       text: string,
@@ -187,11 +249,11 @@ export class QwenAdapter implements LLMAdapter {
     const tokenIds = await this.tokenize(nextText);
     const nextTokenId = tokenIds.tokenIds[0] ?? 0;
 
-    const logits = new Float32Array(this.getModelMetadata().vocabSize);
+    const vocabSize = this.getModelMetadata().vocabSize;
+    const logits = new Float32Array(vocabSize);
     if (nextTokenId < logits.length) logits[nextTokenId] = 1.0;
 
     const elapsed = performance.now() - start;
-
     return { nextTokenId, logits, kvCache: null, elapsedMs: elapsed };
   }
 
@@ -252,28 +314,30 @@ export class QwenAdapter implements LLMAdapter {
   }
 
   getModelMetadata(): ModelMetadata {
-    if (this._metadata) return this._metadata;
-
-    this._metadata = {
-      name: this.config.modelId,
-      revision: 'main',
-      paramCount: 500_000_000, // 0.5B
-      hiddenSize: 896,
-      numLayers: 24,
-      numHeads: 14,
-      numKvHeads: 2,
-      headDim: 64,
-      intermediateSize: 4864,
-      vocabSize: 151936,
-      maxContextLength: this.config.maxContextLength ?? 32768,
-      quantization: this.config.quantization,
-      bytesPerParam: this.config.quantization === 'int4' ? 0.5 : 2,
-    };
+    if (!this._metadata) {
+      // Return default Qwen3-0.6B metadata if model not loaded yet
+      this._metadata = {
+        name: this.config.modelId,
+        revision: 'main',
+        paramCount: 600_000_000,
+        hiddenSize: 1024,
+        numLayers: 28,
+        numHeads: 16,
+        numKvHeads: 8,
+        headDim: 64,
+        intermediateSize: 3072,
+        vocabSize: 151936,
+        maxContextLength: this.config.maxContextLength ?? 32768,
+        quantization: this.config.dtype,
+        bytesPerParam: this._bytesPerParam(this.config.dtype),
+      };
+    }
     return this._metadata;
   }
 
   getCacheMetadata(): CacheMetadata {
     const m = this.getModelMetadata();
+    // KV cache: 2 (K+V) × num_layers × num_kv_heads × head_dim × bytes_per_elem
     const kvBytesPerToken =
       2 * m.numLayers * m.numKvHeads * m.headDim * m.bytesPerParam;
     return {

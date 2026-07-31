@@ -422,7 +422,7 @@ export class AkashaRouter {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 3. Default model spec（Qwen2.5-0.5B 相当）
+// 3. Default model spec（Qwen3-0.6B）
 // ═════════════════════════════════════════════════════════════════════════════
 
 const DEFAULT_MODEL: ModelSpec = {

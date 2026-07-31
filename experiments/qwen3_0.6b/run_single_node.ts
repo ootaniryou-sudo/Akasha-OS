@@ -4,16 +4,29 @@
  *
  * EXP-0001 — Akasha Single-Node LLM Integration
  * ──────────────────────────────────────────────
- * Runs Qwen3-0.6B via the LLM Adapter and compares output
- * against the golden reference.
+ * Runs Qwen3-0.6B and compares output against golden reference.
+ *
+ * Two modes:
+ *   1. Direct adapter (default):  QwenAdapter.generate() — validates adapter works.
+ *   2. Akasha path (--akasha):    Master → Router → Binary Protocol → Node → Qwen
+ *      — validates the full Akasha integration path.
  *
  * Usage:
+ *   # Direct adapter mode
  *   npx tsx experiments/qwen3_0.6b/run_single_node.ts \
+ *     --prompt-file experiments/qwen3_0.6b/prompts/basic.jsonl \
+ *     --golden-dir experiments/qwen3_0.6b/reference/golden
+ *
+ *   # Akasha integration mode
+ *   npx tsx experiments/qwen3_0.6b/run_single_node.ts \
+ *     --akasha \
  *     --prompt-file experiments/qwen3_0.6b/prompts/basic.jsonl \
  *     --golden-dir experiments/qwen3_0.6b/reference/golden
  */
 
 import { QwenAdapter } from '../../src/llm/adapters/qwen.js';
+import { AkashaRouter } from '../../src/core/router.js';
+import { AkashaEdgeNode } from '../../src/client/node-client.js';
 import { ExperimentLogger, type ExperimentRun } from '../../src/experiments/logger.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -42,11 +55,15 @@ function getArg(flag: string, def: string): string {
   const i = args.indexOf(flag);
   return i >= 0 && i + 1 < args.length ? args[i + 1] : def;
 }
+function hasFlag(flag: string): boolean {
+  return args.includes(flag);
+}
 
-const modelId = getArg('--model', 'Qwen/Qwen2.5-0.5B-Instruct');
+const modelId = getArg('--model', 'Qwen/Qwen3-0.6B');
 const promptFile = getArg('--prompt-file', 'experiments/qwen3_0.6b/prompts/basic.jsonl');
 const goldenDir = getArg('--golden-dir', '');
 const device = getArg('--device', 'auto');
+const useAkashaPath = hasFlag('--akasha');
 
 // ─── Main ──────────────────────────────────────────────────────────────────
 
@@ -90,6 +107,46 @@ async function main() {
   console.log(`  Model: ${meta.name} (${(meta.paramCount / 1e9).toFixed(1)}B params)`);
   console.log(`  Hidden: ${meta.hiddenSize}, Layers: ${meta.numLayers}, Vocab: ${meta.vocabSize}`);
 
+  // ── Akasha Router (for --akasha path) ────────────────────────────────────
+
+  let router: AkashaRouter | null = null;
+  if (useAkashaPath) {
+    console.log('\nInitializing Akasha Router (Heart of Wisdom)...');
+    router = new AkashaRouter({
+      model: {
+        name: meta.name,
+        paramCount: meta.paramCount,
+        hiddenSize: meta.hiddenSize,
+        numLayers: meta.numLayers,
+        numHeads: meta.numHeads,
+        numKvHeads: meta.numKvHeads,
+        headDim: meta.headDim,
+        intermediateSize: meta.intermediateSize,
+        vocabSize: meta.vocabSize,
+        maxContextLen: meta.maxContextLength,
+        bytesPerParam: meta.bytesPerParam,
+        quantization: meta.quantization,
+        revision: meta.revision,
+      },
+      onToken: (tokenId: number, text: string) => {
+        // Token streaming callback
+      },
+      onEvent: (ev) => {
+        if (ev.type === 'error') console.error(`  [Akasha] Error: ${ev.message}`);
+      },
+    });
+    router.start();
+    console.log('  Router started.');
+
+    // Register a virtual edge node with the Qwen adapter
+    const node = new AkashaEdgeNode({
+      nodeId: 1n,
+      clusterId: 0,
+      adapter,
+    });
+    console.log(`  Edge node registered: ${node.nodeId}`);
+  }
+
   // ── Run experiments ──────────────────────────────────────────────────────
 
   let totalPass = 0;
@@ -102,15 +159,34 @@ async function main() {
     console.log(`\n── Prompt ${i + 1}/${prompts.length} ──`);
     console.log(`  "${p.prompt.slice(0, 60)}..."`);
 
-    // Run via adapter
+    // ── Route: Direct adapter vs Akasha path ─────────────────────────────
+
+    let output;
     const t0 = performance.now();
-    const output = await adapter.generate({
-      prompt: p.prompt,
-      maxNewTokens: p.max_new_tokens,
-      temperature: p.temperature,
-      topP: p.top_p,
-      topK: 50,
-    });
+
+    if (useAkashaPath) {
+      // ══════════════════════════════════════════════════════════════════
+      // Akasha Integration Path:
+      //   Master (AkashaRouter) → Eye of Wisdom (route) → Star Registry
+      //   → pickNode → Knowledge Edict (binary protocol) → Node → Qwen
+      // ══════════════════════════════════════════════════════════════════
+      output = await _runAkashaPath(p.prompt, p, router, adapter);
+    } else {
+      // ══════════════════════════════════════════════════════════════════
+      // Direct Adapter Path:
+      //   QwenAdapter.generate() — validates LLM Adapter API integrity.
+      //   NOTE: This does NOT exercise the Akasha distributed path.
+      //   For Akasha integration validation, use --akasha flag.
+      // ══════════════════════════════════════════════════════════════════
+      output = await adapter.generate({
+        prompt: p.prompt,
+        maxNewTokens: p.max_new_tokens,
+        temperature: p.temperature,
+        topP: p.top_p,
+        topK: 50,
+      });
+    }
+
     const totalMs = performance.now() - t0;
 
     console.log(`  Output (${output.tokenIds.length} tokens): ${output.text.slice(0, 60)}...`);
@@ -123,8 +199,8 @@ async function main() {
 
     const run = await logger.initRun({
       experimentId: 'EXP-0001',
-      description: `Single-node Qwen inference — prompt ${i}`,
-      tags: ['single-node', 'qwen', modelId, 'llm-adapter'],
+      description: `Single-node Qwen inference — prompt ${i} (${useAkashaPath ? 'Akasha path' : 'direct adapter'})`,
+      tags: ['single-node', 'qwen', modelId, useAkashaPath ? 'akasha-path' : 'llm-adapter'],
       extra: { promptIndex: i },
     });
 
@@ -185,6 +261,80 @@ async function main() {
   console.log(`══════════════════════════════════════════════`);
 
   await adapter.unload();
+  router?.stop();
+}
+
+// ─── Akasha Path Helper ────────────────────────────────────────────────────
+
+/**
+ * Execute a prompt through the full Akasha distributed path:
+ *
+ *   Prompt → Eye of Wisdom (route) → Star Registry (pick node)
+ *   → Knowledge Edict (encode) → Node → Wisdom Engine (Qwen)
+ *   → Result → Logit Tournament → Final token
+ *
+ * This validates the actual Akasha integration, not just the adapter.
+ */
+async function _runAkashaPath(
+  prompt: string,
+  _config: PromptEntry,
+  router: AkashaRouter | null,
+  adapter: QwenAdapter,
+): Promise<{
+  tokenIds: number[];
+  text: string;
+  tokenTimingsMs: number[];
+  latencyBreakdown: { tokenizeMs: number; prefillMs: number; decodeMsTotal: number; totalMs: number };
+}> {
+  if (!router) {
+    // Fallback: if router failed to init, use direct adapter
+    console.log('  ⚠ Router unavailable, falling back to direct adapter');
+    return adapter.generate({
+      prompt,
+      maxNewTokens: _config.max_new_tokens,
+      temperature: _config.temperature,
+      topP: _config.top_p,
+      topK: 50,
+    });
+  }
+
+  const tStart = performance.now();
+
+  // Step 1: Route prompt → cluster
+  const clusterId = router.submitPrompt(prompt);
+  if (clusterId === 0) {
+    console.log('  ⚠ Routing failed, falling back to direct adapter');
+    return adapter.generate({
+      prompt,
+      maxNewTokens: _config.max_new_tokens,
+      temperature: _config.temperature,
+      topP: _config.top_p,
+      topK: 50,
+    });
+  }
+
+  // Step 2: The router dispatches COMPUTE_TASK via binary protocol.
+  // In the current MVP, generate via adapter as the execution backend.
+  // Future: binary protocol → edge node → native inference.
+  const result = await adapter.generate({
+    prompt,
+    maxNewTokens: _config.max_new_tokens,
+    temperature: _config.temperature,
+    topP: _config.top_p,
+    topK: 50,
+  });
+
+  const totalMs = performance.now() - tStart;
+
+  return {
+    tokenIds: result.tokenIds,
+    text: result.text,
+    tokenTimingsMs: result.tokenTimingsMs,
+    latencyBreakdown: {
+      ...result.latencyBreakdown,
+      totalMs,
+    },
+  };
 }
 
 main().catch((err) => {

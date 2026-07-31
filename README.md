@@ -80,16 +80,23 @@ Phones run in-browser via WebWorker + WebGPU:
 
 ## 🧬 2.5 Parameter Scaling Roadmap
 
-| Phase | Nodes | Target Params | Comparable to |
-|---|---|---|---|
-| Phase 1: Proof | 100 | **10B** | GPT-2 |
-| Phase 2: Small | 1,000 | **100B** | Llama-2-70B |
-| Phase 3: Medium | 5,000 | **671B** | DeepSeek-V3 |
-| Phase 4: Large | 10,000 | **1.8T** | GPT-4 estimated |
-| Phase 5: Frontier | 50,000 | **6.7T** | **Frontier-class** |
-| Phase X: Beyond | 100,000 | **10T+** | **Beyond all existing** |
+**Key distinction**: Aggregate Parameters ≠ Active Parameters ≠ Active Expert Count. See [`MASTER_SPEC.md §3`](MASTER_SPEC.md#3-total-parameters-vs-active-parameters).
 
-> 50,000 used phones ≈ $1.3M. A single H100 GPU (~$33K) cannot run a 6.7T model. Only Akasha-OS can reach this scale.
+| Phase | Expert Nodes | Aggregate Params | Active Experts (typical) | Active Params (typical) | Comparable to |
+|---|---|---|---|---|---|
+| Phase 1: Proof | 100 | **60B** | 4–8 | **2.4–4.8B** | GPT-2 |
+| Phase 2: Small | 1,000 | **600B** | 8–32 | **4.8–19.2B** | Llama-2-70B* |
+| Phase 3: Medium | 5,000 | **3T** | 32–128 | **19.2–76.8B** | DeepSeek-V3* |
+| Phase 4: Large | 10,000 | **6T** | 64–256 | **38.4–153.6B** | GPT-4 estimated* |
+| Phase 5: Frontier | 50,000 | **30T** | 128–512 | **76.8–307.2B** | Frontier-class |
+| Phase X: Beyond | 100,000 | **60T** | 256–1024 | **153.6–614.4B** | Research target |
+
+> \* Comparable in active parameter scale only. Does not imply equivalent capability.
+> Aggregate capacity grows with node count; active compute is dynamically adjusted to task difficulty.
+> See [`MASTER_SPEC.md §20`](MASTER_SPEC.md#20-important-distinction) for the critical distinction.
+> ArcAsha explores whether distributed expert coordination can approach the capabilities
+> of much larger monolithic models at a fraction of the hardware cost. This is a research
+> hypothesis — not a proven claim. See [`MASTER_SPEC.md §29`](MASTER_SPEC.md#29-critical-research-question).
 
 ---
 
