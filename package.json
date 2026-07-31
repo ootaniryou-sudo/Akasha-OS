@@ -20,6 +20,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {

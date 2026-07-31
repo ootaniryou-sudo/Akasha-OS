@@ -1,0 +1,91 @@
+{
+  "runId": "EXP-0001_1785493477276",
+  "experimentId": "EXP-0001",
+  "timestamp": "2026-07-31T10:24:37.276Z",
+  "gitCommit": "unknown",
+  "environment": {
+    "os": "darwin 25.5.0 arm64",
+    "cpu": "Apple M3",
+    "ram": "16 GB",
+    "gpu": "unknown",
+    "nodeVersion": "v24.4.1"
+  },
+  "config": {
+    "experimentId": "EXP-0001",
+    "description": "Single-node Qwen inference — prompt 8 (direct adapter)",
+    "tags": [
+      "single-node",
+      "qwen",
+      "onnx-community/Qwen3-0.6B-ONNX",
+      "llm-adapter"
+    ],
+    "extra": {
+      "promptIndex": 8
+    }
+  },
+  "input": {
+    "prompt": "Pythonでフィボナッチ数列を書いてください。",
+    "promptTokenIds": [
+      30280,
+      16161,
+      129537,
+      125065,
+      95352,
+      126636,
+      8863,
+      31118,
+      29412,
+      133686,
+      71215,
+      1773
+    ],
+    "topK": 50
+  },
+  "output": {
+    "tokenIds": [
+      220,
+      220,
+      139252,
+      5373,
+      129537,
+      125065,
+      95352,
+      126636
+    ],
+    "text": "  ただし、フィボナッチ",
+    "tokenTimingsMs": [
+      43.58676037500118,
+      43.58676037500118,
+      43.58676037500118,
+      43.58676037500118,
+      43.58676037500118,
+      43.58676037500118,
+      43.58676037500118,
+      43.58676037500118
+    ],
+    "latencyBreakdown": {
+      "tokenizeMs": 0.14420899999095127,
+      "prefillMs": 52.30411245000141,
+      "decodeMsTotal": 296.389970550008,
+      "totalMs": 348.8391249999986
+    }
+  },
+  "metrics": {
+    "totalMs": 351.4743750000198,
+    "tokenizeMs": 0.14420899999095127,
+    "prefillMs": 52.30411245000141,
+    "decodeMs": 296.389970550008,
+    "tokensPerSecond": 22.761261044989553,
+    "promptTokens": 12,
+    "outputTokens": 8
+  },
+  "goldenComparison": {
+    "tokenMatchRate": 0.25,
+    "exactMatch": false,
+    "diffs": [
+      "pos=8: akasha=undefined golden=8863",
+      "pos=9: akasha=undefined golden=31118",
+      "length: akasha=8 golden=32"
+    ]
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "runId": "EXP-0001_1785493474177",
+  "experimentId": "EXP-0001",
+  "timestamp": "2026-07-31T10:24:34.177Z",
+  "gitCommit": "unknown",
+  "environment": {
+    "os": "darwin 25.5.0 arm64",
+    "cpu": "Apple M3",
+    "ram": "16 GB",
+    "gpu": "unknown",
+    "nodeVersion": "v24.4.1"
+  },
+  "config": {
+    "experimentId": "EXP-0001",
+    "description": "Single-node Qwen inference — prompt 2 (direct adapter)",
+    "tags": [
+      "single-node",
+      "qwen",
+      "onnx-community/Qwen3-0.6B-ONNX",
+      "llm-adapter"
+    ],
+    "extra": {
+      "promptIndex": 2
+    }
+  },
+  "input": {
+    "prompt": "Explain machine learning briefly.",
+    "promptTokenIds": [
+      840,
+      20772,
+      5662,
+      6832,
+      26753,
+      13
+    ],
+    "topK": 50
+  },
+  "output": {
+    "tokenIds": [
+      3555,
+      374,
+      279,
+      6672,
+      1948,
+      5662,
+      6832,
+      323,
+      5538,
+      6832,
+      30,
+      3555,
+      525,
+      279
+    ],
+    "text": " What is the difference between machine learning and deep learning? What are the",
+    "tokenTimingsMs": [
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155,
+      42.78007442857155
+    ],
+    "latencyBreakdown": {
+      "tokenizeMs": 0.1936670000141021,
+      "prefillMs": 89.83815630000026,
+      "decodeMsTotal": 509.0828857000015,
+      "totalMs": 599.115541999985
+    }
+  },
+  "metrics": {
+    "totalMs": 599.3059590000194,
+    "tokenizeMs": 0.1936670000141021,
+    "prefillMs": 89.83815630000026,
+    "decodeMs": 509.0828857000015,
+    "tokensPerSecond": 23.360355073658706,
+    "promptTokens": 6,
+    "outputTokens": 14
+  },
+  "goldenComparison": {
+    "tokenMatchRate": 0.15625,
+    "exactMatch": false,
+    "diffs": [
+      "pos=5: akasha=5662 golden=58989",
+      "pos=6: akasha=6832 golden=323",
+      "pos=7: akasha=323 golden=6975",
+      "pos=8: akasha=5538 golden=454",
+      "pos=9: akasha=6832 golden=77990",
+      "length: akasha=14 golden=32"
+    ]
+  }
+}

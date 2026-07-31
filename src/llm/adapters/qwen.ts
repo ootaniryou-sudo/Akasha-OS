@@ -59,7 +59,7 @@ export interface QwenAdapterConfig {
 }
 
 const DEFAULT_CONFIG: QwenAdapterConfig = {
-  modelId: 'Qwen/Qwen3-0.6B',
+  modelId: 'onnx-community/Qwen3-0.6B-ONNX',
   dtype: 'fp16',
   device: 'auto',
 };
@@ -98,9 +98,7 @@ export class QwenAdapter implements LLMAdapter {
       );
     }
 
-    // Configure CDN
-    transformers.env.remoteHost = 'https://huggingface.co';
-    transformers.env.remotePathTemplate = '{model}/resolve/{revision}/{file}';
+    // Use default Transformers.js env (auto-detects HF hub)
 
     // Load model via pipeline with dtype-based quantisation
     this.pipeline = await transformers.pipeline(

@@ -1,0 +1,9 @@
+metric,value
+totalMs,500.4485830000194
+tokenizeMs,0.11512500001117587
+prefillMs,75.02465010000014
+decodeMs,425.1396839000008
+tokensPerSecond,23.978487316447325
+promptTokens,8
+outputTokens,12
+tokenMatchRate,0.375

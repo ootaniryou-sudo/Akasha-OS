@@ -1,0 +1,93 @@
+{
+  "runId": "EXP-0001_1785493475827",
+  "experimentId": "EXP-0001",
+  "timestamp": "2026-07-31T10:24:35.827Z",
+  "gitCommit": "unknown",
+  "environment": {
+    "os": "darwin 25.5.0 arm64",
+    "cpu": "Apple M3",
+    "ram": "16 GB",
+    "gpu": "unknown",
+    "nodeVersion": "v24.4.1"
+  },
+  "config": {
+    "experimentId": "EXP-0001",
+    "description": "Single-node Qwen inference — prompt 5 (direct adapter)",
+    "tags": [
+      "single-node",
+      "qwen",
+      "onnx-community/Qwen3-0.6B-ONNX",
+      "llm-adapter"
+    ],
+    "extra": {
+      "promptIndex": 5
+    }
+  },
+  "input": {
+    "prompt": "Explain what a neural network is.",
+    "promptTokenIds": [
+      840,
+      20772,
+      1128,
+      264,
+      29728,
+      3922,
+      374,
+      13
+    ],
+    "topK": 50
+  },
+  "output": {
+    "tokenIds": [
+      3555,
+      374,
+      279,
+      6672,
+      1948,
+      264,
+      29728,
+      3922,
+      323,
+      264,
+      61722,
+      94710
+    ],
+    "text": " What is the difference between a neural network and a perceptron",
+    "tokenTimingsMs": [
+      41.68036116666675,
+      41.68036116666675,
+      41.68036116666675,
+      41.68036116666675,
+      41.68036116666675,
+      41.68036116666675,
+      41.68036116666675,
+      41.68036116666675,
+      41.68036116666675,
+      41.68036116666675,
+      41.68036116666675,
+      41.68036116666675
+    ],
+    "latencyBreakdown": {
+      "tokenizeMs": 0.11512500001117587,
+      "prefillMs": 75.02465010000014,
+      "decodeMsTotal": 425.1396839000008,
+      "totalMs": 500.2803750000021
+    }
+  },
+  "metrics": {
+    "totalMs": 500.4485830000194,
+    "tokenizeMs": 0.11512500001117587,
+    "prefillMs": 75.02465010000014,
+    "decodeMs": 425.1396839000008,
+    "tokensPerSecond": 23.978487316447325,
+    "promptTokens": 8,
+    "outputTokens": 12
+  },
+  "goldenComparison": {
+    "tokenMatchRate": 0.375,
+    "exactMatch": false,
+    "diffs": [
+      "length: akasha=12 golden=32"
+    ]
+  }
+}
