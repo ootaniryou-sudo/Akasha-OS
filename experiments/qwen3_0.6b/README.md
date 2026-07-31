@@ -161,6 +161,75 @@ See [`APPLE_BACKEND_DESIGN.md`](APPLE_BACKEND_DESIGN.md).
 
 ---
 
+## iOS Metal Backend (`--backend metal_ios`)
+
+> **Bypasses Safari WebGPU limitations on iPhone by using native Metal Performance Shaders.**
+
+### Why
+
+iOS Safari does not expose the WebGPU API (`navigator.gpu`), even on iPhone 15 Pro with experimental flags enabled. WASM-based model loading from CDN is impractical on mobile (~200MB download).
+
+The Metal backend provides a hardware-direct alternative for iOS devices.
+
+### Architecture
+
+```
+ArcAsha Runtime
+  └── ExecutionBackend (src/llm/backend.ts)
+        └── MetalBackend (src/native/ios/metal/)
+              ├── Metal Device (MTLDevice)
+              ├── MPS Graph (MPSGraph)
+              └── MPS Kernels (matmul, attention, etc.)
+```
+
+### Backend Selection
+
+| Flag | Behavior |
+|------|----------|
+| `--backend auto` | Auto-detect: Metal on iOS, WebGPU on desktop |
+| `--backend metal_ios` | Force Metal (iOS only) |
+| `--backend webgpu` | Force WebGPU |
+| `--backend cpu_fallback` | Force CPU |
+
+### Fallback Policy
+
+```
+1. Try metal_ios (if on iOS + native bridge wired)
+2. Fallback to webgpu (if available)
+3. Fallback to cpu_fallback
+```
+
+### Constraints
+
+- **Native bridge required**: Metal backend needs an iOS native app with `WKScriptMessageHandler` or `JSContext` to bridge TypeScript ↔ Metal.
+- **Scaffold mode**: Without native bridge, `MetalBackend.capabilities().available` returns `false`, and the system falls back gracefully.
+- **Not for non-iOS**: Metal backend throws `DeviceUnavailable` on desktop platforms.
+
+### Example
+
+```bash
+# With Metal backend (on iOS)
+npx tsx experiments/qwen3_0.6b/run_single_node.ts \
+  --backend metal_ios \
+  --model onnx-community/Qwen3-0.6B-ONNX
+
+# Auto-detect (prefers Metal on iOS)
+npx tsx experiments/qwen3_0.6b/run_single_node.ts \
+  --backend auto
+```
+
+### Status: SCAFFOLD
+
+- ✅ Backend interface fully defined (`ExecutionBackend`)
+- ✅ Platform detection + availability check
+- ✅ Native bridge contract documented
+- ✅ All error codes handled (8 types)
+- ✅ Fallback policy implemented
+- ⚠️ Native Metal bridge not yet wired (requires iOS app integration)
+- ⚠️ Metal kernels not yet compiled (TODO: MPSGraph / MPS kernel implementation)
+
+---
+
 ## Running
 
 ```bash

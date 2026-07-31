@@ -42,6 +42,7 @@ import type {
   PrefillResult,
   DecodeResult,
 } from '../adapter.js';
+import { BackendType } from '../backend.js';
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -52,6 +53,8 @@ export interface QwenAdapterConfig {
   dtype: string;
   /** Device: "webgpu", "cpu", "auto". */
   device: string;
+  /** Execution backend type. */
+  backend?: BackendType;
   /** Max context length (overrides model default). */
   maxContextLength?: number;
   /** Quantization bits (legacy flag, prefer `dtype`). */
@@ -62,6 +65,7 @@ const DEFAULT_CONFIG: QwenAdapterConfig = {
   modelId: 'onnx-community/Qwen3-0.6B-ONNX',
   dtype: 'fp16',
   device: 'auto',
+  backend: BackendType.Auto,
 };
 
 // ─── Adapter ────────────────────────────────────────────────────────────────

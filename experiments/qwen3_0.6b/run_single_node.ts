@@ -25,6 +25,7 @@
  */
 
 import { QwenAdapter } from '../../src/llm/adapters/qwen.js';
+import { BackendType } from '../../src/llm/backend.js';
 import { AkashaRouter } from '../../src/core/router.js';
 import { AkashaEdgeNode } from '../../src/client/node-client.js';
 import { ExperimentLogger, type ExperimentRun } from '../../src/experiments/logger.js';
@@ -64,6 +65,10 @@ const promptFile = getArg('--prompt-file', 'experiments/qwen3_0.6b/prompts/basic
 const goldenDir = getArg('--golden-dir', '');
 const device = getArg('--device', 'auto');
 const useAkashaPath = hasFlag('--akasha');
+const backendStr = getArg('--backend', 'auto');
+const backend: BackendType = (Object.values(BackendType) as string[]).includes(backendStr)
+  ? backendStr as BackendType
+  : BackendType.Auto;
 
 // ─── Main ──────────────────────────────────────────────────────────────────
 
@@ -91,8 +96,8 @@ async function main() {
 
   // ── Load adapter ─────────────────────────────────────────────────────────
 
-  console.log(`\nLoading Qwen adapter: ${modelId} ...`);
-  const adapter = new QwenAdapter({ modelId, device });
+  console.log(`\nLoading Qwen adapter: ${modelId} (backend: ${backend}) ...`);
+  const adapter = new QwenAdapter({ modelId, device, backend });
 
   try {
     await adapter.loadModel();
@@ -199,8 +204,8 @@ async function main() {
 
     const run = await logger.initRun({
       experimentId: 'EXP-0001',
-      description: `Single-node Qwen inference — prompt ${i} (${useAkashaPath ? 'Akasha path' : 'direct adapter'})`,
-      tags: ['single-node', 'qwen', modelId, useAkashaPath ? 'akasha-path' : 'llm-adapter'],
+      description: `Single-node Qwen inference — prompt ${i} (${useAkashaPath ? 'Akasha path' : 'direct adapter'}, backend=${backend})`,
+      tags: ['single-node', 'qwen', modelId, useAkashaPath ? 'akasha-path' : 'llm-adapter', `backend-${backend}`],
       extra: { promptIndex: i },
     });
 
