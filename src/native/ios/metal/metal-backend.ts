@@ -6,28 +6,56 @@
  * Hardware-direct Metal inference for iPhone/iPad.
  * Bypasses Safari WebGPU limitations by using native Metal Performance Shaders.
  *
- * ## Architecture
+ * ╔══════════════════════════════════════════════════════════════╗
+ * ║  STATUS: STUB — COMPILE-SAFE, NOT FUNCTIONAL                ║
+ * ║                                                            ║
+ * ║  This file defines the TypeScript-side interface and       ║
+ * ║  native bridge contract. It does NOT invoke Metal.         ║
+ * ║                                                            ║
+ * ║  Real Metal inference requires:                            ║
+ * ║    1. iOS native target (Xcode project / Swift package)    ║
+ * ║    2. Metal shaders (.metal files) for Qwen3-0.6B ops     ║
+ * ║    3. Native bridge (WKScriptMessageHandler or JSContext)  ║
+ * ║    4. MPSGraph or raw MPS kernel integration               ║
+ * ║    5. On-device testing (iPhone 12 mini / 15 Pro)          ║
+ * ║                                                            ║
+ * ║  Until all 5 items are complete, MetalBackend.isAvailable()║
+ * ║  returns FALSE, and the system falls back to WebGPU/CPU.   ║
+ * ║                                                            ║
+ * ║  DO NOT claim metal_ios inference is implemented.          ║
+ * ╚══════════════════════════════════════════════════════════════╝
  *
- *   ArcAsha Runtime
- *     └── ExecutionBackend (backend.ts)
- *           └── MetalBackend (this file)
- *                 ├── Metal Device (MTLDevice)
- *                 ├── MPS Graph (MPSGraph)
- *                 └── MPS Kernels (matrix multiply, attention, etc.)
+ * ## Target Architecture (when implemented)
  *
- * ## Integration Path
+ *   ArcAsha TypeScript
+ *         │
+ *   ExecutionBackend (backend.ts)
+ *         │
+ *   MetalBackend (this file)  ← TypeScript STUB
+ *         │
+ *   Native Bridge (Swift / Obj-C++)
+ *         │
+ *   Metal / MPS / Core ML
+ *         │
+ *   iPhone GPU / Neural Engine
  *
- *   iOS App (Swift/ObjC)
- *     └── Native Bridge (WKScriptMessageHandler / JSContext)
- *           └── MetalBackend (TypeScript → Native call)
+ * ## What This STUB Provides
  *
- * ## Status: SCAFFOLD — compile-safe, not yet wired to native Metal.
+ *   - Type-safe ExecutionBackend implementation (compiles clean)
+ *   - Platform detection (isIOS check)
+ *   - Native bridge contract (MetalNativeBridge interface)
+ *   - All 8 error codes for robust error handling
+ *   - Graceful fallback: always reports unavailable → system falls back
+ *   - Experiment metadata fields (backend, platform, precision)
  *
- *   - Interface fully defined with ExecutionBackend.
- *   - Platform detection + availability check implemented.
- *   - Native bridge contract documented with TODO boundaries.
- *   - All error codes handled.
- *   - Fallback policy: Metal → WebGPU → CPU.
+ * ## What This STUB Does NOT Provide
+ *
+ *   - Actual Metal GPU invocation
+ *   - MPSGraph / MPS kernel execution
+ *   - Model weight loading on iOS
+ *   - Token generation on iPhone
+ *   - Any measurable inference performance
+ */
  */
 
 import {
@@ -188,10 +216,17 @@ export class MetalBackend implements ExecutionBackend {
   async execute(request: BackendExecuteRequest): Promise<BackendExecuteResult> {
     this._ensureInitialized();
 
+    // ═══════════════════════════════════════════════════════════════
+    // STUB GUARD: Real Metal execution requires native bridge.
+    // Until wired, always throw with clear message.
+    // ═══════════════════════════════════════════════════════════════
     if (!this.nativeBridge) {
       throw new BackendError(
         BackendErrorCode.NotSupported,
-        'Metal native bridge not wired. Use WebGPU or CPU backend.',
+        'Metal inference STUB — native bridge not wired. ' +
+        'Requires: iOS native target (Xcode/Swift), Metal shaders (.metal), ' +
+        'MPSGraph/MPS kernel integration, and on-device testing. ' +
+        'Use --backend webgpu or --backend cpu_fallback instead.',
         BackendType.MetalIOS,
       );
     }
@@ -265,21 +300,23 @@ export class MetalBackend implements ExecutionBackend {
 
   capabilities(): BackendCapabilities {
     const { isIOS } = detectPlatform();
+    // STUB: always unavailable until native bridge is wired.
+    // This is intentional — prevents false claims of Metal support.
     const available = isIOS && this.initialized && this.nativeBridge !== null;
 
     return {
       type: BackendType.MetalIOS,
-      name: 'Asha Metal (iOS Metal/MPS)',
+      name: 'Asha Metal (iOS Metal/MPS) — STUB',
       supportedPrecisions: ['fp16', 'fp32'],
       maxContextLength: this.config.maxContextLength,
       available,
       unavailableReason: available
         ? undefined
         : !isIOS
-          ? 'Metal backend requires iOS. Current platform is not iOS.'
-          : 'Metal native bridge not wired. Native iOS app integration required.',
+          ? 'Metal backend requires iOS device. Current platform: ' + detectPlatform().platform
+          : 'STUB: Native bridge not wired. Requires: iOS target + Metal shaders + MPS integration + on-device test.',
       platform: isIOS ? 'ios-arm64' : detectPlatform().platform,
-      device: this.deviceInfo?.gpuFamily ?? 'Apple GPU (Metal)',
+      device: this.deviceInfo?.gpuFamily ?? 'Apple GPU (Metal) — STUB (no device info)',
     };
   }
 

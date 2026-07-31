@@ -218,15 +218,48 @@ npx tsx experiments/qwen3_0.6b/run_single_node.ts \
   --backend auto
 ```
 
-### Status: SCAFFOLD
+### Status: STUB — NOT FUNCTIONAL
 
-- ✅ Backend interface fully defined (`ExecutionBackend`)
-- ✅ Platform detection + availability check
-- ✅ Native bridge contract documented
-- ✅ All error codes handled (8 types)
-- ✅ Fallback policy implemented
-- ⚠️ Native Metal bridge not yet wired (requires iOS app integration)
-- ⚠️ Metal kernels not yet compiled (TODO: MPSGraph / MPS kernel implementation)
+> **⚠️ `metal_ios` backend scaffold ≠ Metal inference completed.**
+
+| Item | Status |
+|------|:---:|
+| TypeScript interface (`ExecutionBackend`) | ✅ Defined |
+| Platform detection (`detectPlatform()`) | ✅ |
+| Native bridge contract (`MetalNativeBridge`) | ✅ Documented |
+| Error handling (8 codes) | ✅ |
+| Fallback policy | ✅ |
+| `tsc --noEmit` | ✅ Clean |
+| **iOS native target (Xcode/Swift)** | ❌ NOT STARTED |
+| **Metal shaders (.metal files)** | ❌ NOT STARTED |
+| **MPSGraph / MPS kernel integration** | ❌ NOT STARTED |
+| **On-device iPhone inference test** | ❌ NOT STARTED |
+
+**Until all 5 native items are complete, `MetalBackend.isAvailable()` returns `false` and the system falls back to WebGPU/CPU.**
+
+### Native Target Requirements
+
+Real Metal inference requires:
+
+```
+ArcAsha TypeScript (this repo)
+      ↓
+Backend Interface (src/llm/backend.ts)
+      ↓
+MetalBackend STUB (src/native/ios/metal/)  ← TypeScript side DONE
+      ↓
+═══════════════════════════════════════
+      ↓
+iOS Native Target (NEEDS CREATION)
+      ↓
+  ├── *.xcodeproj / *.xcworkspace
+  ├── Swift / Obj-C++ bridge
+  ├── Metal shaders (.metal)
+  ├── MPSGraph integration
+  └── Core ML / Core AI (optional)
+      ↓
+iPhone GPU / Neural Engine
+```
 
 ---
 
