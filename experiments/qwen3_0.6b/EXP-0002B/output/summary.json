@@ -1,35 +1,51 @@
 {
   "experiment": "EXP-0002B",
   "description": "Two-Expert Round-Robin Routing (Master Hub + iPhone 12 mini Relay)",
-  "timestamp": "2026-08-01T01:37:02.925Z",
+  "timestamp": "2026-08-01T04:25:23.758Z",
   "config": {
-    "master_port": 8095,
-    "prompts_file": "experiments/qwen3_0.6b/golden/prompts.jsonl",
+    "master_port": 8080,
+    "prompts_file": "/Users/ooyaryou/my-AI-fac/Akasha-OS/akasha-master/experiments/qwen3_0.6b/golden/prompts.jsonl",
     "num_prompts": 10,
     "policy": "round-robin",
     "min_nodes": 2
   },
   "completed": 10,
-  "total_ms": 13216,
-  "throughput_req_per_sec": 0.76,
+  "total_ms": 6960,
+  "throughput_req_per_sec": 1.44,
   "nodes": [
     {
       "node_id": "node-a",
       "role": "expert",
       "platform": "darwin-arm64",
       "device": "PC",
-      "latency_ms": 3.4,
-      "requests": 10,
-      "total_tokens": 320,
-      "avg_roundtrip_ms": 1321.5,
+      "latency_ms": 9,
+      "requests": 5,
+      "total_tokens": 160,
+      "avg_roundtrip_ms": 1358.1,
+      "errors": 0
+    },
+    {
+      "node_id": "iphone12mini",
+      "role": "lightweight-relay",
+      "platform": "iOS",
+      "device": "iPhone13,0",
+      "latency_ms": 0,
+      "requests": 5,
+      "total_tokens": 0,
+      "avg_roundtrip_ms": 33.7,
       "errors": 0
     }
   ],
   "routing_distribution": [
     {
       "node_id": "node-a",
-      "requests": 10,
-      "pct": 100
+      "requests": 5,
+      "pct": 50
+    },
+    {
+      "node_id": "iphone12mini",
+      "requests": 5,
+      "pct": 50
     }
   ],
   "requests": [
@@ -38,90 +54,90 @@
       "node_id": "node-a",
       "prompt": "What is 2 + 2?",
       "tokens": 32,
-      "roundtrip_ms": 1565.4,
-      "node_total_ms": 1562.7,
-      "network_ms": 2.7
+      "roundtrip_ms": 1611.3,
+      "node_total_ms": 1606.2,
+      "network_ms": 5.1
     },
     {
       "request_id": "req-0001",
-      "node_id": "node-a",
+      "node_id": "iphone12mini",
       "prompt": "What is the capital of Japan?",
-      "tokens": 32,
-      "roundtrip_ms": 1301.6,
-      "node_total_ms": 1300.9,
-      "network_ms": 0.7
+      "tokens": 0,
+      "roundtrip_ms": 7.7,
+      "node_total_ms": 0,
+      "network_ms": 7.7
     },
     {
       "request_id": "req-0002",
       "node_id": "node-a",
       "prompt": "Explain machine learning briefly.",
       "tokens": 32,
-      "roundtrip_ms": 1294.7,
-      "node_total_ms": 1294.1,
-      "network_ms": 0.6
+      "roundtrip_ms": 1328,
+      "node_total_ms": 1326.1,
+      "network_ms": 1.9
     },
     {
       "request_id": "req-0003",
-      "node_id": "node-a",
+      "node_id": "iphone12mini",
       "prompt": "Write a Python factorial function.",
-      "tokens": 32,
-      "roundtrip_ms": 1281.2,
-      "node_total_ms": 1280.5,
-      "network_ms": 0.7
+      "tokens": 0,
+      "roundtrip_ms": 104.8,
+      "node_total_ms": 0,
+      "network_ms": 104.8
     },
     {
       "request_id": "req-0004",
       "node_id": "node-a",
       "prompt": "What is 12 * 7?",
       "tokens": 32,
-      "roundtrip_ms": 1293.8,
-      "node_total_ms": 1293.1,
-      "network_ms": 0.7
+      "roundtrip_ms": 1287.5,
+      "node_total_ms": 1286.1,
+      "network_ms": 1.4
     },
     {
       "request_id": "req-0005",
-      "node_id": "node-a",
+      "node_id": "iphone12mini",
       "prompt": "Explain what a neural network is.",
-      "tokens": 32,
-      "roundtrip_ms": 1272.5,
-      "node_total_ms": 1271.9,
-      "network_ms": 0.6
+      "tokens": 0,
+      "roundtrip_ms": 8.3,
+      "node_total_ms": 0,
+      "network_ms": 8.3
     },
     {
       "request_id": "req-0006",
       "node_id": "node-a",
       "prompt": "日本の首都はどこですか？",
       "tokens": 32,
-      "roundtrip_ms": 1287,
-      "node_total_ms": 1286.4,
-      "network_ms": 0.6
+      "roundtrip_ms": 1276,
+      "node_total_ms": 1275.1,
+      "network_ms": 0.9
     },
     {
       "request_id": "req-0007",
-      "node_id": "node-a",
+      "node_id": "iphone12mini",
       "prompt": "機械学習とは何ですか？",
-      "tokens": 32,
-      "roundtrip_ms": 1284.6,
-      "node_total_ms": 1284,
-      "network_ms": 0.6
+      "tokens": 0,
+      "roundtrip_ms": 38.9,
+      "node_total_ms": 0,
+      "network_ms": 38.9
     },
     {
       "request_id": "req-0008",
       "node_id": "node-a",
       "prompt": "Pythonでフィボナッチ数列を書いてください。",
       "tokens": 32,
-      "roundtrip_ms": 1314.3,
-      "node_total_ms": 1313.5,
-      "network_ms": 0.8
+      "roundtrip_ms": 1287.6,
+      "node_total_ms": 1286.7,
+      "network_ms": 0.9
     },
     {
       "request_id": "req-0009",
-      "node_id": "node-a",
+      "node_id": "iphone12mini",
       "prompt": "1から100までの合計はいくつですか？",
-      "tokens": 32,
-      "roundtrip_ms": 1319.7,
-      "node_total_ms": 1319,
-      "network_ms": 0.7
+      "tokens": 0,
+      "roundtrip_ms": 8.6,
+      "node_total_ms": 0,
+      "network_ms": 8.6
     }
   ]
 }

@@ -1,7 +1,8 @@
 # Qwen3-0.6B — ArcAsha Experiment Log
 
 > **Phase 1 complete (EXP-0000〜0001.9): LLM Numerical Characterization**  
-> **Phase 2 in progress (EXP-0002A): Distributed Inference**
+> **Phase 2 complete (EXP-0002A/B): Distributed Runtime**  
+> **Phase 3 next (EXP-0002C): Intelligent Routing**
 
 **[`CONCLUSIONS.md`](CONCLUSIONS.md)** — Formal conclusions + design principles.  
 **[`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md)** — Multi-dimensional profile spec.
@@ -21,7 +22,7 @@
 | 0001.9 | Platform Matrix | ✅ | macOS MPS completed. CUDA/CPU pending |
 | 0002A | Remote Expert | ✅ | Mac Node: Qwen3-0.6B via WebSocket. Network overhead 2ms |
 | 0002A-iPhone | iPhone 12 mini Relay | ✅ | **iPhone joins ArcAsha network.** WiFi 20ms. Lightweight relay |
-| 0002B | Two-Expert Routing | ✅ | **Round-Robin between PC + iPhone 12 mini.** Master Hub pattern |
+| 0002B | Heterogeneous Two-Node Routing | ✅ | **Round-Robin PC+iPhone 15 Pro. 50/50 distribution. 1.9× throughput.** |
 
 ---
 
@@ -137,18 +138,38 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 
 ## Research Roadmap
 
+### Phase 1 ✅ — Numerical Characterization
 ```
-✅ EXP-0000〜0001.9   Phase 1: LLM Numerical Characterization
-✅ EXP-0002A          Phase 2: Remote Expert + iPhone Relay
-✅ EXP-0002B          Two Mac + iPhone Experts (round-robin routing)
-📐 EXP-0002C          Capability-Aware Routing
-📐 EXP-0002D          iPhone 12 mini Relay (常設)
-📐 EXP-0002E          iPhone 15 Pro Native Expert (Asha Metal Phase 1)
-📐 EXP-0002F          Metal vs Core ML/Core AI (Asha Neural Phase 2)
-📐 EXP-0002G          Metal Precision Matrix
-📐 EXP-0003           2〜4 Expert Collaboration
+✅ EXP-0000〜0001.9   LLM Numerical Stability Profile
+```
+→ [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md)
+
+### Phase 2 ✅ — Distributed Runtime
+```
+✅ EXP-0002A          Remote Single Expert (WebSocket + iPhone Relay)
+✅ EXP-0002B          Heterogeneous Two-Node Round-Robin (PC Expert + iPhone Relay)
+```
+→ Scheduler, Node Registry, Master Hub が成立
+
+### Phase 3 ⏳ — Intelligent Routing
+```
+📐 EXP-0002C          Capability-Aware Routing (coding expert vs math expert)
+📐 EXP-0002D          Shadow Routing (Main + Shadow + Verification)
+📐 EXP-0002E          Cost-Aware Routing
+📐 EXP-0002F          Latency-Aware Routing
+📐 EXP-0002G          Stability-Aware Routing（EXP-0001成果を活用）
+```
+
+### Phase 4 ⏳ — Multi-Expert Collaboration
+```
+📐 EXP-0003           Planner + Coder + Math + Critic + Synthesizer
+```
+
+### Phase 5 ⏳ — Dynamic Active Compute
+```
 📐 EXP-0004           Active Expert Scaling (1→2→4→8→16)
 ```
+> **「多数の小型モデルを必要に応じて起動し、全体としてフロンティア級の能力を目指す」**
 
 ### Apple Backend Phases
 
