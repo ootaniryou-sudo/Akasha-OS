@@ -2,6 +2,7 @@
 
 > **Router 自身が Composite Score の重みを経験から学習する。**
 > **「手作業で調整するルーター」から「自ら方針を更新するルーター」へ。**
+> **重み学習は Pareto 集合の中だけで行う（0002E.2 の成果を活用）。**
 
 ## Objective
 
@@ -15,6 +16,26 @@ Online Learning (タスク結果から)
     ↓
 0.27 → 0.31 → 0.29 → ... (適応)
 ```
+
+## Pareto-Integrated Learning (0002E.2 の成果)
+
+```
+以前:   Weight → Composite → Decision（全ノード対象）
+現在:   Pareto Filter → Weight → Composite → Decision（フロンティア内のみ）
+
+  All Nodes
+      ↓
+  Pareto Frontier (0002E.2)
+      ↓
+  Adaptive Weight (0002E.3)
+      ↓
+  Composite Score
+      ↓
+  Best Node
+```
+
+> **重み学習は Pareto 集合の中だけで行う。**
+> 完全支配ノード（node-h 型）を学習対象から除外できる。
 
 ## Learning Signal
 

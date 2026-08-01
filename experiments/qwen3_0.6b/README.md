@@ -222,21 +222,42 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 
 ### Phase 3 ⏳ — Intelligent Routing
 
-> **Phase 3 スレッド: Capability → Adaptive → Confidence → Composite → Decision Boundary**
-> **EXP-0001 + EXP-0002 が一本に。分析可能な Router へ。**
-> **「観測 → モデル化 → 実装 → 検証」のサイクルが成立。**
+> **Phase 3 スレッド: Capability → Adaptive → Confidence → Composite → (Decision Boundary | Pareto) → Adaptive Weights**
+> **分散 LLM ルーティングの設計原理を段階的に明らかにする研究。**
+
+```
+Capability
+    ↓
+Adaptive
+    ↓
+Confidence
+    ↓
+Composite Score
+    ↓
+  ├──────────────┐
+  ▼              ▼
+Decision Boundary   Pareto Frontier
+(Weight Space)  (Objective Space)
+  │              │
+  └──────┬───────┘
+         ▼
+  Adaptive Weights (Pareto 内で学習)
+```
 
 ```
 ✅ EXP-0002C          Static Capability
 ✅ EXP-0002D          Adaptive (SMA) → Evaluator limit 発見
 ✅ EXP-0002D.1        Confidence-Aware (two-stage: μ × confidence)
 ✅ EXP-0002E          Composite Score (C + Conf + L + S)
-✅ EXP-0002E.1        Decision Boundary（重み感度解析）
-                       Stability = secondary objective (lexicographic-like)
+✅ EXP-0002E.1        Decision Boundary（重み空間の相転移）
                        critical w_stab = 0.0 / 0.185 / 0.351
+✅ EXP-0002E.2        Pareto Frontier（目的空間の支配構造）
+                       Scalarization cannot preserve full dominance structure.
+                       node-h dominated but rank#7 in weighted-sum.
+                       → Two-stage: Pareto Filter → Composite Score
 
-📐 EXP-0002E.2        Pareto Routing（複数軸フロンティア）
-📐 EXP-0002E.3        Adaptive Weight Learning（Router が重みを学習）
+📐 EXP-0002E.3        Adaptive Weight Learning
+                       重み学習は Pareto 集合の中だけで行う
 ```
 
 ### Phase 4 ⏳ — Collaborative Intelligence

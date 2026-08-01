@@ -1,64 +1,68 @@
 # EXP-0002E.2 — Pareto Routing
 
-> **Capability / Latency / Stability の複数軸で Pareto Frontier を描き、**
-> **Router はフロンティア上のみから選択する。**
+> **「Composite Score だけでは表現できない構造」が実験で確認された。**
+> **Scalarization cannot preserve the full dominance structure of a multi-objective routing problem.**
 
-## Objective
+## Proven
 
-0002E では重み付き和（スカラー化）で 1 つのスコアに圧縮した。
-0002E.2 では、複数軸のまま Pareto Dominance で比較する。
-
-```
-Capability ↑
-    │        ●C
-    │     ●B
-    │  ●A
-    │
-    └──────────→ Stability →
-
-  A: 低能力・低安定性 → 劣る（Pareto 支配される）
-  B: 中能力・中安定性 → フロンティア上
-  C: 高能力・高安定性 → フロンティア上（最良）
-```
-
-## Pareto Dominance
+> **完全に支配されるノード（node-h）が、Weighted-Sum では候補として残る。**
 
 ```
-Node X dominates Node Y if:
-  X ≥ Y on all axes AND X > Y on at least one axis
+node-h (cap=0.80, lat=70ms, stab=0.80)
+  └── 完全支配 by node-b (cap=0.85, lat=40ms, stab=0.99)
+      全軸で劣る → Pareto では存在価値なし
 
-Router は非支配集合（Pareto Frontier）のみを考慮。
+しかし Weighted-Sum では Rank #7 に残る
+→ スカラー化はトレードオフを隠す
 ```
 
-## 3-Axis Example
-
-| Node | Capability | Latency (ms) | Stability |
-|------|:---:|:---:|:---:|
-| A | 0.70 | 10 | 0.90 |
-| B | 0.85 | 40 | 0.99 |
-| C | 0.95 | 80 | 0.99 |
-| D | 0.90 | 60 | 0.79 |
+## Two-Stage Routing Design
 
 ```
-Frontier: B, C (A は B に支配、D は低安定性で除外)
-
-Router は B vs C のトレードオフだけを扱う
-  B: 中能力・低遅延
-  C: 高能力・高遅延
+All Nodes
+    ↓
+Step 1: Pareto Filter   ← 完全支配ノードを除外
+    ↓
+Pareto Frontier
+    ↓
+Step 2: Composite Score ← フロンティア内で運用ポリシー適用
+    ↓
+Best Node
 ```
 
-## Success Criteria
+> Pareto で候補集合を絞り、Composite Score で最終選択。
+> node-h のような完全劣化ノードは最初から除外される。
 
-- [ ] Multi-axis Pareto dominance computed
-- [ ] Dominated nodes excluded from routing
-- [ ] Frontier visualization (2D/3D scatter)
-- [ ] Trade-off between frontier nodes quantified
-- [ ] Comparison with weighted-sum (0002E) results
+## Weight Space vs Objective Space
 
-## Running
+```
+0002E.1: Decision Boundary  ← 重み空間（1次元解析）
+             └── weight を変えて相転移を測定
 
-```bash
-npx tsx experiments/qwen3_0.6b/EXP-0002E.2/run_pareto.ts
+0002E.2: Pareto Frontier    ← 目的空間（多次元解析）
+             └── 複数軸のまま支配関係を測定
+
+補完関係: 異なる視点から同じルーティング問題を見ている
 ```
 
-Depends on: EXP-0002E (Composite Score), EXP-0002E.1 (Sensitivity)
+## Results (2026-08-01)
+
+```
+Frontier: 7/9 nodes
+  Dominated: node-h (by node-b), node-i (by node-a)
+
+Weighted-Sum ranking:
+  node-c #1 (frontier ✅)
+  ...
+  node-h #7 (NOT on frontier ❌ ← スカラー化の問題点)
+  ...
+```
+
+Full results: [`output/summary.json`](output/summary.json)
+
+## Research Significance
+
+> **Composite Score は Pareto 集合を完全には表現できない。**
+> ルーティングは二段階（Pareto Filter → Composite Score）にすべき。
+
+Depends on: EXP-0002E (Composite Score), EXP-0002E.1 (Decision Boundary)
