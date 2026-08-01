@@ -175,11 +175,15 @@ curl http://localhost:9090/metrics
 
 ---
 
-## 🔬 7.5 Phase 1 Experiments — Complete (Jul 2026)
+## 🔬 7.5 Research Progress — Phase 1〜4 (Jul 2026)
 
-> Full details: [`experiments/qwen3_0.6b/README.md`](akasha-master/experiments/qwen3_0.6b/README.md) | Conclusions: [`CONCLUSIONS.md`](akasha-master/experiments/qwen3_0.6b/CONCLUSIONS.md)
+> Full details: [`experiments/qwen3_0.6b/README.md`](experiments/qwen3_0.6b/README.md) | Conclusions: [`CONCLUSIONS.md`](experiments/qwen3_0.6b/CONCLUSIONS.md) | Framework: [`RESEARCH_FRAMEWORK.md`](experiments/qwen3_0.6b/RESEARCH_FRAMEWORK.md)
 
-### Phase 1: LLM Numerical Characterization (EXP-0000〜0001.9)
+ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
+**「分散LLMにおけるルーティング戦略を、多目的最適化・数値安定性・信頼度推定を用いて体系化する」**
+ことを研究テーマとし、`理論 → 実装 → 実データ検証 → システム状態変化` のサイクルで段階的に検証している。
+
+### Phase 1 ✅ — LLM Numerical Characterization (EXP-0000〜0001.9)
 
 | # | Experiment | Result | Key Finding |
 |---|-----------|:---:|------|
@@ -198,12 +202,13 @@ curl http://localhost:9090/metrics
 
 **Design principle:** *Numerical Stability is a property of an execution configuration (platform + backend + precision), not of a model alone.*
 
-### Phase 2: Distributed Inference (EXP-0002A)
+### Phase 2 ✅ — Distributed Runtime (EXP-0002A/B)
 
 | # | Experiment | Result | Key Finding |
 |---|-----------|:---:|------|
 | 0002A | Remote Single Expert | ✅ | Mac Node: Qwen3-0.6B via WebSocket. Network overhead 2ms (localhost) |
 | 0002A-iPhone | iPhone 12 mini Relay | ✅ | **iPhone joins ArcAsha network.** WiFi 20ms RTT. Lightweight relay — no model needed |
+| 0002B | Heterogeneous Two-Node Routing | ✅ | **Round-Robin PC Expert + iPhone 15 Pro Relay. 50/50. 1.9× throughput** (13.2s→6.96s) |
 
 **Node Type Architecture:**
 
@@ -213,18 +218,35 @@ curl http://localhost:9090/metrics
 | **Relay Node** | ❌ | iPhone 12 mini | Connectivity, forwarding, health |
 | **Hybrid Node** | ✅ | Future iPhone 15 Pro | Expert + Relay combined |
 
-### Phase 2-4: Planned
+### Phase 3 ✅ — Intelligent Routing (EXP-0002C〜0002E.2)
 
-| # | Experiment | Target |
-|---|-----------|--------|
-| 0002B | Two Expert Routing | 2 Mac Nodes, request distribution |
-| 0002C | Capability-Aware Routing | Math→Math Expert, Code→Code Expert |
-| 0002D | iPhone 12 mini Relay | Low-power relay, health monitoring |
-| 0002E | iPhone 15 Pro Native Expert | Asha Metal Phase 1 — iPhone GPU inference |
-| 0002F | Metal vs Core ML/Core AI | Asha Neural Phase 2 — Apple backend comparison |
-| 0002G | Metal Precision Matrix | backend × precision on Apple Silicon |
-| 0003 | Cooperative Inference | 2 Experts → Synthesis |
-| 0004 | Active Expert Scaling | 1→2→4→8→16 Experts |
+| # | Experiment | Result | Key Finding |
+|---|-----------|:---:|------|
+| 0002C | Capability-Aware Routing | ✅ | **Routing Accuracy 100%.** coding→coding expert, math→math expert |
+| 0002D | Adaptive Capability (SMA) | ✅ | **Score Inversion 発見** → Evaluation fidelity bounds routing quality |
+| 0002D.1 | Confidence-Aware Routing | ✅ | Two-stage eval (μ × confidence). **Inversion 7回避・0発生** |
+| 0002E | Composite Score Routing | ✅ | Under equal capability, **Stability dominates** (FP16 10/10, BF16 0/10) |
+| 0002E.1 | Decision Boundary | ✅ | **critical w_stab = 0.0 / 0.185 / 0.351.** Stability = secondary objective |
+| 0002E.2 | Pareto Routing | ✅ | Scalarization hides dominance. **Two-stage: Pareto Filter → Composite Score** |
+
+### Phase 4 ⏳ — Adaptive State Routing (EXP-0002F〜)
+
+| # | Experiment | Result | Key Finding |
+|---|-----------|:---:|------|
+| 0002F | Shadow Expert Feedback | ✅ | 閉ループ実装. Same-runtime 100% agree (EXP-0001.8 と整合) |
+| 0002F.1 | **Cross-Backend Shadow** | ✅ | **ONNX vs PyTorch MPS: 88.6% overlap, FLAG=1 (45%). Stability 0.992→0.743** — Belief Update 実証 |
+| 0002F.2 | Stability Recovery | 📐 | Drift + Recovery 両検出（環境変化への追従） |
+| 0002E.3 | Adaptive Weight Learning | 📐 | 実データで重みを自己最適化 |
+
+> **Phase 4 の中核**: 「良いノードを選ぶ」→「**観測結果に応じてノードの信頼性を更新し、次の意思決定へ反映する**」
+> `Static Knowledge → Observed Evidence → Belief Update → Routing`
+
+### Roadmap
+
+```
+Phase 5 📐 Emergent Routing（ルールなし，Policy 生成）
+Phase 6 📐 Multi-Agent Collaboration / Distributed Frontier AI
+```
 
 ### Apple Backend Architecture
 
@@ -239,7 +261,7 @@ ArcAsha Runtime
         └── Asha Metal Kernel Lab (Custom Shaders)
 ```
 
-See [`APPLE_BACKEND_DESIGN.md`](akasha-master/experiments/qwen3_0.6b/APPLE_BACKEND_DESIGN.md).
+See [`APPLE_BACKEND_DESIGN.md`](experiments/qwen3_0.6b/APPLE_BACKEND_DESIGN.md).
 
 ---
 
