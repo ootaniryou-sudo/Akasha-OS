@@ -1,0 +1,242 @@
+{
+  "experiment": "EXP-0002D.1",
+  "description": "Bayesian Evaluator + Confidence-Aware Routing (Phase 2)",
+  "timestamp": "2026-08-01T06:19:35.673Z",
+  "config": {
+    "min_samples": 8,
+    "estimator": "bayesian_mean"
+  },
+  "completed": 10,
+  "total_ms": 15457,
+  "inversions_avoided": 7,
+  "nodes": [
+    {
+      "node_id": "node-coding",
+      "initial_capabilities": {
+        "coding": 0.95,
+        "math": 0.65,
+        "general": 0.8
+      },
+      "estimates": {
+        "coding": {
+          "initial": 0.95,
+          "n": 4,
+          "mu": 0.25,
+          "confidence": 0.393,
+          "effective": 0.098
+        },
+        "math": {
+          "initial": 0.65,
+          "n": 0,
+          "mu": 0.65,
+          "confidence": 0,
+          "effective": 0
+        },
+        "general": {
+          "initial": 0.8,
+          "n": 2,
+          "mu": 0.9935,
+          "confidence": 0.221,
+          "effective": 0.22
+        }
+      },
+      "requests": 6,
+      "total_tokens": 192
+    },
+    {
+      "node_id": "node-math",
+      "initial_capabilities": {
+        "coding": 0.62,
+        "math": 0.94,
+        "general": 0.8
+      },
+      "estimates": {
+        "coding": {
+          "initial": 0.62,
+          "n": 0,
+          "mu": 0.62,
+          "confidence": 0,
+          "effective": 0
+        },
+        "math": {
+          "initial": 0.94,
+          "n": 4,
+          "mu": 0.33749999999999997,
+          "confidence": 0.393,
+          "effective": 0.133
+        },
+        "general": {
+          "initial": 0.8,
+          "n": 0,
+          "mu": 0.8,
+          "confidence": 0,
+          "effective": 0
+        }
+      },
+      "requests": 4,
+      "total_tokens": 128
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "req-0000",
+      "node_id": "node-coding",
+      "prompt": "Write a Python function to calculate factorial.",
+      "expected_capability": "coding",
+      "routing_method": "tie-break (RR, effective=0)",
+      "evaluator": "structure+refusal",
+      "task_score": 0.4,
+      "mu_before": 0.95,
+      "mu_after": 0.4,
+      "n": 1,
+      "confidence": 0.118,
+      "effective": 0.047,
+      "tokens": 32,
+      "roundtrip_ms": 2247.7
+    },
+    {
+      "request_id": "req-0001",
+      "node_id": "node-math",
+      "prompt": "What is the integral of x^2 from 0 to 1?",
+      "expected_capability": "math",
+      "routing_method": "tie-break (RR, effective=0)",
+      "evaluator": "signal+numeric+refusal",
+      "task_score": 0.7,
+      "mu_before": 0.94,
+      "mu_after": 0.7,
+      "n": 1,
+      "confidence": 0.118,
+      "effective": 0.083,
+      "tokens": 32,
+      "roundtrip_ms": 2054.4
+    },
+    {
+      "request_id": "req-0002",
+      "node_id": "node-coding",
+      "prompt": "Implement a binary search algorithm in Python.",
+      "expected_capability": "coding",
+      "routing_method": "confidence-aware (μ=0.4, conf=0.118, eff=0.047)",
+      "evaluator": "structure+refusal",
+      "task_score": 0.2,
+      "mu_before": 0.4,
+      "mu_after": 0.30000000000000004,
+      "n": 2,
+      "confidence": 0.221,
+      "effective": 0.066,
+      "tokens": 32,
+      "roundtrip_ms": 1674.4
+    },
+    {
+      "request_id": "req-0003",
+      "node_id": "node-math",
+      "prompt": "Solve the equation: 3x + 7 = 22",
+      "expected_capability": "math",
+      "routing_method": "confidence-aware (μ=0.7, conf=0.118, eff=0.083)",
+      "evaluator": "signal+numeric+refusal",
+      "task_score": 0.2,
+      "mu_before": 0.7,
+      "mu_after": 0.44999999999999996,
+      "n": 2,
+      "confidence": 0.221,
+      "effective": 0.099,
+      "tokens": 32,
+      "roundtrip_ms": 1376.6
+    },
+    {
+      "request_id": "req-0004",
+      "node_id": "node-coding",
+      "prompt": "Write a function that reverses a linked list.",
+      "expected_capability": "coding",
+      "routing_method": "confidence-aware (μ=0.30000000000000004, conf=0.221, eff=0.066)",
+      "evaluator": "structure+refusal",
+      "task_score": 0.2,
+      "mu_before": 0.30000000000000004,
+      "mu_after": 0.26666666666666666,
+      "n": 3,
+      "confidence": 0.313,
+      "effective": 0.083,
+      "tokens": 32,
+      "roundtrip_ms": 1322.4
+    },
+    {
+      "request_id": "req-0005",
+      "node_id": "node-math",
+      "prompt": "What is 15% of 340?",
+      "expected_capability": "math",
+      "routing_method": "confidence-aware (μ=0.44999999999999996, conf=0.221, eff=0.099)",
+      "evaluator": "signal+numeric+refusal",
+      "task_score": 0.2,
+      "mu_before": 0.44999999999999996,
+      "mu_after": 0.36666666666666664,
+      "n": 3,
+      "confidence": 0.313,
+      "effective": 0.115,
+      "tokens": 32,
+      "roundtrip_ms": 1335.3
+    },
+    {
+      "request_id": "req-0006",
+      "node_id": "node-coding",
+      "prompt": "Create a Python class for a bank account with depo",
+      "expected_capability": "coding",
+      "routing_method": "confidence-aware (μ=0.26666666666666666, conf=0.313, eff=0.083)",
+      "evaluator": "structure+refusal",
+      "task_score": 0.2,
+      "mu_before": 0.26666666666666666,
+      "mu_after": 0.25,
+      "n": 4,
+      "confidence": 0.393,
+      "effective": 0.098,
+      "tokens": 32,
+      "roundtrip_ms": 1355.7
+    },
+    {
+      "request_id": "req-0007",
+      "node_id": "node-math",
+      "prompt": "Calculate the derivative of f(x) = x^3 + 2x^2 - 5x",
+      "expected_capability": "math",
+      "routing_method": "confidence-aware (μ=0.36666666666666664, conf=0.313, eff=0.115)",
+      "evaluator": "signal+numeric+refusal",
+      "task_score": 0.25,
+      "mu_before": 0.36666666666666664,
+      "mu_after": 0.33749999999999997,
+      "n": 4,
+      "confidence": 0.393,
+      "effective": 0.133,
+      "tokens": 32,
+      "roundtrip_ms": 1411.9
+    },
+    {
+      "request_id": "req-0008",
+      "node_id": "node-coding",
+      "prompt": "Explain machine learning briefly.",
+      "expected_capability": "general",
+      "routing_method": "tie-break (RR, effective=0)",
+      "evaluator": "length+refusal",
+      "task_score": 1,
+      "mu_before": 0.8,
+      "mu_after": 1,
+      "n": 1,
+      "confidence": 0.118,
+      "effective": 0.118,
+      "tokens": 32,
+      "roundtrip_ms": 1295.5
+    },
+    {
+      "request_id": "req-0009",
+      "node_id": "node-coding",
+      "prompt": "What is the capital of Japan?",
+      "expected_capability": "general",
+      "routing_method": "confidence-aware (μ=1, conf=0.118, eff=0.118)",
+      "evaluator": "length+refusal",
+      "task_score": 0.987,
+      "mu_before": 1,
+      "mu_after": 0.9935,
+      "n": 2,
+      "confidence": 0.221,
+      "effective": 0.22,
+      "tokens": 32,
+      "roundtrip_ms": 1373.7
+    }
+  ]
+}
