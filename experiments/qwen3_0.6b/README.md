@@ -1,10 +1,44 @@
 # Qwen3-0.6B — ArcAsha Experiment Log
 
 > **Phase 1 ✅ Numerical Characterization | Phase 2 ✅ Distributed Runtime**  
-> **Phase 3 ⏳ Intelligent Routing — Capability-Aware → Adaptive → Evaluator → Composite → Shadow**
+> **Phase 3 ⏳ Intelligent Routing | Phase 4 ⏳ Collaborative Intelligence**
 
 **[`CONCLUSIONS.md`](CONCLUSIONS.md)** — Formal conclusions + design principles.  
 **[`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md)** — Multi-dimensional profile spec.
+
+---
+
+## ArcAsha 3-Layer Routing Model
+
+```
+Node State
+──────────────
+Capability
+Confidence
+Latency
+Stability
+Cost
+Queue
+──────────────
+        │
+        ▼
+Policy
+──────────────
+Composite Score
+Decision Boundary
+Weight Learning
+──────────────
+        │
+        ▼
+Routing Decision
+──────────────
+Select
+Fallback
+Shadow
+──────────────
+```
+
+> **各層が独立して拡張可能。Node State が増えても、Policy が変わっても、Decision は共通。**
 
 ---
 
@@ -190,6 +224,7 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 
 > **Phase 3 スレッド: Capability → Adaptive → Confidence → Composite → Decision Boundary**
 > **EXP-0001 + EXP-0002 が一本に。分析可能な Router へ。**
+> **「観測 → モデル化 → 実装 → 検証」のサイクルが成立。**
 
 ```
 ✅ EXP-0002C          Static Capability
@@ -197,19 +232,27 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 ✅ EXP-0002D.1        Confidence-Aware (two-stage: μ × confidence)
 ✅ EXP-0002E          Composite Score (C + Conf + L + S)
 ✅ EXP-0002E.1        Decision Boundary（重み感度解析）
-                       Stability acts as secondary objective;
-                       influence decreases as capability gap grows.
-                       (lexicographic-like behavior)
+                       Stability = secondary objective (lexicographic-like)
+                       critical w_stab = 0.0 / 0.185 / 0.351
 
 📐 EXP-0002E.2        Pareto Routing（複数軸フロンティア）
 📐 EXP-0002E.3        Adaptive Weight Learning（Router が重みを学習）
-📐 EXP-0002F          Shadow Expert Verification
-                       Dynamic stability → Composite Score update
 ```
 
-### Phase 4 ⏳ — Multi-Expert Collaboration
+### Phase 4 ⏳ — Collaborative Intelligence
+
+> **Routing から Collaboration へ。Expert 間の相互作用を扱う。**
+
 ```
-📐 EXP-0003           Planner + Coder + Math + Critic + Synthesizer
+📐 EXP-0002F          Shadow Expert Feedback
+                       Main → Answer + Shadow → Verification
+                       → Evaluator → Capability/Stability → Composite Score
+                       Shadow = Composite Score を改善する教師
+
+📐 EXP-0003A          Planner（タスク分解）
+📐 EXP-0003B          Critic（品質評価）
+📐 EXP-0003C          Verifier（検証）
+📐 EXP-0003D          Consensus（多数決/合意形成）
 ```
 
 ### Phase 5 ⏳ — Dynamic Active Compute
