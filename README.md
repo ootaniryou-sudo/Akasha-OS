@@ -245,6 +245,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | 0003C.1 | **Contextual Bandit (UCB)** | ✅ | **UCB/Thompson は Q-Learning より2-3倍サンプル効率 (16.5 vs 7.2/5.4).** Contextual Bandit 定式化の妥当性を確認. ただし60サンプルでは Fixed 未達 → **Empirical Observation 1 (学習深度) 支持** |
 | 0003C.2 | **Sample Complexity Estimation** | ✅ | **実測 (N=5..120) を冪則フィット: Fixed b=0.75 < 全学習器 (0.83〜0.94) → N* = NEVER (漸近).** **フィードバック非対称性を発見: Fixed=フル情報 (オラクル) vs バンディット=部分情報.** Shadow (0002F) との統合が次の動機 |
 | 0003C.3 | **Shadow Feedback (Full-Info Bandit)** | ✅ | **2×2 (UCB/Thompson × partial/shadow). シャドウ実行で UCB のギャップ 94% 解消 (9.58→0.60), Thompson の N* が 6.2倍高速化 (5,456→885). フィードバック構造が支配要因と実証. 残差は重みキャリブレーション → LinUCB** |
+| 0003C.4 | **LinUCB (7-dim features)** | ✅ | **LinUCB-Shadow が初めて Fixed を上回る (gap=-0.40, regret 6.5%減).** **学習重みがメカニズムを実証: gemma latency=0.379 (>Fixed 0.20). 0003C.3 の残差 0.60 を解消し逆転.** Observation→State→Belief→Confidence→Features→Routing パイプライン完成 |
 
 > **Phase 4 完了**: `Static Knowledge → Observed Evidence → Belief Update → Weight Learning → Routing` の閉ループが実データで成立。
 > 「観測に応じて Belief を更新し、その Belief に応じて Weight を学習することで、未知の環境変化にも適応できる」— 中心仮説に実験的裏付け。
@@ -253,7 +254,8 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 ### Roadmap
 
 ```
-EXP-0003C.4 ▶ LinUCB（feature=[capability, latency, cost, stability, memory, temperature]）← 次
+EXP-0003D ▶ Statistical Validation（multi-seed, 95%CI, Wilcoxon/対応t検定, Cohen's d）← 次
+EXP-0003E 📐 Benchmark Expansion（Phi-3 Mini, Qwen2.5-1.5B, TinyLlama 追加）
 EXP-0003C.5 📐 Neural Bandit
 Phase 5 📐 Emergent Controller（Task → Planner → Policy 生成）
 Phase 6 📐 Distributed Frontier AI

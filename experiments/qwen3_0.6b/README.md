@@ -138,6 +138,7 @@ Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, 
 | 0003C.1 | Contextual Bandit (UCB) | ✅ | **UCB/Thompson は Q-Learning より2-3倍サンプル効率 (16.5 vs 7.2/5.4). 60で Fixed 未達 — Empirical Observation 1 (学習深度) 支持.** |
 | 0003C.2 | Sample Complexity Estimation | ✅ | **実測(N=5..120)を冪則フィット: Fixed b=0.75 が最小 → 学習器は構造的に追い越せない. フィードバック非対称性 (Fixed=フル情報 vs 学習器=部分) を発見.** |
 | 0003C.3 | Shadow Feedback (Full-Info Bandit) | ✅ | **2×2 (UCB/Thompson × partial/shadow). シャドウ実行で UCB のギャップ 94% 解消 (9.58→0.60). Thompson の N* が 6.2倍高速化 (5,456→885). フィードバック構造が支配要因と実証.** |
+| 0003C.4 | LinUCB (7-dim features) | ✅ | **LinUCB-Shadow が初めて Fixed を超える (gap=-0.40, regret 6.5%減). 学習重みがメカニズムを実証: gemma latency=0.379 (キャリブレーション). 0003C.3 の残差 0.60 を解消しさらに逆転.** |
 | 0002F | Shadow Expert Feedback | ✅ | **Closed loop. Same-runtime 100% agree.** |
 | 0002F.1 | Cross-Backend Shadow | ✅ | **ONNX vs PyTorch: 88.6% overlap, FLAG=1, Stability 0.992→0.743.** |
 | 0002F.2 | Recovery Dynamics & Hysteresis | ✅ | **Asym α. Drift 1.0→0.91, Recovery 0.91→0.961. Hysteresis 0.567 (conservative). Half-life 7reqs. FalseRecovery 0%.** |
@@ -405,9 +406,13 @@ Routing (Composite Score)
 ✅ EXP-0003C.3       Shadow Feedback (Full-Information Bandit)
                        2×2: UCB/Thompson × partial/shadow
                        シャドウで UCB gap 94% 解消 (9.58→0.60), Thompson N* 6.2x高速 (5,456→885)
-▶ EXP-0003C.4       LinUCB ← 次
-                       feature=[capability, latency, cost, stability, memory, temperature]
-                       → Regression で重みキャリブレーションの残差を学習
+✅ EXP-0003C.4       LinUCB (7-dim features: cap/lat/cost/stab/conf/mem/temp)
+                       LinUCB-Shadow が Fixed を初めて上回る (gap=-0.40)
+                       学習重み: gemma latency=0.379 → キャリブレーションの実証
+▶ EXP-0003D         Statistical Validation ← 次
+                       multi-seed, 95%CI, Wilcoxon/対応t検定, Cohen's d
+▶ EXP-0003E         Benchmark Expansion
+                       Phi-3 Mini, Qwen2.5-1.5B, TinyLlama 追加
 ▶ EXP-0003C.5       Neural Bandit
 ▶ Phase 5           Emergent Controller
                        Task → Planner → Policy 生成
@@ -417,8 +422,9 @@ Routing (Composite Score)
 > 学習対象が weights → state → policy と深くなるにつれ、Fixed を超えるのに必要な観測数が
 > 一貫して増加した (weight ~0 / state ~6 / policy >60)。
 > **0003C.2 の深化**: ギャップは「サンプル数」だけでなく「フィードバック構造」が原因。
-> **0003C.3 の決着**: シャドウ実行 (フル情報化) でギャップ 94% 解消 →
-> 「観測情報の量」が主役。残差は重みキャリブレーション (→ LinUCB)。
+> **0003C.3 の決着**: シャドウ実行 (フル情報化) でギャップ 94% 解消。
+> **0003C.4 の完成**: LinUCB (Observation→State→Belief→Confidence→Features→Routing) が
+> Fixed を上回る (-0.40)。「観測情報の量 + 特徴量学習」で手設計の事前知識を超えられる。
 
 ### Phase 5 ⏳ — Frontier Scale
 ```
