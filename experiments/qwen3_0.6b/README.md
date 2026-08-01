@@ -130,7 +130,8 @@ Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, 
 | 0002E | Composite Score Routing | ✅ | **Stability dominates. FP16 10/10, BF16 0/10. 0001+0002 connected.** |
 | 0002E.1 | Weight Sensitivity | ✅ | **Decision Boundary. critical w_stab=0.0/0.185/0.351.** |
 | 0002E.2 | Pareto Routing | ✅ | **Scalarization hides dominance. Two-stage routing.** |
-| 0002F | Shadow Expert Feedback | ✅ | **Closed loop. 100% agree (same runtime). Cross-backend next.** |
+| 0002F | Shadow Expert Feedback | ✅ | **Closed loop. Same-runtime 100% agree.** |
+| 0002F.1 | Cross-Backend Shadow | ✅ | **ONNX vs PyTorch: 88.6% overlap, FLAG=1, Stability 0.992→0.743.** |
 
 ---
 
@@ -234,6 +235,33 @@ Node Type:  Lightweight Relay (no model)
 - macOS MPS: completed ✅
 - NVIDIA CUDA, x86 CPU, WebGPU/ONNX: pending
 
+### EXP-0002A/B: Distributed Runtime (Phase 2)
+- Remote expert via WebSocket: network overhead ~1ms (localhost)
+- iPhone 12 mini relay: WiFi 20ms RTT
+- **Heterogeneous Two-Node Round-Robin**: PC Expert + iPhone 15 Pro relay
+  - 50/50 distribution, 1.9× pipeline throughput (13.2s → 6.96s)
+- Master Hub pattern (nodes connect to Master) — iPhone Safari can participate
+
+### EXP-0002C/D/D.1: Capability → Adaptive → Confidence (Phase 3)
+- **Capability Routing**: Routing Accuracy 100% (coding→coding, math→math)
+- **Adaptive (SMA)**: Score Inversion discovered → Evaluator fidelity bounds routing quality
+- **Confidence-Aware (Bayesian)**: Two-stage evaluation (μ × confidence)
+  - Score Inversion: 1 → 0 (7 prevented). n=0 nodes never incorrectly chosen
+
+### EXP-0002E/E.1/E.2: Composite + Decision Boundary + Pareto (Phase 3)
+- **Composite Score**: Under equal capability, Stability dominates (FP16 10/10)
+- **Decision Boundary (Weight Space)**: critical w_stab = 0.0 / 0.185 / 0.351
+  - Stability = secondary objective (lexicographic-like)
+- **Pareto Frontier (Objective Space)**: Scalarization hides dominance structure
+  - node-h dominated but rank#7 in weighted-sum
+  - **Two-stage routing**: Pareto Filter → Composite Score
+
+### EXP-0002F/F.1: Shadow Expert (Phase 4)
+- **Same-runtime**: 100% agreement (confirms EXP-0001.8 σ=0.0000)
+- **Cross-backend (ONNX vs PyTorch MPS)**: 88.6% avg overlap, FLAG=1 (45%)
+  - Dynamic Stability: 0.992 → 0.743 (Δ=-0.249) — closed loop works
+  - Shadow → Mismatch → FLAG → Stability down → Composite Score
+
 ---
 
 ## Three-Line Conclusion
@@ -313,10 +341,10 @@ Decision Boundary   Pareto Frontier
 
 ```
 ✅ EXP-0002F          Shadow Expert Feedback
-                       Main→Answer + Shadow→Verification→Evaluator
-                       閉ループ: 実行→Shadow→Evaluator→Capability/Stability
-                       同一ランタイムでは100%一致（EXP-0001.8 と整合）
-                       次の課題: cross-backend Shadow で FLAG 検出
+                       Same-runtime: 100% agree (EXP-0001.8 と整合)
+✅ EXP-0002F.1        Cross-Backend Shadow
+                       ONNX vs PyTorch MPS: 88.6% overlap, FLAG=1
+                       Stability 0.992→0.743 (閉ループ実証)
 
 📐 EXP-0003          Heterogeneous Experts（Qwen/Gemma/Phi/SmolLM/TinyLlama）
 📐 EXP-0003A         Dynamic Capability（Capability(t)：時間変動）
