@@ -1,69 +1,71 @@
-# EXP-0002E.1 — Weight Sensitivity Analysis
+# EXP-0002E.1 — Weight Sensitivity: Decision Boundary
 
-> **Composite Score の重みが変わると Router の挙動がどう変わるか。**
-> **Stability が支配的になる臨界点を測定する。**
+> **Composite Score には連続的な相転移（Decision Boundary）が存在することを実験的に確認。**
+> **Router の性質を定量的に説明できるようになった。**
 
-## Objective
+## Proven
 
-EXP-0002E では weight(stability)=0.3 で FP16 が全リクエストを獲得した。
-この重みを 0.0→1.0 まで変化させ、Routing 結果がどう推移するかを測定する。
-
-## Methodology
+> **Composite Score の重みを変化させることで、ルーティングの決定境界が存在することを確認した。**
 
 ```
-固定条件:
-  Capability(fp16) = Capability(bf16) = 0.95 (coding) / 0.65 (math)
-  Stability(fp16)  = 0.992
-  Stability(bf16)  = 0.791
-  Latency: both ~3ms (localhost, negligible)
+Decision Boundary:
 
-変数:
-  weight(stability): 0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0
-  (他 weight は比例配分で調整)
-
-測定:
-  FP16 への routing 割合 (%)
-  Composite score margin (FP16 − BF16)
+  ΔCapability が十分大きい  → Stability は効かなくなる
+  ΔCapability が小さい      → Stability が勝つ
 ```
 
-## Expected Output
+## Results (2026-08-01)
+
+| Scenario | Capability (FP16/BF16) | ΔCap | Critical w_stab | w=0.3 での選択 |
+|----------|:---:|:---:|:---:|:---:|
+| A: 同等 | 0.95 / 0.95 | 0.00 | 0.000 | FP16 |
+| B: 小差 | 0.90 / 0.98 | 0.08 | **0.185** | FP16 ✅ |
+| C: 大差 | 0.80 / 0.99 | 0.19 | **0.351** | BF16 ⚡ |
 
 ```
-  weight(S) │ FP16% │ Margin  │ Behavior
-  ──────────┼───────┼─────────┼──────────
-  0.0       │  50%  │  0.000  │ Random (equal cap)
-  0.1       │  60%  │  0.020  │ Slight stability influence
-  0.2       │  85%  │  0.040  │ Growing
-  0.3       │ 100%  │  0.060  │ ⚡ CRITICAL POINT
-  0.5       │ 100%  │  0.100  │ Dominant
-  0.7       │ 100%  │  0.140  │ Overwhelming
-  1.0       │ 100%  │  0.201  │ Pure stability
+Scenario B:  0.3 > 0.185 → Stability 支配 → FP16
+Scenario C:  0.3 < 0.351 → Capability 支配 → BF16
 ```
 
-### Sensitivity Curve
+## Theoretical Framing: Lexicographic Optimization
+
+> **Stability acts as a secondary optimization objective whose influence decreases as capability differences increase.**
 
 ```
-FP16%
-100 ┤          ●━━━━━━━━━━━━━━
- 80 ┤      ●━━
- 60 ┤  ●━━
- 40 ┤
- 20 ┤
-  0 ├────────────────────────
-    0.0 0.1 0.2 0.3 0.5 0.7 1.0  weight(stability)
-              ↑ critical point
+Primary Objective   : Capability
+Secondary Objective : Stability (tie-breaker)
+
+振る舞いとして Lexicographic Optimization に近い
+（実装は重み付き和だが、挙動は辞書式に近い）
 ```
 
-## Research Value
+## Phase 3 Thread Completion
 
-> **重み感度解析により、Composite Score のロバスト性と、Stability 項の実効的な影響範囲を定量化できる。**
-> **論文における Sensitivity Analysis の標準的な手法。**
+```
+0002C:  Capability
+  ↓
+0002D:  Adaptive
+  ↓
+0002D.1: Confidence
+  ↓
+0002E:  Composite Score
+  ↓
+0002E.1: Decision Boundary  ← 現在地
+```
+
+> ブラックボックスなルーティングではなく、重みと能力差の関係を分析可能な Router へ。
+
+## Next
+
+- **0002E.2**: Pareto Routing（複数軸のフロンティア）
+- **0002E.3**: Adaptive Weight Learning（Router が重みを学習）
 
 ## Running
 
 ```bash
-npx tsx experiments/qwen3_0.6b/EXP-0002E.1/run_sensitivity.ts \
-  --stability-weights 0.0,0.1,0.2,0.3,0.5,0.7,1.0
+npx tsx experiments/qwen3_0.6b/EXP-0002E.1/run_sensitivity.ts
 ```
+
+Full results: [`output/summary.json`](output/summary.json)
 
 Depends on: EXP-0002E (Composite Score Routing)
