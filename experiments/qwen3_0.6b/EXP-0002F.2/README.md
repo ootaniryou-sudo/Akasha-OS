@@ -1,36 +1,50 @@
-# EXP-0002F.2 — Stability Recovery
+# EXP-0002F.2 — Recovery Dynamics & Hysteresis
 
 > **Drift Detection だけでなく Recovery Detection まで扱う。**
-> **Router は「悪いノードを避ける」だけでなく、「環境変化に追従して評価を更新する適応型システム」へ。**
+> **「劣化を検出できる」だけでなく「いつ、どの程度の証拠で信頼を回復させるべきか」を実証する。**
+> **Adaptive State Routing の中核実験。**
 
-## Problem (from EXP-0002F.1)
+## Core Concept: Hysteresis
 
-```
-EXP-0002F.1 では Drift のみ観測:
-
-  Stability: 0.992 → 0.743 (down only)
-
-まだ検証していない:
-  ノードが正常に戻ったら Stability も回復するか?
-```
-
-## Objective
+> **Adaptive System の性質は「落ちる速さ」と「戻る速さ」の差に現れる。**
 
 ```
-Stability trajectory with recovery:
+劣化速度:  1.000 → 0.743  (何リクエストで落ちる?)
+回復速度:  0.743 → 0.970  (何リクエストで戻る?)
 
-  1.000
-    ↓ (normal)
-  0.950
-    ↓ (drift: cross-backend mismatch)
-  0.743
-    ↓ (recovery: node returns to normal behavior)
-  0.810
-    ↓
-  0.900
-    ↓
-  0.970   ← 回復を検出できるか?
+  落ちるのが速く、戻るのが遅い → Router は簡単には信用を戻さない
+  すぐ戻る                  → Router は柔軟
 ```
+
+この差が **ヒステリシス**。Adaptive State Routing の性質を一つの数値で表せる。
+
+## Asymmetric Update Rule
+
+```
+Belief(t+1) = α × Belief(t) + (1−α) × Observation(t)
+
+ただし劣化と回復で α を変える:
+
+  α_degrade  (小):  劣化を素早く反映（異常を即座に検知）
+  α_recover  (大):  回復を慎重に反映（十分な証拠が集まるまで待つ）
+
+→ 3 つの設計を比較:
+  ① 対称 (α_degrade = α_recover)
+  ② 非対称 (α_degrade < α_recover)  ← 推奨
+  ③ 非対称逆 (α_degrade > α_recover) ← 過敏
+```
+
+## Evaluation Metrics
+
+| Metric | Meaning | Measure |
+|--------|---------|---------|
+| **Recovery Half-life** | Stability が半分回復するまでのリクエスト数 | N リクエスト |
+| **Recovery Time** | 元の 95% まで戻る時間 | N リクエスト |
+| **Hysteresis Ratio** | 回復速度 ÷ 劣化速度 | ≥1 = 慎重, <1 = 柔軟 |
+| **False Recovery Rate** | 一時的な一致で過大評価しないか | % |
+| **Routing Recovery Delay** | ルーティングが元に戻るまでの遅延 | N リクエスト |
+
+> **Hysteresis Ratio は Adaptive State Routing の性質を一つの数値で表す。論文でも比較しやすい指標。**
 
 ## Design: Two-Phase Verification
 
@@ -52,15 +66,18 @@ Phase B: Recovery (healthy shadow)
 Phase A (N prompts):  Shadow = cross-backend → expect drift
 Phase B (N prompts):  Shadow = same-runtime → expect recovery
 
-Stability(t) を全ステップ記録
+Stability(t) を全ステップ記録 → 上記 5 指標を計算
 ```
 
 ## Success Criteria
 
 - [ ] Phase A: Stability declines (drift detected)
 - [ ] Phase B: Stability recovers (recovery detected)
-- [ ] Recovery rate measured (slope of recovery)
-- [ ] Hysteresis analyzed (recovery slower/faster than drift?)
+- [ ] Recovery Half-life measured
+- [ ] Recovery Time to 95% measured
+- [ ] **Hysteresis Ratio** computed (recovery ÷ degradation)
+- [ ] False Recovery Rate quantified
+- [ ] Asymmetric α (degrade < recover) vs symmetric compared
 - [ ] Router adapts to both degradation and improvement
 
 ## Expected Output
@@ -75,12 +92,31 @@ Stability
 0.75 ─│            ●
 0.70 ─└────────────────
        PhaseA( drift )  PhaseB( recovery )
+
+Metrics:
+  Degradation rate:  ~0.25/req (fast)
+  Recovery rate:     ~0.06/req (slow)
+  Hysteresis Ratio:  ~4.2  → Router is conservative
+```
+
+## Phase 4 Thread
+
+```
+0002F   Shadow Loop
+  ↓
+0002F.1 Belief Update (drift: 0.992→0.743) ✅
+  ↓
+0002F.2 Recovery Dynamics + Hysteresis ← 現在地
+  ↓
+0002E.3 Adaptive Weight Learning
+  → Belief が変わるから Weight も変わる（二重適応）
 ```
 
 ## Research Value
 
-> **Adaptive Router は環境変化（劣化と回復の両方）に追従できるか。**
-> Static Knowledge ではなく Observed Evidence で状態を維持する。
+> **Adaptive State Routing は「劣化を検出できる」だけでなく、**
+> **「いつ、どの程度の証拠で信頼を回復させるべきか」を設計できる。**
+> これはロボティクス・センサフュージョン・自律システムと共通の原理。
 
 ## Running
 
