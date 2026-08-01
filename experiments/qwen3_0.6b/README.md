@@ -1,7 +1,7 @@
 # Qwen3-0.6B — ArcAsha Experiment Log
 
 > **Phase 1 ✅ Numerical Characterization | Phase 2 ✅ Distributed Runtime**  
-> **Phase 3 ✅ Intelligent Routing | Phase 4 ⏳ Adaptive State Routing**
+> **Phase 3 ✅ Intelligent Routing | Phase 4 ✅ Adaptive State Routing**
 
 **[`CONCLUSIONS.md`](CONCLUSIONS.md)** — Formal conclusions + design principles.  
 **[`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md)** — Multi-dimensional profile spec.  
@@ -339,10 +339,10 @@ Decision Boundary   Pareto Frontier
                        「重みも観測から学習できる」= 二重適応の実証
 ```
 
-### Phase 4 ⏳ — Adaptive State Routing
+### Phase 4 ✅ — Adaptive State Routing
 
 > **「良いノードを選ぶ」から「観測結果に応じてノードの信頼性を更新し、次の意思決定へ反映する」へ。**
-> **Static Knowledge → Observed Evidence → Belief Update → Routing**
+> **Static Knowledge → Observed Evidence → Belief Update → Weight Learning → Routing (closed loop)**
 
 ```
 Node State
@@ -350,6 +350,8 @@ Node State
 Evidence (Shadow verification, latency, task results)
     ↓
 Belief Update (Bayesian: μ, confidence, stability)
+    ↓
+Weight Learning (Adaptive: w_stab が Belief に追従) ← EXP-0002E.3
     ↓
 Routing (Composite Score)
     ↓
@@ -368,9 +370,14 @@ Routing (Composite Score)
                        Hysteresis Ratio 0.567 (rec/deg < 1 = conservative)
                        Half-life 7reqs, Time-to-95% 未到達 (α=0.9 で ~51reqs)
                        False Recovery 0% / Asym 0.961 vs Sym 0.999
+✅ EXP-0002E.3        Adaptive Weight Learning
+                       Fixed 86% vs Manual 96% vs Adaptive 96%
+                       Adaptive = Manual を事前知識ゼロで再現
+                       w_stab 0.30→0.70 (Belief に追従) → Drift 8/8, Recovery 8/8
+                       Phase 4 閉ループ完成: Observation→Belief→Weight→Routing
 
-📐 EXP-0002E.3        Adaptive Weight Learning（実データで重みを学習）
-📐 EXP-0003          Heterogeneous Experts（Qwen/Gemma/Phi/SmolLM/TinyLlama）
+📐 EXP-0003          Heterogeneous Experts（Phi/Gemma/SmolLM/Qwen で Belief を検証）
+                       Belief(Node) → Belief(Node, Task) へ拡張
 📐 EXP-0003A         Dynamic Capability（Capability(t) 全次元の時間変動）
 📐 EXP-0003B         Cost-Aware Routing（Quality+Latency+Cost）
 📐 EXP-0003C         Self-Learning Router（経験から方針を学習）

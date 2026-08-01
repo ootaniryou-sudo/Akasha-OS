@@ -230,21 +230,23 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | 0002E.2 | Pareto Routing | ✅ | Scalarization hides dominance. **Two-stage: Pareto Filter → Composite Score** |
 | 0002E.3 | **Adaptive Weight Learning** | ✅ | **3-way比較: Fixed 86% vs Manual 96% vs Adaptive 96%.** w_stab 0.30→0.70 を Belief から学習. ドリフト 8/8・Recovery 8/8 |
 
-### Phase 4 ⏳ — Adaptive State Routing (EXP-0002F〜)
+### Phase 4 ✅ — Adaptive State Routing (EXP-0002F〜0002E.3)
 
 | # | Experiment | Result | Key Finding |
 |---|-----------|:---:|------|
 | 0002F | Shadow Expert Feedback | ✅ | 閉ループ実装. Same-runtime 100% agree (EXP-0001.8 と整合) |
 | 0002F.1 | **Cross-Backend Shadow** | ✅ | **ONNX vs PyTorch MPS: 88.6% overlap, FLAG=1 (45%). Stability 0.992→0.743** — Belief Update 実証 |
 | 0002F.2 | **Recovery Dynamics & Hysteresis** | ✅ | **非対称α (deg=0.3/recover=0.9). Drift 1.0→0.91 → Recovery 0.91→0.961. Hysteresis 0.567 (保守的). Half-life 7reqs. Time-to-95% 未到達. FalseRecovery 0%.** |
-| 0002E.3 | **Adaptive Weight Learning** | ✅ | **3-way比較: Adaptive 96% ≥ Fixed 86%.** w_stab 0.30→0.70 が Belief に追従. ドリフト/Recovery 8/8. **二重適応の実証** |
+| 0002E.3 | **Adaptive Weight Learning** | ✅ | **3-way比較: Adaptive 96% ≥ Fixed 86%.** w_stab 0.30→0.70 が Belief に追従. ドリフト/Recovery 8/8. **事前知識ゼロで Manual と同等** — 二重適応の実証 |
 
-> **Phase 4 の中核**: 「良いノードを選ぶ」→「**観測結果に応じてノードの信頼性を更新し、次の意思決定へ反映する**」
-> `Static Knowledge → Observed Evidence → Belief Update → Routing`
+> **Phase 4 完了**: `Static Knowledge → Observed Evidence → Belief Update → Weight Learning → Routing` の閉ループが実データで成立。
+> 「観測に応じて Belief を更新し、その Belief に応じて Weight を学習することで、未知の環境変化にも適応できる」— 中心仮説に実験的裏付け。
 
 ### Roadmap
 
 ```
+EXP-0003 📐 Heterogeneous Experts（Phi/Gemma/SmolLM/Qwen）
+           Belief(Node) → Belief(Node, Task) へ拡張 — 本当に異質な Expert で検証
 Phase 5 📐 Emergent Routing（ルールなし，Policy 生成）
 Phase 6 📐 Multi-Agent Collaboration / Distributed Frontier AI
 ```

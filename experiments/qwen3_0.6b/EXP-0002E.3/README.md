@@ -101,8 +101,121 @@ Phase-wise Routing Accuracy:
 1. **仮説 SUPPORTED ✅**: Adaptive (96%) ≥ Fixed (86%)。ドリフト+recoveryで Fixed は 3 ミス、Adaptive は 0 ミス。
 2. **重みが Belief を追従**: stab 0.209 で w_stab=0.627 まで上昇、回復とともに 0.467 へ減衰。観測だけで重みが動く。
 3. **Fixed の失敗機構**: w_cap=0.60 が Cap 0.95 に強く引っ張られ、stab 低下を score に反映しきれない (P2-001, P3-005, P3-007 で main を誤選択)。
-4. **Manual vs Adaptive**: 全体 accuracy は同等だが、Manual は「ドリフトが来る」と事前に知っている設定。Adaptive は観測だけで同等を達成 = **事前知識不要**。
-5. **初回ステップの artifact**: P1-000 で manual/adaptive が cand を選んだのは初回推論 warmup latency。Fixed は w_cap 支配で main を選んだため偶然正解。
+4. **初回ステップの artifact**: P1-000 で manual/adaptive が cand を選んだのは初回推論 warmup latency。Fixed は w_cap 支配で main を選んだため偶然正解。
+
+## The Key Insight: Adaptive matches Manual with ZERO prior knowledge
+
+> **「Adaptive が勝った」ことが価値なのではない。**
+> **「事前知識ゼロで、人間が調整した Manual と同じ性能に達した」ことが価値。**
+
+Manual は「ドリフトが来る」と**人間が事前に知っている**状態で重みを調整している:
+
+```
+Human (環境変化を知っている)
+    ↓
+Weight Adjustment (w_stab=0.50 に事前設定)
+    ↓
+Correct Routing (96%)
+```
+
+一方 Adaptive は:
+
+```
+Observation (shadow overlap)
+    ↓
+Belief Update (stability 低下を検知)
+    ↓
+Weight Learning (w_stab 0.30→0.70 を自動上昇)
+    ↓
+Routing (96%)
+```
+
+**人間の事前知識を使わずに、同じ 96% を達成した。**
+
+これは次のように言い換えられる:
+
+> **Adaptive Weight Learning reproduces the performance of manually tuned
+> routing policies without prior knowledge of environmental changes.**
+
+「環境変化がいつ来るか分からない」システムこそ Adaptive の本領。
+Manual は「環境がどう変わるか知っている」前提に依存するが、
+Adaptive は観測だけで同じ結果を出す。
+
+---
+
+## Figure 1: Weight Trajectory (Belief → Weight Learning)
+
+**w_stab の軌跡** — ドリフトで上昇し、回復で減衰 (ヒステリシス = F.2 と整合):
+
+```
+w_stab
+0.70 |                          ●  (step12: stab=0.672, w=0.696)
+     |                      ●      (step11: stab=0.209, w=0.627)
+0.60 |                    ●        (step15: stab=0.371, w=0.650)
+     |                   ●
+0.50 |             ●              (step8:  stab=0.705, w=0.500)
+     |
+0.40 |                                   ●  (step22: stab=0.699, w=0.467)
+     |
+0.30 |● ● ● ● ● ●
+     +----------------------------------------------
+       Baseline(6)     Drift(8)         Recovery(8)
+```
+
+- **Drift 開始**と同時に w_stab が上昇 (Belief の低下を Weight に反映)
+- **Recovery 中**も高い値を維持し、ゆっくり減衰 (保守的 = F.2 のヒステリシスと整合)
+- 閾値・ルールなし。**観測だけで重みが動く**
+
+この1枚で `Observation → Belief → Weight Learning` が直感的に分かる。
+
+---
+
+## Figure 2: Why Fixed Fails (Mechanism)
+
+P2-001 (stab=0.705) の時点でのスコア計算:
+
+```
+        Fixed (w_cap=0.60, w_stab=0.30)          Adaptive (w_stab 学習済み 0.50)
+        ─────────────────────────────             ─────────────────────────────
+main:   Cap 0.95 × 0.60 = 0.570                  Cap 0.95 × 0.357 = 0.339
+        Stab 0.705 × 0.30 = 0.212                Stab 0.705 × 0.500 = 0.353
+        Composite ≈ 0.782  ← 勝つ               Composite ≈ 0.692
+cand:   Cap 0.80 × 0.60 = 0.480                  Cap 0.80 × 0.357 = 0.286
+        Stab 1.000 × 0.30 = 0.300                Stab 1.000 × 0.500 = 0.500
+        Composite ≈ 0.780                        Composite ≈ 0.786  ← 勝つ
+
+        → main を誤選択 ✗                        → cand を正しく選択 ✓
+```
+
+**Fixed の失敗機構**: Cap 0.95 への固定の強い重み (0.60) が、Stab 0.705 の低下を
+スコアに反映しきれない。Stability が低いのに capability の見た目だけで選んでしまう。
+
+**Adaptive の成功機構**: w_stab が 0.30→0.50 に上昇したことで、Stab の差
+(0.705 vs 1.000) がスコア差として効くようになり、Composite が逆転する。
+
+> **「どれを重んじるか」を環境に応じて変えられることこそ、Adaptive Weight の本質。**
+
+---
+
+## Phase 4 Completion
+
+```
+Observation → Belief → Weight → Routing
+```
+
+この閉ループが **実データで完成**した:
+
+| 段階 | 実験 | 成果 |
+|------|------|------|
+| Observation | 0002F.1 | クロスバックエンド shadow で観測 (88.6% overlap) |
+| Belief Update | 0002F.1/F.2 | Stability を更新 (0.992→0.743, ヒステリシス 0.567) |
+| Weight Learning | 0002E.3 | w_stab を Belief から学習 (0.30→0.70) |
+| Routing | 0002E/0002E.3 | Composite でルーティング (Adaptive 96%) |
+
+**Phase 4 (Adaptive State Routing) 完了。**
+
+次は EXP-0003: 異種エキスパート (Phi/Gemma/SmolLM/Qwen) で Belief が
+「ノード単位」から「ノード × タスク」へ拡張されるかを検証する。
 
 ## Success Criteria
 
