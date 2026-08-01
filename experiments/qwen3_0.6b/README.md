@@ -1,7 +1,7 @@
 # Qwen3-0.6B — ArcAsha Experiment Log
 
 > **Phase 1 ✅ Numerical Characterization | Phase 2 ✅ Distributed Runtime**  
-> **Phase 3 ⏳ Intelligent Routing | Phase 4 ⏳ Collaborative Intelligence**
+> **Phase 3 ✅ Intelligent Routing | Phase 4 ⏳ Adaptive State Routing**
 
 **[`CONCLUSIONS.md`](CONCLUSIONS.md)** — Formal conclusions + design principles.  
 **[`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md)** — Multi-dimensional profile spec.  
@@ -335,19 +335,35 @@ Decision Boundary   Pareto Frontier
 📐 EXP-0002E.3        Adaptive Weight Learning（Pareto 内で学習）
 ```
 
-### Phase 4 ⏳ — Collaborative Intelligence
+### Phase 4 ⏳ — Adaptive State Routing
 
-> **Routing から Collaboration へ。Expert 間の相互作用を扱う。**
+> **「良いノードを選ぶ」から「観測結果に応じてノードの信頼性を更新し、次の意思決定へ反映する」へ。**
+> **Static Knowledge → Observed Evidence → Belief Update → Routing**
+
+```
+Node State
+    ↓
+Evidence (Shadow verification, latency, task results)
+    ↓
+Belief Update (Bayesian: μ, confidence, stability)
+    ↓
+Routing (Composite Score)
+    ↓
+(back to Node State — closed loop)
+```
 
 ```
 ✅ EXP-0002F          Shadow Expert Feedback
                        Same-runtime: 100% agree (EXP-0001.8 と整合)
 ✅ EXP-0002F.1        Cross-Backend Shadow
                        ONNX vs PyTorch MPS: 88.6% overlap, FLAG=1
-                       Stability 0.992→0.743 (閉ループ実証)
+                       Stability 0.992→0.743 (Belief Update 実証)
 
+📐 EXP-0002F.2        Stability Recovery（Drift + Recovery の両方を検出）
+                       0.743 → 0.81 → 0.90 → 0.97 と回復するか
+📐 EXP-0002E.3        Adaptive Weight Learning（実データで重みを学習）
 📐 EXP-0003          Heterogeneous Experts（Qwen/Gemma/Phi/SmolLM/TinyLlama）
-📐 EXP-0003A         Dynamic Capability（Capability(t)：時間変動）
+📐 EXP-0003A         Dynamic Capability（Capability(t) 全次元の時間変動）
 📐 EXP-0003B         Cost-Aware Routing（Quality+Latency+Cost）
 📐 EXP-0003C         Self-Learning Router（経験から方針を学習）
 ```
