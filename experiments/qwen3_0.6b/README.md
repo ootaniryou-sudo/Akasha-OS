@@ -135,6 +135,7 @@ Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, 
 | 0003B | Cost-Aware Routing | ✅ | **Quality+Latency+Cost. QPC 1.91x. Cost -43% with Accuracy 50%→60%. SmolLM 10/10 選択.** |
 | 0003A | Dynamic Node State Estimation | ✅ | **State(t)={Cap,Lat,Cost,Stab}. Regret指標. Adaptive vs Static: Regret -75.7%. Capability jump追従.** |
 | 0003C | Policy Learning | ⚠️ | **Q[state][node] 学習. 負の結果: 少サンプルでは Fixed 優位 (1.6 vs 4.2). 表現力とサンプル数のトレードオフを実証.** |
+| 0003C.1 | Contextual Bandit (UCB) | ✅ | **UCB/Thompson は Q-Learning より2-3倍サンプル効率 (16.5 vs 7.2/5.4). ただし60でFixed未達 — Depth Hypothesis支持.** |
 | 0002F | Shadow Expert Feedback | ✅ | **Closed loop. Same-runtime 100% agree.** |
 | 0002F.1 | Cross-Backend Shadow | ✅ | **ONNX vs PyTorch: 88.6% overlap, FLAG=1, Stability 0.992→0.743.** |
 | 0002F.2 | Recovery Dynamics & Hysteresis | ✅ | **Asym α. Drift 1.0→0.91, Recovery 0.91→0.961. Hysteresis 0.567 (conservative). Half-life 7reqs. FalseRecovery 0%.** |
@@ -391,8 +392,13 @@ Routing (Composite Score)
                        State(t)={Cap,Lat,Cost,Stab}, Regret -75.7% (Adaptive vs Static)
 ✅ EXP-0003C         Policy Learning（State → Policy → Action）
                        負の結果: 少サンプルでは Fixed 優位 (1.6 vs 4.2)
+                       Learning Depth Hypothesis を提案
                        「表現力の高い学習器ほどデータを必要とする」を実証
-                       → Phase 5 では状態離散化とサンプル数の設計が要件
+✅ EXP-0003C.1       Contextual Bandit (UCB) Router
+                       UCB/Thompson は Q-Learning より2-3倍サンプル効率
+                       60サンプルでは Fixed 未達 → Depth Hypothesis 支持
+▶ Phase 5           Emergent Controller ← 次
+                       Task → Planner → Policy 生成
 ```
 
 ### Phase 5 ⏳ — Frontier Scale
