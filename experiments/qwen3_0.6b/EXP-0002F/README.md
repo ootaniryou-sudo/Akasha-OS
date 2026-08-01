@@ -1,27 +1,36 @@
 # EXP-0002F — Shadow Expert Verification
 
 > **Main Expert の出力を Shadow Expert が検証する。**
-> **EXP-0001 の数値安定性が「検証役」として活きる。**
+> **Shadow は単なる検証役ではなく、Evaluator への高品質フィードバック源。**
+> **0002D.1 → 0002E → 0002F の研究スレッドの最終段階。**
 
-## Objective
+## Role in the Research Thread
 
-同一プロンプトを Main Expert と Shadow Expert（異なる backend/precision）の両方で実行し、
-出力の一貫性を検証する。EXP-0001 で確立した Numerical Stability Profile を
-実用的な検証メカニズムとして応用する。
+```
+0002D.1: Evaluator の精度改善
+   ↓
+0002E:   Composite Score に Stability 統合
+   ↓
+0002F:   Shadow が Evaluator に高品質フィードバックを供給
+```
 
-## Architecture
+Architecture:
 
 ```
 Prompt
   │
-  ├── Main Expert (FP16, MPS)
-  │     └── Answer
+  ├── Main Expert → Primary Answer
   │
-  └── Shadow Expert (FP32, MPS)
-        └── Verification
-              │
-              ├── Token match ≥ threshold → ACCEPT
-              └── Token match < threshold → FLAG (numerical instability)
+  └── Shadow Expert (異なる backend/precision)
+        │
+        ▼
+      Verification
+        │
+        ▼
+      Evaluator ← Shadow の検証結果が評価精度を向上させる
+        │
+        ▼
+      Capability Update
 ```
 
 ## Verification Modes

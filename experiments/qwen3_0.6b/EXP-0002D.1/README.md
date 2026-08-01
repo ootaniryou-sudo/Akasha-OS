@@ -1,7 +1,17 @@
-# EXP-0002D.1 — Task Evaluator: Heuristic → Measured
+# EXP-0002D.1 — Task Evaluator Improvement
 
 > **評価関数の忠実度が Routing Quality の上限を決定する。**
 > **EXP-0002D で発見された Score Inversion の根本原因に対処する。**
+> **評価関数そのものの精度改善を独立した研究対象として扱う。**
+
+## Research Thread
+
+```
+0002D.1 (Evaluator) → 0002E (Composite Score) → 0002F (Shadow Feedback)
+     │                       │                          │
+     ▼                       ▼                          ▼
+ 測定の精度向上         EXP-0001 Stability 活用    高品質フィードバック源
+```
 
 ## Problem (from EXP-0002D)
 
@@ -41,41 +51,41 @@ Prompt → LLM generates answer →
   └── Capability Score = similarity_score
 ```
 
-## Confidence-Aware Update
-
-### Current (EXP-0002D)
+## Capability Estimation: Phased Approach
 
 ```
-new_score = α × task_score + (1-α) × old_score
-α = 0.3 (fixed)
-→ 単一タスクで大きく変動
+Phase 1: EMA / SMA (current 0002D)
+  └── 単純、即時反映、ただし overshoot しやすい
+
+Phase 2: Bayesian Mean
+  └── サンプル数で自然に重み付け、overshoot 抑制
+
+Phase 3: Bayesian + Confidence Interval
+  └── 区間推定、Router が Confidence を考慮可能
+
+Phase 4: Context-Aware Capability
+  └── タスク難易度・ドメイン類似度でスコアを文脈化
 ```
 
-### Target: Bayesian Update with Confidence
+### Phase 2: Bayesian Mean (MVP for 0002D.1)
 
 ```
 n = sample_count
 μ = current_mean
-σ² = current_variance
 
 After new observation x:
   μ_new = (n × μ + x) / (n + 1)
-  σ²_new = σ² × n/(n+1) + (x - μ_new)² / (n+1)
   n_new = n + 1
 
-Confidence = 1 - exp(-n / min_samples)
-Effective Score = μ × confidence
+Confidence = 1 − exp(−n / min_samples)
+Effective Score = μ_new × confidence
 ```
 
-### Effect
+### Why Phased
 
 ```
-Before (SMA, 3 samples):
-  math: 0.545 (point estimate only)
-
-After (Bayesian, 3 samples):
-  math: 0.70 ± 0.15, confidence=0.45
-  Effective: 0.70 × 0.45 = 0.315  ← 信頼性が低いので割り引かれる
+最初から複雑なベイズ推定を入れるより、段階的に進める方が
+実験ごとの効果が見えやすく、各段階での知見を蓄積できる。
 ```
 
 ## Success Criteria

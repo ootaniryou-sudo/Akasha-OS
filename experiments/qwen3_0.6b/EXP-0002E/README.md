@@ -1,20 +1,32 @@
 # EXP-0002E — Composite Score Routing
 
-> **Capability + Latency + Stability + Cost の複合スコアでルーティングする。**
-
-## Objective
-
-EXP-0002C では Capability 単軸でルーティングした。
-EXP-0002E では、EXP-0001（数値安定性）と EXP-0002A/B（レイテンシ）の成果を統合し、
-複合スコアで最適ノードを選択する。
+> **Capability + Confidence + Latency + Stability + Cost の複合スコアでルーティング。**
+> **EXP-0001 の Numerical Stability が初めて Routing に直接活用される。**
+> **0002D.1（Evaluator精度）→ 0002E（複合判断）→ 0002F（Shadow検証）の中心。**
 
 ## Composite Score Formula
 
 ```
 Score(node, task) =
-    0.55 × Capability(node, task)    ← EXP-0002C: タスク適性
-  + 0.25 × Latency(node)             ← EXP-0002A: RTT正規化値
-  + 0.20 × Stability(node, backend) ← EXP-0001: 数値安定性プロファイル
+    w₁ × Capability(node, task)   ← 0002C/0002D: タスク適性
+  + w₂ × Confidence(node, task)   ← 0002D.1: 推定の信頼度
+  + w₃ × Latency(node)            ← 0002A: RTT
+  + w₄ × Stability(node, backend) ← 0001: 数値安定性プロファイル
+  + w₅ × Cost(node)               ← 計算コスト（将来）
+```
+
+### Concrete Example
+
+```
+Node A (FP16 MPS):
+  Capability=0.93, Confidence=0.85, Latency=18ms, Stability=0.992
+  Score = 0.35×0.93 + 0.15×0.85 + 0.20×1.0 + 0.30×0.992 = 0.950
+
+Node B (BF16 MPS):
+  Capability=0.95, Confidence=0.90, Latency=210ms, Stability=0.791
+  Score = 0.35×0.95 + 0.15×0.90 + 0.20×0.09 + 0.30×0.791 = 0.724
+
+→ Node A wins: 能力は少し低いが、速くて安定している
 ```
 
 ### Weight Rationale

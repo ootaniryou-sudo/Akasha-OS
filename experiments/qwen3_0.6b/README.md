@@ -1,11 +1,30 @@
 # Qwen3-0.6B — ArcAsha Experiment Log
 
-> **Phase 1 complete (EXP-0000〜0001.9): LLM Numerical Characterization**  
-> **Phase 2 complete (EXP-0002A/B): Distributed Runtime**  
-> **Phase 3 next (EXP-0002C): Intelligent Routing**
+> **Phase 1 ✅ Numerical Characterization | Phase 2 ✅ Distributed Runtime**  
+> **Phase 3 ⏳ Intelligent Routing — Capability-Aware → Adaptive → Evaluator → Composite → Shadow**
 
 **[`CONCLUSIONS.md`](CONCLUSIONS.md)** — Formal conclusions + design principles.  
 **[`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md)** — Multi-dimensional profile spec.
+
+---
+
+## ArcAsha 5-Layer Architecture
+
+```
+Task
+  ↓
+Capability Model      ← ノードの能力をどう表現するか
+  ↓
+Evaluation Function   ← タスク成功/失敗をどう判定するか（← 0002D.1）
+  ↓
+Capability Estimation ← 測定値から能力をどう推定するか（Bayesian, Confidence）
+  ↓
+Routing Policy        ← どのノードを選ぶか（Capability, Latency, Stability）
+  ↓
+Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, CPU）
+```
+
+> **各層が独立して拡張可能。Latency / Cost / Numerical Stability を追加しても自然に統合できる。**
 
 ---
 
@@ -166,15 +185,29 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 → Scheduler, Node Registry, Master Hub が成立
 
 ### Phase 3 ⏳ — Intelligent Routing
-```
-✅ EXP-0002C          Capability-Aware Routing (static profile, Routing Accuracy 100%)
-✅ EXP-0002D          Adaptive Capability (SMA, Score Inversion → Evaluator limit)
-📐 EXP-0002D.1        Task Evaluator Improvement (heuristic → measured + confidence)
-📐 EXP-0002E          Composite Score Routing (capability + latency + stability)
-📐 EXP-0002F          Shadow Expert Verification (EXP-0001 stability applied)
-```
 
-> **EXP-0002D の核心的発見**: Adaptive routing は正しく動作するが、Routing Quality は Evaluation Function の忠実度によって制限される。不正確な評価関数は Capability Inversion を引き起こす。
+> **Research thread: 0002D.1 → 0002E → 0002F が一本の研究テーマとして接続**
+
+```
+✅ EXP-0002C          Capability-Aware Routing (static, Routing Accuracy 100%)
+✅ EXP-0002D          Adaptive Capability (SMA, Score Inversion → Evaluator limit)
+
+📐 EXP-0002D.1        Task Evaluator Improvement
+                       Phase 1: EMA/SMA (current)
+                       Phase 2: Bayesian Mean
+                       Phase 3: Bayesian + Confidence Interval
+                       Phase 4: Context-Aware Capability
+
+📐 EXP-0002E          Composite Score Routing
+                       Score = w₁·Capability + w₂·Confidence + w₃·Latency
+                             + w₄·Numerical Stability + w₅·Cost
+                       ← EXP-0001 の Stability が初めて直接活用される
+
+📐 EXP-0002F          Shadow Expert Verification
+                       Main Expert → Answer
+                       Shadow Expert → Verification → Evaluator → Capability Update
+                       ← Shadow は検証役 + Evaluator への高品質フィードバック源
+```
 
 ### Phase 4 ⏳ — Multi-Expert Collaboration
 ```
