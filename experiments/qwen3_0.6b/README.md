@@ -128,6 +128,9 @@ Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, 
 | 0002D | Adaptive Capability Profile | ✅ | **Score Inversion detected. Evaluation fidelity = routing limit.** |
 | 0002D.1 | Confidence-Aware Adaptive Routing | ✅ | **Two-stage eval. Score Inversion → 0. 7 avoided.** |
 | 0002E | Composite Score Routing | ✅ | **Stability dominates. FP16 10/10, BF16 0/10. 0001+0002 connected.** |
+| 0002E.1 | Weight Sensitivity | ✅ | **Decision Boundary. critical w_stab=0.0/0.185/0.351.** |
+| 0002E.2 | Pareto Routing | ✅ | **Scalarization hides dominance. Two-stage routing.** |
+| 0002F | Shadow Expert Feedback | ✅ | **Closed loop. 100% agree (same runtime). Cross-backend next.** |
 
 ---
 
@@ -298,14 +301,10 @@ Decision Boundary   Pareto Frontier
 ✅ EXP-0002D.1        Confidence-Aware (two-stage: μ × confidence)
 ✅ EXP-0002E          Composite Score (C + Conf + L + S)
 ✅ EXP-0002E.1        Decision Boundary（重み空間の相転移）
-                       critical w_stab = 0.0 / 0.185 / 0.351
 ✅ EXP-0002E.2        Pareto Frontier（目的空間の支配構造）
                        Scalarization cannot preserve full dominance structure.
-                       node-h dominated but rank#7 in weighted-sum.
-                       → Two-stage: Pareto Filter → Composite Score
 
-📐 EXP-0002E.3        Adaptive Weight Learning
-                       重み学習は Pareto 集合の中だけで行う
+📐 EXP-0002E.3        Adaptive Weight Learning（Pareto 内で学習）
 ```
 
 ### Phase 4 ⏳ — Collaborative Intelligence
@@ -313,20 +312,23 @@ Decision Boundary   Pareto Frontier
 > **Routing から Collaboration へ。Expert 間の相互作用を扱う。**
 
 ```
-📐 EXP-0002F          Shadow Expert Feedback
-                       Main → Answer + Shadow → Verification
-                       → Evaluator → Capability/Stability → Composite Score
-                       Shadow = Composite Score を改善する教師
+✅ EXP-0002F          Shadow Expert Feedback
+                       Main→Answer + Shadow→Verification→Evaluator
+                       閉ループ: 実行→Shadow→Evaluator→Capability/Stability
+                       同一ランタイムでは100%一致（EXP-0001.8 と整合）
+                       次の課題: cross-backend Shadow で FLAG 検出
 
-📐 EXP-0003A          Planner（タスク分解）
-📐 EXP-0003B          Critic（品質評価）
-📐 EXP-0003C          Verifier（検証）
-📐 EXP-0003D          Consensus（多数決/合意形成）
+📐 EXP-0003          Heterogeneous Experts（Qwen/Gemma/Phi/SmolLM/TinyLlama）
+📐 EXP-0003A         Dynamic Capability（Capability(t)：時間変動）
+📐 EXP-0003B         Cost-Aware Routing（Quality+Latency+Cost）
+📐 EXP-0003C         Self-Learning Router（経験から方針を学習）
 ```
 
-### Phase 5 ⏳ — Dynamic Active Compute
+### Phase 5 ⏳ — Frontier Scale
 ```
-📐 EXP-0004           Active Expert Scaling (1→2→4→8→16)
+📐 EXP-0004          Emergent Routing（ルールなし，Policy 生成）
+📐 EXP-0005          Multi-Agent Collaboration
+📐 EXP-0006          Distributed Frontier AI
 ```
 > **「多数の小型モデルを必要に応じて起動し、全体としてフロンティア級の能力を目指す」**
 
