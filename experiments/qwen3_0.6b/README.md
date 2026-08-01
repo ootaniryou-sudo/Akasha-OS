@@ -132,6 +132,7 @@ Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, 
 | 0002E.2 | Pareto Routing | ✅ | **Scalarization hides dominance. Two-stage routing.** |
 | 0002E.3 | Adaptive Weight Learning | ✅ | **3-way comparison. Adaptive 96% ≥ Fixed 86%. w_stab 0.30→0.70 学習. Drift 8/8, Recovery 8/8.** |
 | 0003 | Heterogeneous Experts | ✅ | **Qwen/SmolLM/Gemma. Belief(Node,Task). Belief 60% > Fixed 20%. SmolLM coding最強. Gemma math最強.** |
+| 0003B | Cost-Aware Routing | ✅ | **Quality+Latency+Cost. QPC 1.91x. Cost -43% with Accuracy 50%→60%. SmolLM 10/10 選択.** |
 | 0002F | Shadow Expert Feedback | ✅ | **Closed loop. Same-runtime 100% agree.** |
 | 0002F.1 | Cross-Backend Shadow | ✅ | **ONNX vs PyTorch: 88.6% overlap, FLAG=1, Stability 0.992→0.743.** |
 | 0002F.2 | Recovery Dynamics & Hysteresis | ✅ | **Asym α. Drift 1.0→0.91, Recovery 0.91→0.961. Hysteresis 0.567 (conservative). Half-life 7reqs. FalseRecovery 0%.** |
@@ -382,8 +383,9 @@ Routing (Composite Score)
                        SmolLM coding 最強 (μ=0.525), Gemma math 最強 (μ=0.812)
                        Phase 4 の閉ループは異種モデルでも機能
 
-📐 EXP-0003A         Dynamic Capability（Capability(t) 全次元の時間変動）
-📐 EXP-0003B         Cost-Aware Routing（Quality+Latency+Cost）
+✅ EXP-0003B         Cost-Aware Routing（Quality+Latency+Cost）
+                       QPC 1.91x, Cost -43%, Accuracy 50%→60%
+📐 EXP-0003A         Dynamic Capability（Capability(t) 全次元の時間変動）← 次
 📐 EXP-0003C         Self-Learning Router（経験から方針を学習）
 ```
 

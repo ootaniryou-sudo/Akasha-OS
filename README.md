@@ -239,6 +239,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | 0002F.2 | **Recovery Dynamics & Hysteresis** | ✅ | **非対称α (deg=0.3/recover=0.9). Drift 1.0→0.91 → Recovery 0.91→0.961. Hysteresis 0.567 (保守的). Half-life 7reqs. Time-to-95% 未到達. FalseRecovery 0%.** |
 | 0002E.3 | **Adaptive Weight Learning** | ✅ | **3-way比較: Adaptive 96% ≥ Fixed 86%.** w_stab 0.30→0.70 が Belief に追従. ドリフト/Recovery 8/8. **事前知識ゼロで Manual と同等** — 二重適応の実証 |
 | 0003 | **Heterogeneous Experts** | ✅ | **Qwen3-0.6B / SmolLM2-360M / Gemma-3-1B.** Belief(Node)→Belief(Node,Task) 拡張. **Belief 60% > Fixed 20%.** SmolLM coding最強, Gemma math最強 |
+| 0003B | **Cost-Aware Routing** | ✅ | **Quality+Latency+Cost の総合ルーティング. QPC (Quality-per-Cost) 1.91x. コスト -43% で Accuracy 50%→60%.** 「安くて十分良い」を選ぶ |
 
 > **Phase 4 完了**: `Static Knowledge → Observed Evidence → Belief Update → Weight Learning → Routing` の閉ループが実データで成立。
 > 「観測に応じて Belief を更新し、その Belief に応じて Weight を学習することで、未知の環境変化にも適応できる」— 中心仮説に実験的裏付け。
@@ -247,8 +248,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 ### Roadmap
 
 ```
-EXP-0003A 📐 Dynamic Capability（Capability(t) 全次元の時間変動）
-EXP-0003B 📐 Cost-Aware Routing（Quality+Latency+Cost）
+EXP-0003A ▶ Dynamic Capability（Capability(t) 全次元の時間変動）← 次
 EXP-0003C 📐 Self-Learning Router（経験から方針を学習）
 Phase 5 📐 Emergent Routing（ルールなし，Policy 生成）
 Phase 6 📐 Multi-Agent Collaboration / Distributed Frontier AI
