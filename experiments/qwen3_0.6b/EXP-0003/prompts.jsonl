@@ -1,0 +1,16 @@
+{"prompt": "Write a Python function to calculate factorial.", "capability": "coding"}
+{"prompt": "What is the integral of x^2 from 0 to 1?", "capability": "math"}
+{"prompt": "Implement a binary search algorithm in Python.", "capability": "coding"}
+{"prompt": "Solve the equation: 3x + 7 = 22", "capability": "math"}
+{"prompt": "Write a function that reverses a linked list.", "capability": "coding"}
+{"prompt": "What is 15% of 340?", "capability": "math"}
+{"prompt": "Create a Python class for a bank account with deposit and withdraw methods.", "capability": "coding"}
+{"prompt": "Calculate the derivative of f(x) = x^3 + 2x^2 - 5x + 1", "capability": "math"}
+{"prompt": "Write a Python function that checks if a string is a palindrome.", "capability": "coding"}
+{"prompt": "Find the sum of all even numbers from 1 to 100.", "capability": "math"}
+{"prompt": "Implement a function to sort a list of integers using bubble sort.", "capability": "coding"}
+{"prompt": "What is the area of a circle with radius 5?", "capability": "math"}
+{"prompt": "Write a Python function to find the maximum element in an array.", "capability": "coding"}
+{"prompt": "Solve for x: 2x^2 + 3x - 5 = 0", "capability": "math"}
+{"prompt": "Implement a function that counts word frequency in a string.", "capability": "coding"}
+{"prompt": "Compute the value of log base 10 of 1000.", "capability": "math"}
