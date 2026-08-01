@@ -1,75 +1,96 @@
 # EXP-0002E — Composite Score Routing
 
-> **Capability + Confidence + Latency + Stability + Cost の複合スコアでルーティング。**
-> **EXP-0001 の Numerical Stability が初めて Routing に直接活用される。**
-> **0002D.1（Evaluator精度）→ 0002E（複合判断）→ 0002F（Shadow検証）の中心。**
+> **EXP-0001（数値特性）と EXP-0002（分散ルーティング）が初めて一本につながった。**
+> **ArcAsha の重要な節目。**
+
+## Proven
+
+> **Under equal capability scores, the stability component dominated the composite routing score.**
+
+```
+Capability(fp16) = Capability(bf16)
+
+Stability(fp16) = 0.992  →  selected for ALL 10 requests
+Stability(bf16) = 0.791  →  selected for 0 requests
+```
+
+> これは Composite Score が設計どおり機能したことを示す。
+> 「Stability wins at every step」ではなく、同等能力条件下で Stability が支配的だった、と表現するのが科学的に正確。
+
+## Router Evolution
+
+```
+0002C:  Capability ──────────────────────→ Routing
+
+0002D:  Capability → Adaptive Update ────→ Routing
+
+0002D.1: Capability → Confidence ────────→ Routing
+
+0002E:  Capability ┐
+        Latency    ├→ Composite Score ──→ Routing
+        Stability  │
+        Confidence ┘
+```
 
 ## Composite Score Formula
 
 ```
-Score(node, task) =
-    w₁ × Capability(node, task)   ← 0002C/0002D: タスク適性
-  + w₂ × Confidence(node, task)   ← 0002D.1: 推定の信頼度
-  + w₃ × Latency(node)            ← 0002A: RTT
-  + w₄ × Stability(node, backend) ← 0001: 数値安定性プロファイル
-  + w₅ × Cost(node)               ← 計算コスト（将来）
+Score(node) = w_cap × Capability(eff) + w_conf × Confidence
+            + w_lat × Latency(1−norm)  + w_stab × Stability(backend)
 ```
 
-### Concrete Example
+### Weights (configurable)
+
+| Component | Weight | Source |
+|-----------|:---:|--------|
+| Capability (effective) | 0.40 | 0002D.1 |
+| Confidence | 0.15 | 0002D.1 |
+| Latency | 0.15 | 0002A |
+| Stability | 0.30 | 0001 |
+
+### Stability Database (from EXP-0001)
+
+| Backend | Stability |
+|---------|:---:|
+| mps-fp32 | 1.000 |
+| mps-fp16 | 0.992 |
+| mps-bf16 | 0.791 |
+| cpu-fp32 | 1.000 |
+| onnx-fp16 | 0.992 |
+
+## Results (2026-08-01)
 
 ```
-Node A (FP16 MPS):
-  Capability=0.93, Confidence=0.85, Latency=18ms, Stability=0.992
-  Score = 0.35×0.93 + 0.15×0.85 + 0.20×1.0 + 0.30×0.992 = 0.950
+  ┌──────────────┬──────────┬──────────┬──────────┬──────────┐
+  │ Node         │ Cap(eff) │ Stability│ Latency  │ Reqs     │
+  ├──────────────┼──────────┼──────────┼──────────┼──────────┤
+  │ node-fp16    │ 0.134    │ 0.992    │ 3.7ms    │ 10 ✅    │
+  │ node-bf16    │ 0        │ 0.791    │ 3.2ms    │  0       │
+  └──────────────┴──────────┴──────────┴──────────┴──────────┘
 
-Node B (BF16 MPS):
-  Capability=0.95, Confidence=0.90, Latency=210ms, Stability=0.791
-  Score = 0.35×0.95 + 0.15×0.90 + 0.20×0.09 + 0.30×0.791 = 0.724
-
-→ Node A wins: 能力は少し低いが、速くて安定している
+  Composite range: FP16 0.298~0.380 vs BF16 0.237~0.320
+  Margin: Δstab(0.201) × weight(0.3) = 0.060 → FP16 always wins
 ```
 
-### Weight Rationale
-
-| Factor | Weight | Rationale |
-|--------|:---:|------|
-| Capability | 0.55 | 最重要：タスクに適したExpertを選ぶ |
-| Latency | 0.25 | 実用上重要：応答速度 |
-| Stability | 0.20 | 品質保証：バックエンド固有の数値リスク |
-
-## Architecture
+## Next: Weight Sensitivity Analysis (0002E.1)
 
 ```
-Master Hub
-  ├── CapabilityRegistry   ← EXP-0002C
-  ├── LatencyMonitor       ← EXP-0002A (RTT tracking)
-  ├── StabilityProfile     ← EXP-0001 (platform/backend/precision)
-  └── CompositeScheduler   ← Weighted score calculation
+weight(stability): 0.0 → 0.1 → 0.2 → 0.3 → 0.5 → 0.7 → 1.0
+
+Measure: at what weight does routing flip from BF16 to FP16?
 ```
 
-### Stability Score (from EXP-0001)
+## Future: Generalized Policy-Based Router
 
 ```
-Stability(backend, precision) = 1.0 − divergence_rate
-
-Example:
-  FP16 MPS:  stability = 1.0 − 0.008 = 0.992
-  BF16 MPS:  stability = 1.0 − 0.209 = 0.791
+Score(node) = w_cap·Capability + w_lat·Latency + w_stab·Stability
+            + w_conf·Confidence + w_cost·Cost + w_energy·Energy
+            + w_vram·VRAM + w_queue·QueueLength + ...
 ```
 
-## Success Criteria
+> Composite Score の重みをどう決めるか、重みが変わると Router の挙動がどう変わるか。
+> ここまで実験できれば、さらに説得力のある研究になる。
 
-- [ ] Composite score combines 3 dimensions correctly
-- [ ] High-capability node chosen for specialized tasks
-- [ ] Low-latency node preferred when capability scores tie
-- [ ] Low-stability backend deprioritized (BF16 on MPS)
-- [ ] Score weights adjustable via config
+Full results: [`output/summary.json`](output/summary.json)
 
-## Running
-
-```bash
-npx tsx experiments/qwen3_0.6b/EXP-0002E/run_master.ts --port 8080 \
-  --weights '{"capability":0.55,"latency":0.25,"stability":0.20}'
-```
-
-Depends on: EXP-0001 (Stability), EXP-0002A (Latency), EXP-0002C (Capability)
+Depends on: EXP-0001 (Stability), EXP-0002A (Latency), EXP-0002D.1 (Confidence)

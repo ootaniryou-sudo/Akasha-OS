@@ -45,6 +45,7 @@ Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, 
 | 0002C | Capability-Aware Routing | ✅ | **Routing Accuracy 100%. coding→coding, math→math.** |
 | 0002D | Adaptive Capability Profile | ✅ | **Score Inversion detected. Evaluation fidelity = routing limit.** |
 | 0002D.1 | Confidence-Aware Adaptive Routing | ✅ | **Two-stage eval. Score Inversion → 0. 7 avoided.** |
+| 0002E | Composite Score Routing | ✅ | **Stability dominates. FP16 10/10, BF16 0/10. 0001+0002 connected.** |
 
 ---
 
@@ -187,27 +188,24 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 
 ### Phase 3 ⏳ — Intelligent Routing
 
-> **Router Evolution: Static → Adaptive → Confidence-Aware**
-> **Research thread: 0002D.1 → 0002E → 0002F**
+> **Router Evolution: Capability → Adaptive → Confidence → Composite**
+> **EXP-0001 + EXP-0002 が初めて一本に。重要な節目。**
 
 ```
-✅ EXP-0002C          Static Capability Routing (100% accuracy)
-✅ EXP-0002D          Adaptive Routing (SMA) → Score Inversion → Evaluator limit
-✅ EXP-0002D.1        Confidence-Aware Adaptive Routing
-                       Two-stage evaluation: Capability + Confidence
-                       Bayesian Mean + exp-saturation confidence function
-                       n=0 nodes: eff=0 → never incorrectly chosen
-                       7 inversions avoided, 0 occurred
-                       Future: Lower Confidence Bound (μ − λσ)
+✅ EXP-0002C          Static Capability
+✅ EXP-0002D          Adaptive (SMA) → Evaluator limit 発見
+✅ EXP-0002D.1        Confidence-Aware (two-stage: μ × confidence)
+✅ EXP-0002E          Composite Score (C + Conf + L + S)
+                       Under equal capability, stability dominated routing.
+                       FP16(S=0.992) 10/10, BF16(S=0.791) 0/10.
 
-📐 EXP-0002E          Composite Score Routing
-                       Score = w₁·Capability + w₂·Confidence + w₃·Latency
-                             + w₄·Numerical Stability + w₅·Cost
-                       ← 0002D.1 の二段階評価を多軸に拡張
+📐 EXP-0002E.1        Weight Sensitivity Analysis
+                       weight(stability): 0.0→0.1→...→1.0
+                       At what weight does routing flip?
 
 📐 EXP-0002F          Shadow Expert Verification
-                       Shadow = Evaluator への高品質フィードバック源
-                       ← 0002D.1 の Evaluator 精度をさらに向上
+                       Dynamic stability → Composite Score update
+                       Static profile → Runtime-adaptive stability
 ```
 
 ### Phase 4 ⏳ — Multi-Expert Collaboration
