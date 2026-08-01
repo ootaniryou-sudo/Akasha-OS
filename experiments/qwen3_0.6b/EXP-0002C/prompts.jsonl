@@ -1,0 +1,10 @@
+{"prompt": "Write a Python function to calculate factorial.", "capability": "coding"}
+{"prompt": "What is the integral of x^2 from 0 to 1?", "capability": "math"}
+{"prompt": "Implement a binary search algorithm in Python.", "capability": "coding"}
+{"prompt": "Solve the equation: 3x + 7 = 22", "capability": "math"}
+{"prompt": "Write a function that reverses a linked list.", "capability": "coding"}
+{"prompt": "What is 15% of 340?", "capability": "math"}
+{"prompt": "Create a Python class for a bank account with deposit and withdraw methods.", "capability": "coding"}
+{"prompt": "Calculate the derivative of f(x) = x^3 + 2x^2 - 5x + 1", "capability": "math"}
+{"prompt": "Explain machine learning briefly.", "capability": "general"}
+{"prompt": "What is the capital of Japan?", "capability": "general"}
