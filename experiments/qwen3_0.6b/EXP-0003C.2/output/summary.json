@@ -1,0 +1,341 @@
+{
+  "experiment": "EXP-0003C.2",
+  "description": "Sample Complexity Estimation — raw regret series for curve fitting",
+  "timestamp": "2026-08-01T16:51:25.223Z",
+  "config": {
+    "total_steps": 120,
+    "checkpoints": [
+      24,
+      60,
+      100,
+      120
+    ],
+    "series_every": 5,
+    "phases": [
+      "baseline",
+      "latency",
+      "capjump"
+    ],
+    "eta": 0.3,
+    "epsilon": 0.15,
+    "ucb_c": 2,
+    "reward": {
+      "q": 1,
+      "lat": 0.1,
+      "cost": 0.1,
+      "stab": 0.1
+    },
+    "fixed_w": {
+      "q": 0.6,
+      "lat": 0.2,
+      "cost": 0.05,
+      "stab": 0.15
+    }
+  },
+  "experts": [
+    {
+      "node_id": "node-qwen",
+      "model_id": "Qwen/Qwen3-0.6B",
+      "family": "qwen"
+    },
+    {
+      "node_id": "node-smollm",
+      "model_id": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "family": "smollm"
+    },
+    {
+      "node_id": "node-gemma",
+      "model_id": "unsloth/gemma-3-1b-it",
+      "family": "gemma"
+    }
+  ],
+  "checkpoints": [
+    {
+      "samples": 24,
+      "cumRegret": {
+        "fixed": 2.1,
+        "qlearn": 5.4,
+        "ucb": 4.15,
+        "thompson": 2.7
+      }
+    },
+    {
+      "samples": 60,
+      "cumRegret": {
+        "fixed": 3.35,
+        "qlearn": 12.950000000000001,
+        "ucb": 7.800000000000001,
+        "thompson": 6.675000000000001
+      }
+    },
+    {
+      "samples": 100,
+      "cumRegret": {
+        "fixed": 6.05,
+        "qlearn": 21.300000000000004,
+        "ucb": 12.550000000000002,
+        "thompson": 10.525000000000004
+      }
+    },
+    {
+      "samples": 120,
+      "cumRegret": {
+        "fixed": 6.2,
+        "qlearn": 24.7,
+        "ucb": 14.150000000000002,
+        "thompson": 10.675000000000004
+      }
+    }
+  ],
+  "series": [
+    {
+      "samples": 5,
+      "cumRegret": {
+        "fixed": 0.6000000000000001,
+        "qlearn": 1.5,
+        "ucb": 1,
+        "thompson": 0.6000000000000001
+      }
+    },
+    {
+      "samples": 10,
+      "cumRegret": {
+        "fixed": 0.6000000000000001,
+        "qlearn": 2.7,
+        "ucb": 1.4,
+        "thompson": 1
+      }
+    },
+    {
+      "samples": 15,
+      "cumRegret": {
+        "fixed": 0.6000000000000001,
+        "qlearn": 3.5000000000000004,
+        "ucb": 1.4,
+        "thompson": 1
+      }
+    },
+    {
+      "samples": 20,
+      "cumRegret": {
+        "fixed": 1.7000000000000002,
+        "qlearn": 5.2,
+        "ucb": 3.4000000000000004,
+        "thompson": 2.5
+      }
+    },
+    {
+      "samples": 24,
+      "cumRegret": {
+        "fixed": 2.1,
+        "qlearn": 5.4,
+        "ucb": 4.15,
+        "thompson": 2.7
+      }
+    },
+    {
+      "samples": 25,
+      "cumRegret": {
+        "fixed": 2.1,
+        "qlearn": 5.6000000000000005,
+        "ucb": 4.3500000000000005,
+        "thompson": 2.9000000000000004
+      }
+    },
+    {
+      "samples": 30,
+      "cumRegret": {
+        "fixed": 2.7,
+        "qlearn": 6.45,
+        "ucb": 4.3500000000000005,
+        "thompson": 3.45
+      }
+    },
+    {
+      "samples": 35,
+      "cumRegret": {
+        "fixed": 3.2,
+        "qlearn": 7.8500000000000005,
+        "ucb": 4.750000000000001,
+        "thompson": 4.25
+      }
+    },
+    {
+      "samples": 40,
+      "cumRegret": {
+        "fixed": 3.2,
+        "qlearn": 9.05,
+        "ucb": 6.500000000000001,
+        "thompson": 4.55
+      }
+    },
+    {
+      "samples": 45,
+      "cumRegret": {
+        "fixed": 3.2,
+        "qlearn": 10.1,
+        "ucb": 6.800000000000001,
+        "thompson": 4.55
+      }
+    },
+    {
+      "samples": 50,
+      "cumRegret": {
+        "fixed": 3.35,
+        "qlearn": 10.25,
+        "ucb": 6.950000000000001,
+        "thompson": 5.2250000000000005
+      }
+    },
+    {
+      "samples": 55,
+      "cumRegret": {
+        "fixed": 3.35,
+        "qlearn": 11.15,
+        "ucb": 7.800000000000001,
+        "thompson": 5.9750000000000005
+      }
+    },
+    {
+      "samples": 60,
+      "cumRegret": {
+        "fixed": 3.35,
+        "qlearn": 12.950000000000001,
+        "ucb": 7.800000000000001,
+        "thompson": 6.675000000000001
+      }
+    },
+    {
+      "samples": 65,
+      "cumRegret": {
+        "fixed": 3.85,
+        "qlearn": 13.700000000000001,
+        "ucb": 8.2,
+        "thompson": 7.175000000000001
+      }
+    },
+    {
+      "samples": 70,
+      "cumRegret": {
+        "fixed": 4.45,
+        "qlearn": 15.700000000000003,
+        "ucb": 9.3,
+        "thompson": 7.775
+      }
+    },
+    {
+      "samples": 75,
+      "cumRegret": {
+        "fixed": 4.45,
+        "qlearn": 17.500000000000004,
+        "ucb": 9.3,
+        "thompson": 7.775
+      }
+    },
+    {
+      "samples": 80,
+      "cumRegret": {
+        "fixed": 4.95,
+        "qlearn": 17.700000000000003,
+        "ucb": 10,
+        "thompson": 8.275
+      }
+    },
+    {
+      "samples": 85,
+      "cumRegret": {
+        "fixed": 4.95,
+        "qlearn": 19.200000000000003,
+        "ucb": 11.100000000000001,
+        "thompson": 8.875000000000002
+      }
+    },
+    {
+      "samples": 90,
+      "cumRegret": {
+        "fixed": 5.5,
+        "qlearn": 20.500000000000004,
+        "ucb": 11.3,
+        "thompson": 9.425000000000002
+      }
+    },
+    {
+      "samples": 95,
+      "cumRegret": {
+        "fixed": 5.55,
+        "qlearn": 20.500000000000004,
+        "ucb": 11.350000000000001,
+        "thompson": 9.425000000000002
+      }
+    },
+    {
+      "samples": 100,
+      "cumRegret": {
+        "fixed": 6.05,
+        "qlearn": 21.300000000000004,
+        "ucb": 12.550000000000002,
+        "thompson": 10.525000000000004
+      }
+    },
+    {
+      "samples": 105,
+      "cumRegret": {
+        "fixed": 6.05,
+        "qlearn": 22.450000000000003,
+        "ucb": 13.250000000000002,
+        "thompson": 10.525000000000004
+      }
+    },
+    {
+      "samples": 110,
+      "cumRegret": {
+        "fixed": 6.05,
+        "qlearn": 23.250000000000004,
+        "ucb": 13.250000000000002,
+        "thompson": 10.525000000000004
+      }
+    },
+    {
+      "samples": 115,
+      "cumRegret": {
+        "fixed": 6.2,
+        "qlearn": 23.8,
+        "ucb": 13.650000000000002,
+        "thompson": 10.675000000000004
+      }
+    },
+    {
+      "samples": 120,
+      "cumRegret": {
+        "fixed": 6.2,
+        "qlearn": 24.7,
+        "ucb": 14.150000000000002,
+        "thompson": 10.675000000000004
+      }
+    }
+  ],
+  "final_ucb": {
+    "q": [
+      0.54,
+      0.865,
+      0.579
+    ],
+    "n": [
+      21,
+      75,
+      24
+    ]
+  },
+  "final_thompson": {
+    "alpha": [
+      4.048,
+      84.497,
+      9.109
+    ],
+    "beta": [
+      3.952,
+      18.503,
+      5.891
+    ]
+  }
+}
