@@ -24,6 +24,7 @@
 | 0002A-iPhone | iPhone 12 mini Relay | ✅ | **iPhone joins ArcAsha network.** WiFi 20ms. Lightweight relay |
 | 0002B | Heterogeneous Two-Node Routing | ✅ | **Round-Robin PC+iPhone 15 Pro. 50/50. 1.9× throughput.** |
 | 0002C | Capability-Aware Routing | ✅ | **Routing Accuracy 100%. coding→coding, math→math.** |
+| 0002D | Adaptive Capability Profile | ✅ | **Score Inversion detected. Evaluation fidelity = routing limit.** |
 
 ---
 
@@ -167,10 +168,13 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 ### Phase 3 ⏳ — Intelligent Routing
 ```
 ✅ EXP-0002C          Capability-Aware Routing (static profile, Routing Accuracy 100%)
-📐 EXP-0002D          Adaptive Capability (measured → updated profile)
+✅ EXP-0002D          Adaptive Capability (SMA, Score Inversion → Evaluator limit)
+📐 EXP-0002D.1        Task Evaluator Improvement (heuristic → measured + confidence)
 📐 EXP-0002E          Composite Score Routing (capability + latency + stability)
 📐 EXP-0002F          Shadow Expert Verification (EXP-0001 stability applied)
 ```
+
+> **EXP-0002D の核心的発見**: Adaptive routing は正しく動作するが、Routing Quality は Evaluation Function の忠実度によって制限される。不正確な評価関数は Capability Inversion を引き起こす。
 
 ### Phase 4 ⏳ — Multi-Expert Collaboration
 ```
