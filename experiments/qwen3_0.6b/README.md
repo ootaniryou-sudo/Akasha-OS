@@ -130,6 +130,7 @@ Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, 
 | 0002E | Composite Score Routing | ✅ | **Stability dominates. FP16 10/10, BF16 0/10. 0001+0002 connected.** |
 | 0002E.1 | Weight Sensitivity | ✅ | **Decision Boundary. critical w_stab=0.0/0.185/0.351.** |
 | 0002E.2 | Pareto Routing | ✅ | **Scalarization hides dominance. Two-stage routing.** |
+| 0002E.3 | Adaptive Weight Learning | ✅ | **3-way comparison. Adaptive 96% ≥ Fixed 86%. w_stab 0.30→0.70 学習. Drift 8/8, Recovery 8/8.** |
 | 0002F | Shadow Expert Feedback | ✅ | **Closed loop. Same-runtime 100% agree.** |
 | 0002F.1 | Cross-Backend Shadow | ✅ | **ONNX vs PyTorch: 88.6% overlap, FLAG=1, Stability 0.992→0.743.** |
 | 0002F.2 | Recovery Dynamics & Hysteresis | ✅ | **Asym α. Drift 1.0→0.91, Recovery 0.91→0.961. Hysteresis 0.567 (conservative). Half-life 7reqs. FalseRecovery 0%.** |
@@ -332,8 +333,10 @@ Decision Boundary   Pareto Frontier
 ✅ EXP-0002E.1        Decision Boundary（重み空間の相転移）
 ✅ EXP-0002E.2        Pareto Frontier（目的空間の支配構造）
                        Scalarization cannot preserve full dominance structure.
-
-📐 EXP-0002E.3        Adaptive Weight Learning（Pareto 内で学習）
+✅ EXP-0002E.3        Adaptive Weight Learning
+                       Fixed 86% vs Manual 96% vs Adaptive 96%
+                       w_stab 0.30→0.70 (Belief に追従) → ドリフト 8/8, recovery 8/8
+                       「重みも観測から学習できる」= 二重適応の実証
 ```
 
 ### Phase 4 ⏳ — Adaptive State Routing

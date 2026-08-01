@@ -218,7 +218,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | **Relay Node** | ❌ | iPhone 12 mini | Connectivity, forwarding, health |
 | **Hybrid Node** | ✅ | Future iPhone 15 Pro | Expert + Relay combined |
 
-### Phase 3 ✅ — Intelligent Routing (EXP-0002C〜0002E.2)
+### Phase 3 ✅ — Intelligent Routing (EXP-0002C〜0002E.3)
 
 | # | Experiment | Result | Key Finding |
 |---|-----------|:---:|------|
@@ -228,6 +228,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | 0002E | Composite Score Routing | ✅ | Under equal capability, **Stability dominates** (FP16 10/10, BF16 0/10) |
 | 0002E.1 | Decision Boundary | ✅ | **critical w_stab = 0.0 / 0.185 / 0.351.** Stability = secondary objective |
 | 0002E.2 | Pareto Routing | ✅ | Scalarization hides dominance. **Two-stage: Pareto Filter → Composite Score** |
+| 0002E.3 | **Adaptive Weight Learning** | ✅ | **3-way比較: Fixed 86% vs Manual 96% vs Adaptive 96%.** w_stab 0.30→0.70 を Belief から学習. ドリフト 8/8・Recovery 8/8 |
 
 ### Phase 4 ⏳ — Adaptive State Routing (EXP-0002F〜)
 
@@ -236,7 +237,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | 0002F | Shadow Expert Feedback | ✅ | 閉ループ実装. Same-runtime 100% agree (EXP-0001.8 と整合) |
 | 0002F.1 | **Cross-Backend Shadow** | ✅ | **ONNX vs PyTorch MPS: 88.6% overlap, FLAG=1 (45%). Stability 0.992→0.743** — Belief Update 実証 |
 | 0002F.2 | **Recovery Dynamics & Hysteresis** | ✅ | **非対称α (deg=0.3/recover=0.9). Drift 1.0→0.91 → Recovery 0.91→0.961. Hysteresis 0.567 (保守的). Half-life 7reqs. Time-to-95% 未到達. FalseRecovery 0%.** |
-| 0002E.3 | Adaptive Weight Learning | 📐 | 実データで重みを自己最適化 |
+| 0002E.3 | **Adaptive Weight Learning** | ✅ | **3-way比較: Adaptive 96% ≥ Fixed 86%.** w_stab 0.30→0.70 が Belief に追従. ドリフト/Recovery 8/8. **二重適応の実証** |
 
 > **Phase 4 の中核**: 「良いノードを選ぶ」→「**観測結果に応じてノードの信頼性を更新し、次の意思決定へ反映する**」
 > `Static Knowledge → Observed Evidence → Belief Update → Routing`
