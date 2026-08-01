@@ -1,0 +1,127 @@
+{
+  "experiment": "EXP-0002B",
+  "description": "Two-Expert Round-Robin Routing (Master Hub + iPhone 12 mini Relay)",
+  "timestamp": "2026-08-01T01:37:02.925Z",
+  "config": {
+    "master_port": 8095,
+    "prompts_file": "experiments/qwen3_0.6b/golden/prompts.jsonl",
+    "num_prompts": 10,
+    "policy": "round-robin",
+    "min_nodes": 2
+  },
+  "completed": 10,
+  "total_ms": 13216,
+  "throughput_req_per_sec": 0.76,
+  "nodes": [
+    {
+      "node_id": "node-a",
+      "role": "expert",
+      "platform": "darwin-arm64",
+      "device": "PC",
+      "latency_ms": 3.4,
+      "requests": 10,
+      "total_tokens": 320,
+      "avg_roundtrip_ms": 1321.5,
+      "errors": 0
+    }
+  ],
+  "routing_distribution": [
+    {
+      "node_id": "node-a",
+      "requests": 10,
+      "pct": 100
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "req-0000",
+      "node_id": "node-a",
+      "prompt": "What is 2 + 2?",
+      "tokens": 32,
+      "roundtrip_ms": 1565.4,
+      "node_total_ms": 1562.7,
+      "network_ms": 2.7
+    },
+    {
+      "request_id": "req-0001",
+      "node_id": "node-a",
+      "prompt": "What is the capital of Japan?",
+      "tokens": 32,
+      "roundtrip_ms": 1301.6,
+      "node_total_ms": 1300.9,
+      "network_ms": 0.7
+    },
+    {
+      "request_id": "req-0002",
+      "node_id": "node-a",
+      "prompt": "Explain machine learning briefly.",
+      "tokens": 32,
+      "roundtrip_ms": 1294.7,
+      "node_total_ms": 1294.1,
+      "network_ms": 0.6
+    },
+    {
+      "request_id": "req-0003",
+      "node_id": "node-a",
+      "prompt": "Write a Python factorial function.",
+      "tokens": 32,
+      "roundtrip_ms": 1281.2,
+      "node_total_ms": 1280.5,
+      "network_ms": 0.7
+    },
+    {
+      "request_id": "req-0004",
+      "node_id": "node-a",
+      "prompt": "What is 12 * 7?",
+      "tokens": 32,
+      "roundtrip_ms": 1293.8,
+      "node_total_ms": 1293.1,
+      "network_ms": 0.7
+    },
+    {
+      "request_id": "req-0005",
+      "node_id": "node-a",
+      "prompt": "Explain what a neural network is.",
+      "tokens": 32,
+      "roundtrip_ms": 1272.5,
+      "node_total_ms": 1271.9,
+      "network_ms": 0.6
+    },
+    {
+      "request_id": "req-0006",
+      "node_id": "node-a",
+      "prompt": "日本の首都はどこですか？",
+      "tokens": 32,
+      "roundtrip_ms": 1287,
+      "node_total_ms": 1286.4,
+      "network_ms": 0.6
+    },
+    {
+      "request_id": "req-0007",
+      "node_id": "node-a",
+      "prompt": "機械学習とは何ですか？",
+      "tokens": 32,
+      "roundtrip_ms": 1284.6,
+      "node_total_ms": 1284,
+      "network_ms": 0.6
+    },
+    {
+      "request_id": "req-0008",
+      "node_id": "node-a",
+      "prompt": "Pythonでフィボナッチ数列を書いてください。",
+      "tokens": 32,
+      "roundtrip_ms": 1314.3,
+      "node_total_ms": 1313.5,
+      "network_ms": 0.8
+    },
+    {
+      "request_id": "req-0009",
+      "node_id": "node-a",
+      "prompt": "1から100までの合計はいくつですか？",
+      "tokens": 32,
+      "roundtrip_ms": 1319.7,
+      "node_total_ms": 1319,
+      "network_ms": 0.7
+    }
+  ]
+}
