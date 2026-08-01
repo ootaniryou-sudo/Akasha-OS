@@ -16,12 +16,17 @@ node-h (cap=0.80, lat=70ms, stab=0.80)
 → スカラー化はトレードオフを隠す
 ```
 
+## Generalization
+
+> **Scalarization cannot preserve the full dominance structure of a multi-objective routing problem.**
+> **Therefore, Pareto filtering is introduced before scalarization to preserve the dominance structure while enabling policy-driven final selection.**
+
 ## Two-Stage Routing Design
 
 ```
 All Nodes
     ↓
-Step 1: Pareto Filter   ← 完全支配ノードを除外
+Step 1: Pareto Filter   ← 完全支配ノードを除外（探索空間の理論的削減）
     ↓
 Pareto Frontier
     ↓
@@ -32,6 +37,7 @@ Best Node
 
 > Pareto で候補集合を絞り、Composite Score で最終選択。
 > node-h のような完全劣化ノードは最初から除外される。
+> **Dominated Node は計算対象外 → 実装上も探索空間が削減される。**
 
 ## Weight Space vs Objective Space
 

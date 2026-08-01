@@ -4,7 +4,8 @@
 > **Phase 3 ⏳ Intelligent Routing | Phase 4 ⏳ Collaborative Intelligence**
 
 **[`CONCLUSIONS.md`](CONCLUSIONS.md)** — Formal conclusions + design principles.  
-**[`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md)** — Multi-dimensional profile spec.
+**[`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md)** — Multi-dimensional profile spec.  
+**[`RESEARCH_FRAMEWORK.md`](RESEARCH_FRAMEWORK.md)** — 研究フレームワーク + 論文アウトライン.
 
 ---
 
@@ -39,6 +40,53 @@ Shadow
 ```
 
 > **各層が独立して拡張可能。Node State が増えても、Policy が変わっても、Decision は共通。**
+
+---
+
+## Phase 3 Complete Pipeline
+
+```
+Node Characteristics
+──────────────────────────
+Capability
+Latency
+Stability
+Cost
+Confidence
+──────────────────────────
+          │
+          ▼
+Capability Estimation
+──────────────────────────
+Adaptive Update (0002D)
+Bayesian Update (0002D.1)
+Confidence Estimation (0002D.1)
+──────────────────────────
+          │
+          ▼
+Candidate Selection
+──────────────────────────
+Pareto Filter (0002E.2)   ← 探索空間の理論的削減
+──────────────────────────
+          │
+          ▼
+Decision Policy
+──────────────────────────
+Composite Score (0002E)
+Decision Boundary (0002E.1)
+Adaptive Weights (0002E.3, future)
+──────────────────────────
+          │
+          ▼
+Execution
+──────────────────────────
+Best Expert
+Shadow Expert (0002F, Phase 4)
+──────────────────────────
+```
+
+> **Weight Space（ルーター側）と Objective Space（ノード側）の二視点でルーティングを解析。**
+> **MoE の top-k とは異なり、Routing を多目的最適化問題として扱う。**
 
 ---
 
