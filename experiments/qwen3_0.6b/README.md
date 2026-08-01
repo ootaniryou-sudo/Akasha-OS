@@ -22,7 +22,20 @@
 | 0001.9 | Platform Matrix | ✅ | macOS MPS completed. CUDA/CPU pending |
 | 0002A | Remote Expert | ✅ | Mac Node: Qwen3-0.6B via WebSocket. Network overhead 2ms |
 | 0002A-iPhone | iPhone 12 mini Relay | ✅ | **iPhone joins ArcAsha network.** WiFi 20ms. Lightweight relay |
-| 0002B | Heterogeneous Two-Node Routing | ✅ | **Round-Robin PC+iPhone 15 Pro. 50/50 distribution. 1.9× throughput.** |
+| 0002B | Heterogeneous Two-Node Routing | ✅ | **Round-Robin PC+iPhone 15 Pro. 50/50. 1.9× throughput.** |
+| 0002C | Capability-Aware Routing | ✅ | **Routing Accuracy 100%. coding→coding, math→math.** |
+
+---
+
+## Terminology Notes
+
+| Term | Definition |
+|------|-----------|
+| **Routing Accuracy** | Router が事前定義 Profile に従って正しいノードを選べた割合 |
+| **Task Classification Accuracy** | LLM 自身の能力を正確に分類できた割合（未検証） |
+
+> EXP-0002C の 100% は **Routing Accuracy**。Capability は固定の事前設定値。
+> 論文ではこの2つを明確に区別する必要がある。
 
 ---
 
@@ -146,18 +159,17 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 
 ### Phase 2 ✅ — Distributed Runtime
 ```
-✅ EXP-0002A          Remote Single Expert (WebSocket + iPhone Relay)
-✅ EXP-0002B          Heterogeneous Two-Node Round-Robin (PC Expert + iPhone Relay)
+✅ EXP-0002A          Remote Single Expert
+✅ EXP-0002B          Heterogeneous Two-Node Round-Robin
 ```
 → Scheduler, Node Registry, Master Hub が成立
 
 ### Phase 3 ⏳ — Intelligent Routing
 ```
-📐 EXP-0002C          Capability-Aware Routing (coding expert vs math expert)
-📐 EXP-0002D          Shadow Routing (Main + Shadow + Verification)
-📐 EXP-0002E          Cost-Aware Routing
-📐 EXP-0002F          Latency-Aware Routing
-📐 EXP-0002G          Stability-Aware Routing（EXP-0001成果を活用）
+✅ EXP-0002C          Capability-Aware Routing (static profile, Routing Accuracy 100%)
+📐 EXP-0002D          Adaptive Capability (measured → updated profile)
+📐 EXP-0002E          Composite Score Routing (capability + latency + stability)
+📐 EXP-0002F          Shadow Expert Verification (EXP-0001 stability applied)
 ```
 
 ### Phase 4 ⏳ — Multi-Expert Collaboration
