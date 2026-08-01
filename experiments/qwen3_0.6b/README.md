@@ -44,6 +44,7 @@ Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, 
 | 0002B | Heterogeneous Two-Node Routing | ✅ | **Round-Robin PC+iPhone 15 Pro. 50/50. 1.9× throughput.** |
 | 0002C | Capability-Aware Routing | ✅ | **Routing Accuracy 100%. coding→coding, math→math.** |
 | 0002D | Adaptive Capability Profile | ✅ | **Score Inversion detected. Evaluation fidelity = routing limit.** |
+| 0002D.1 | Confidence-Aware Adaptive Routing | ✅ | **Two-stage eval. Score Inversion → 0. 7 avoided.** |
 
 ---
 
@@ -186,27 +187,27 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 
 ### Phase 3 ⏳ — Intelligent Routing
 
-> **Research thread: 0002D.1 → 0002E → 0002F が一本の研究テーマとして接続**
+> **Router Evolution: Static → Adaptive → Confidence-Aware**
+> **Research thread: 0002D.1 → 0002E → 0002F**
 
 ```
-✅ EXP-0002C          Capability-Aware Routing (static, Routing Accuracy 100%)
-✅ EXP-0002D          Adaptive Capability (SMA, Score Inversion → Evaluator limit)
-
-📐 EXP-0002D.1        Task Evaluator Improvement
-                       Phase 1: EMA/SMA (current)
-                       Phase 2: Bayesian Mean
-                       Phase 3: Bayesian + Confidence Interval
-                       Phase 4: Context-Aware Capability
+✅ EXP-0002C          Static Capability Routing (100% accuracy)
+✅ EXP-0002D          Adaptive Routing (SMA) → Score Inversion → Evaluator limit
+✅ EXP-0002D.1        Confidence-Aware Adaptive Routing
+                       Two-stage evaluation: Capability + Confidence
+                       Bayesian Mean + exp-saturation confidence function
+                       n=0 nodes: eff=0 → never incorrectly chosen
+                       7 inversions avoided, 0 occurred
+                       Future: Lower Confidence Bound (μ − λσ)
 
 📐 EXP-0002E          Composite Score Routing
                        Score = w₁·Capability + w₂·Confidence + w₃·Latency
                              + w₄·Numerical Stability + w₅·Cost
-                       ← EXP-0001 の Stability が初めて直接活用される
+                       ← 0002D.1 の二段階評価を多軸に拡張
 
 📐 EXP-0002F          Shadow Expert Verification
-                       Main Expert → Answer
-                       Shadow Expert → Verification → Evaluator → Capability Update
-                       ← Shadow は検証役 + Evaluator への高品質フィードバック源
+                       Shadow = Evaluator への高品質フィードバック源
+                       ← 0002D.1 の Evaluator 精度をさらに向上
 ```
 
 ### Phase 4 ⏳ — Multi-Expert Collaboration
