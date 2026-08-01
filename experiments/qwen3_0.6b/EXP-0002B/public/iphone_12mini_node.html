@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>ArcAsha — iPhone 12 mini Relay</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#000;color:#0f0;font:11px 'SF Mono','Menlo',monospace;padding:8px;-webkit-text-size-adjust:none}
+  h1{font-size:13px;margin-bottom:6px;color:#fff}
+  h2{font-size:11px;color:#888;margin:8px 0 3px}
+  .card{background:#111;border:1px solid #222;padding:6px;margin:3px 0;border-radius:3px;word-break:break-all}
+  .card b{color:#fff}
+  .ok{color:#0f0}.warn{color:#f80}.err{color:#f00}.info{color:#0af}
+  .pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:#0f0;animation:pulse 2s infinite;margin-right:5px;vertical-align:middle}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
+  .metric{display:inline-block;background:#1a1a1a;padding:2px 5px;margin:1px;border-radius:3px;font-size:10px}
+  .log{max-height:180px;overflow-y:auto;font-size:10px;-webkit-overflow-scrolling:touch}
+  .log div{padding:1px 0;border-bottom:1px solid #1a1a1a}
+  button{display:block;width:100%;padding:10px;margin:8px 0;background:#0a0;color:#000;border:none;border-radius:4px;font:bold 13px monospace;cursor:pointer;-webkit-appearance:none}
+  button:active{background:#0c0}
+  button:disabled{background:#333;color:#666}
+  input,select{width:100%;padding:6px;margin:3px 0;background:#111;color:#0f0;border:1px solid #333;border-radius:3px;font:11px monospace}
+  label{color:#888;font-size:10px;display:block;margin-top:4px}
+</style>
+</head>
+<body>
+
+<h1>🧠 ArcAsha Node</h1>
+
+<div>
+  <span class="pulse" id="dot"></span>
+  <span id="status" style="color:#f80">Disconnected</span>
+</div>
+
+<div class="card" id="deviceInfo"></div>
+
+<label>Mode</label>
+<select id="modeSelect" onchange="onModeChange()">
+  <option value="relay">🔄 Relay (forward to Qwen backend)</option>
+  <option value="passthrough">➡️ Passthrough (no backend)</option>
+</select>
+
+<label>Master Hub URL</label>
+<input type="text" id="masterUrl" value="ws://192.168.0.17:8080" placeholder="ws://192.168.x.x:8080">
+
+<div id="backendSection">
+  <label>Backend Qwen URL</label>
+  <input type="text" id="backendUrl" value="ws://192.168.0.17:8082" placeholder="ws://192.168.x.x:8082">
+</div>
+
+<button id="connectBtn" onclick="toggleConnection()">🔗 Connect to Master</button>
+
+<h2>📊 Metrics</h2>
+<div class="card" id="metrics">
+  <span class="metric">⏱ RTT: <b id="latency">--</b>ms</span>
+  <span class="metric">📥 Reqs: <b id="reqCount">0</b></span>
+  <span class="metric">📤 Tokens: <b id="tokCount">0</b></span>
+  <span class="metric">❌ Errors: <b id="errCount">0</b></span>
+  <span class="metric">🔄 Mode: <b id="modeLabel">Relay</b></span>
+</div>
+
+<h2>📋 Event Log</h2>
+<div class="card log" id="log"></div>
+
+<script>
+'use strict';
+
+const $ = (id) => document.getElementById(id);
+const statusEl = $('status'), dotEl = $('dot'), logEl = $('log');
+const latencyEl = $('latency'), reqCountEl = $('reqCount');
+const tokCountEl = $('tokCount'), errCountEl = $('errCount');
+const modeLabel = $('modeLabel');
+const connectBtn = $('connectBtn');
+const masterUrlEl = $('masterUrl'), backendUrlEl = $('backendUrl');
+const modeSelect = $('modeSelect'), backendSection = $('backendSection');
+
+let wsMaster = null, wsBackend = null;
+let connected = false;
+let reqCount = 0, tokCount = 0, errCount = 0;
+let pingInterval = null;
+
+// Device Info
+(function(){
+  const ua = navigator.userAgent;
+  const iosVer = ua.match(/OS (\d+_\d+)/)?.[1]?.replace('_','.')||'?';
+  $('deviceInfo').innerHTML = [
+    '<b>Device</b>: iPhone 12 mini (iPhone13,0)',
+    '<b>OS</b>: iOS '+iosVer,
+    '<b>Cores</b>: '+(navigator.hardwareConcurrency||'6'),
+    '<b>Memory</b>: '+(navigator.deviceMemory||'4')+' GB',
+    '<b>WebGPU</b>: <span class="warn">'+(navigator.gpu?'✅':'❌ not exposed')+'</span>',
+    '<b>Role</b>: <span class="info">Lightweight Relay Node</span>',
+  ].join('<br>');
+})();
+
+function onModeChange(){
+  backendSection.style.display = modeSelect.value==='relay'?'block':'none';
+  modeLabel.textContent = modeSelect.value==='relay'?'Relay':'Passthrough';
+}
+onModeChange();
+
+function log(msg,color){
+  const d=document.createElement('div');
+  d.innerHTML=`<span style="color:#555">${new Date().toLocaleTimeString()}</span> <span style="color:${color||'#0f0'}">${msg}</span>`;
+  logEl.insertBefore(d,logEl.firstChild);
+  if(logEl.children.length>80)logEl.lastChild.remove();
+}
+
+function setStatus(text,color){
+  statusEl.textContent=text;statusEl.style.color=color;dotEl.style.background=color;
+}
+
+function toggleConnection(){
+  if(connected){disconnect();return;}
+  connect();
+}
+
+function connect(){
+  const masterUrl=masterUrlEl.value.trim();
+  if(!masterUrl){log('❌ Master URL required','#f00');return;}
+
+  connectBtn.disabled=true;connectBtn.textContent='⏳ Connecting...';
+  setStatus('Connecting...','#f80');
+  log('🔗 Master: '+masterUrl,'#0af');
+
+  const mode=modeSelect.value;
+  if(mode==='relay'){
+    const be=backendUrlEl.value.trim();
+    if(be){log('🔗 Backend: '+be,'#0af');connectBackend(be);}
+    else log('⚠️ No backend URL','#f80');
+  }
+
+  wsMaster=new WebSocket(masterUrl);
+  wsMaster.onopen=()=>{
+    log('✅ Master connected','#0f0');setStatus('Connected ✅','#0f0');
+    wsMaster.send(JSON.stringify({type:'register',node:{
+      id:'iphone12mini',
+      platform:'iOS-'+ (navigator.userAgent.match(/OS (\d+_\d+)/)?.[1]?.replace('_','.')||'?'),
+      device:'iPhone13,0 (12 mini)',
+      role:mode==='relay'?'lightweight-relay':'lightweight-passthrough',
+      backend:mode==='relay'?(backendUrlEl.value.trim()||'none'):'none',
+      cores:navigator.hardwareConcurrency||6,
+    }}));
+    log('📝 Registered as iphone12mini','#0af');
+    connected=true;connectBtn.textContent='🔌 Disconnect';connectBtn.disabled=false;
+    pingInterval=setInterval(()=>{
+      if(wsMaster&&wsMaster.readyState===WebSocket.OPEN){
+        wsMaster.send(JSON.stringify({type:'ping',t:performance.now()}));
+      }
+    },5000);
+  };
+
+  wsMaster.onmessage=(e)=>{
+    try{var msg=JSON.parse(e.data)}catch(_){return}
+
+    if(msg.type==='register_ack'){
+      log('✅ Master ACK ('+msg.connected_nodes+' nodes)','#0f0');return;
+    }
+    if(msg.type==='pong'){
+      if(msg.t)latencyEl.textContent=Math.round(performance.now()-msg.t);
+      return;
+    }
+    if(msg.type==='compute'){
+      reqCount++;reqCountEl.textContent=reqCount;
+      log('📥 ['+msg.request_id+'] "'+(msg.prompt||'').slice(0,30)+'..."','#0af');
+
+      if(mode==='passthrough'||!wsBackend||wsBackend.readyState!==WebSocket.OPEN){
+        wsMaster.send(JSON.stringify({type:'result',request_id:msg.request_id,
+          tokens:[],text:'[iphone12mini passthrough]',
+          timing:{tokenize_ms:0,prefill_ms:0,decode_ms:0,total_ms:0},
+          metadata:{node_id:'iphone12mini',model_id:'none',backend:'none',precision:'n/a',platform:'iOS',role:'lightweight-passthrough'}}));
+        log('📤 ['+msg.request_id+'] passthrough','#f80');
+        return;
+      }
+
+      const fwdT0=performance.now();
+      wsBackend.send(JSON.stringify({type:'compute',request_id:msg.request_id,
+        prompt:msg.prompt,max_new_tokens:msg.max_new_tokens||32,
+        temperature:msg.temperature??0,top_p:msg.top_p??1}));
+
+      let resolved=false;
+      const resultHandler=(be)=>{
+        if(resolved)return;
+        try{var bm=JSON.parse(be.data)}catch(_){return}
+        if(bm.type==='result'&&bm.request_id===msg.request_id){
+          resolved=true;
+          const fwdMs=Math.round((performance.now()-fwdT0)*10)/10;
+          wsBackend.removeEventListener('message',resultHandler);
+          wsMaster.send(JSON.stringify({...bm,metadata:{...bm.metadata,
+            node_id:'iphone12mini',relayed_from:bm.metadata?.node_id||'backend',
+            relay_ms:fwdMs,role:'lightweight-relay'}}));
+          tokCount+=(bm.tokens||[]).length;tokCountEl.textContent=tokCount;
+          log('📤 ['+msg.request_id+'] '+(bm.tokens||[]).length+' tokens (relay='+fwdMs+'ms)','#0f0');
+        }
+      };
+      wsBackend.addEventListener('message',resultHandler);
+      setTimeout(()=>{
+        if(!resolved){resolved=true;wsBackend.removeEventListener('message',resultHandler);
+        errCount++;errCountEl.textContent=errCount;
+        log('⏰ ['+msg.request_id+'] backend timeout','#f00');}
+      },60000);
+    }
+  };
+
+  wsMaster.onclose=()=>{log('🔌 Master disconnected','#f80');onDisconnected();};
+  wsMaster.onerror=()=>{errCount++;errCountEl.textContent=errCount;log('❌ Master error','#f00');};
+}
+
+function connectBackend(url){
+  wsBackend=new WebSocket(url);
+  wsBackend.onopen=()=>log('✅ Backend connected','#0f0');
+  wsBackend.onclose=()=>log('🔌 Backend disconnected','#f80');
+  wsBackend.onerror=()=>{errCount++;errCountEl.textContent=errCount;log('❌ Backend error','#f00');};
+}
+
+function disconnect(){
+  if(wsMaster){wsMaster.close();wsMaster=null;}
+  if(wsBackend){wsBackend.close();wsBackend=null;}
+  if(pingInterval){clearInterval(pingInterval);pingInterval=null;}
+  onDisconnected();
+}
+
+function onDisconnected(){
+  connected=false;connectBtn.textContent='🔗 Connect to Master';connectBtn.disabled=false;
+  setStatus('Disconnected','#f80');
+}
+</script>
+</body>
+</html>

@@ -21,6 +21,7 @@
 | 0001.9 | Platform Matrix | ✅ | macOS MPS completed. CUDA/CPU pending |
 | 0002A | Remote Expert | ✅ | Mac Node: Qwen3-0.6B via WebSocket. Network overhead 2ms |
 | 0002A-iPhone | iPhone 12 mini Relay | ✅ | **iPhone joins ArcAsha network.** WiFi 20ms. Lightweight relay |
+| 0002B | Two-Expert Routing | ✅ | **Round-Robin between PC + iPhone 12 mini.** Master Hub pattern |
 
 ---
 
@@ -139,7 +140,7 @@ See [`NUMERICAL_STABILITY_PROFILE.md`](NUMERICAL_STABILITY_PROFILE.md).
 ```
 ✅ EXP-0000〜0001.9   Phase 1: LLM Numerical Characterization
 ✅ EXP-0002A          Phase 2: Remote Expert + iPhone Relay
-📐 EXP-0002B          Two Mac Experts (request distribution)
+✅ EXP-0002B          Two Mac + iPhone Experts (round-robin routing)
 📐 EXP-0002C          Capability-Aware Routing
 📐 EXP-0002D          iPhone 12 mini Relay (常設)
 📐 EXP-0002E          iPhone 15 Pro Native Expert (Asha Metal Phase 1)
