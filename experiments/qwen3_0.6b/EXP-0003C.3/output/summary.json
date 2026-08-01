@@ -1,0 +1,376 @@
+{
+  "experiment": "EXP-0003C.3",
+  "description": "Shadow Feedback — Full-Information Bandit (2×2: algorithm × feedback)",
+  "timestamp": "2026-08-01T17:09:30.074Z",
+  "config": {
+    "total_steps": 120,
+    "checkpoints": [
+      24,
+      60,
+      100,
+      120
+    ],
+    "series_every": 5,
+    "phases": [
+      "baseline",
+      "latency",
+      "capjump"
+    ],
+    "ucb_c": 2,
+    "reward": {
+      "q": 1,
+      "lat": 0.1,
+      "cost": 0.1,
+      "stab": 0.1
+    },
+    "fixed_w": {
+      "q": 0.6,
+      "lat": 0.2,
+      "cost": 0.05,
+      "stab": 0.15
+    },
+    "methods": [
+      "fixed",
+      "ucb_partial",
+      "ucb_shadow",
+      "thompson_partial",
+      "thompson_shadow"
+    ],
+    "design": "2×2: Algorithm {UCB, Thompson} × Feedback {Partial, Shadow}"
+  },
+  "experts": [
+    {
+      "node_id": "node-qwen",
+      "model_id": "Qwen/Qwen3-0.6B",
+      "family": "qwen"
+    },
+    {
+      "node_id": "node-smollm",
+      "model_id": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "family": "smollm"
+    },
+    {
+      "node_id": "node-gemma",
+      "model_id": "unsloth/gemma-3-1b-it",
+      "family": "gemma"
+    }
+  ],
+  "checkpoints": [
+    {
+      "samples": 24,
+      "cumRegret": {
+        "fixed": 1.7000000000000002,
+        "ucb_partial": 2.8499999999999996,
+        "ucb_shadow": 1.7000000000000002,
+        "thompson_partial": 3.0999999999999996,
+        "thompson_shadow": 2.6999999999999993
+      }
+    },
+    {
+      "samples": 60,
+      "cumRegret": {
+        "fixed": 2.9499999999999997,
+        "ucb_partial": 7.425000000000001,
+        "ucb_shadow": 2.9499999999999997,
+        "thompson_partial": 5.55,
+        "thompson_shadow": 3.949999999999999
+      }
+    },
+    {
+      "samples": 100,
+      "cumRegret": {
+        "fixed": 5.6499999999999995,
+        "ucb_partial": 13.525000000000004,
+        "ucb_shadow": 6.249999999999999,
+        "thompson_partial": 8.85,
+        "thompson_shadow": 7.249999999999997
+      }
+    },
+    {
+      "samples": 120,
+      "cumRegret": {
+        "fixed": 5.8,
+        "ucb_partial": 15.375000000000004,
+        "ucb_shadow": 6.3999999999999995,
+        "thompson_partial": 9.4,
+        "thompson_shadow": 7.399999999999998
+      }
+    }
+  ],
+  "series": [
+    {
+      "samples": 5,
+      "cumRegret": {
+        "fixed": 0.6000000000000001,
+        "ucb_partial": 1,
+        "ucb_shadow": 0.6000000000000001,
+        "thompson_partial": 1.1,
+        "thompson_shadow": 1.2
+      }
+    },
+    {
+      "samples": 10,
+      "cumRegret": {
+        "fixed": 0.6000000000000001,
+        "ucb_partial": 1.4,
+        "ucb_shadow": 0.6000000000000001,
+        "thompson_partial": 2,
+        "thompson_shadow": 1.4
+      }
+    },
+    {
+      "samples": 15,
+      "cumRegret": {
+        "fixed": 0.6000000000000001,
+        "ucb_partial": 1.4,
+        "ucb_shadow": 0.6000000000000001,
+        "thompson_partial": 2,
+        "thompson_shadow": 1.5999999999999999
+      }
+    },
+    {
+      "samples": 20,
+      "cumRegret": {
+        "fixed": 1.7000000000000002,
+        "ucb_partial": 2.0999999999999996,
+        "ucb_shadow": 1.7000000000000002,
+        "thompson_partial": 3.0999999999999996,
+        "thompson_shadow": 2.6999999999999993
+      }
+    },
+    {
+      "samples": 24,
+      "cumRegret": {
+        "fixed": 1.7000000000000002,
+        "ucb_partial": 2.8499999999999996,
+        "ucb_shadow": 1.7000000000000002,
+        "thompson_partial": 3.0999999999999996,
+        "thompson_shadow": 2.6999999999999993
+      }
+    },
+    {
+      "samples": 25,
+      "cumRegret": {
+        "fixed": 1.7000000000000002,
+        "ucb_partial": 3.05,
+        "ucb_shadow": 1.7000000000000002,
+        "thompson_partial": 3.3,
+        "thompson_shadow": 2.6999999999999993
+      }
+    },
+    {
+      "samples": 30,
+      "cumRegret": {
+        "fixed": 2.3,
+        "ucb_partial": 3.25,
+        "ucb_shadow": 1.7000000000000002,
+        "thompson_partial": 3.9,
+        "thompson_shadow": 2.6999999999999993
+      }
+    },
+    {
+      "samples": 35,
+      "cumRegret": {
+        "fixed": 2.8,
+        "ucb_partial": 3.75,
+        "ucb_shadow": 2.5,
+        "thompson_partial": 4.699999999999999,
+        "thompson_shadow": 3.499999999999999
+      }
+    },
+    {
+      "samples": 40,
+      "cumRegret": {
+        "fixed": 2.8,
+        "ucb_partial": 5.3,
+        "ucb_shadow": 2.8,
+        "thompson_partial": 4.699999999999999,
+        "thompson_shadow": 3.799999999999999
+      }
+    },
+    {
+      "samples": 45,
+      "cumRegret": {
+        "fixed": 2.8,
+        "ucb_partial": 5.7,
+        "ucb_shadow": 2.8,
+        "thompson_partial": 4.699999999999999,
+        "thompson_shadow": 3.799999999999999
+      }
+    },
+    {
+      "samples": 50,
+      "cumRegret": {
+        "fixed": 2.9499999999999997,
+        "ucb_partial": 6.15,
+        "ucb_shadow": 2.9499999999999997,
+        "thompson_partial": 5.35,
+        "thompson_shadow": 3.949999999999999
+      }
+    },
+    {
+      "samples": 55,
+      "cumRegret": {
+        "fixed": 2.9499999999999997,
+        "ucb_partial": 6.65,
+        "ucb_shadow": 2.9499999999999997,
+        "thompson_partial": 5.55,
+        "thompson_shadow": 3.949999999999999
+      }
+    },
+    {
+      "samples": 60,
+      "cumRegret": {
+        "fixed": 2.9499999999999997,
+        "ucb_partial": 7.425000000000001,
+        "ucb_shadow": 2.9499999999999997,
+        "thompson_partial": 5.55,
+        "thompson_shadow": 3.949999999999999
+      }
+    },
+    {
+      "samples": 65,
+      "cumRegret": {
+        "fixed": 3.4499999999999997,
+        "ucb_partial": 7.925000000000001,
+        "ucb_shadow": 3.4499999999999997,
+        "thompson_partial": 6.05,
+        "thompson_shadow": 4.449999999999998
+      }
+    },
+    {
+      "samples": 70,
+      "cumRegret": {
+        "fixed": 4.05,
+        "ucb_partial": 9.125000000000002,
+        "ucb_shadow": 4.05,
+        "thompson_partial": 6.6499999999999995,
+        "thompson_shadow": 5.049999999999998
+      }
+    },
+    {
+      "samples": 75,
+      "cumRegret": {
+        "fixed": 4.05,
+        "ucb_partial": 9.675000000000002,
+        "ucb_shadow": 4.05,
+        "thompson_partial": 6.6499999999999995,
+        "thompson_shadow": 5.049999999999998
+      }
+    },
+    {
+      "samples": 80,
+      "cumRegret": {
+        "fixed": 4.55,
+        "ucb_partial": 10.175000000000002,
+        "ucb_shadow": 4.55,
+        "thompson_partial": 7.1499999999999995,
+        "thompson_shadow": 5.549999999999998
+      }
+    },
+    {
+      "samples": 85,
+      "cumRegret": {
+        "fixed": 4.55,
+        "ucb_partial": 11.375000000000004,
+        "ucb_shadow": 5.1499999999999995,
+        "thompson_partial": 7.749999999999999,
+        "thompson_shadow": 6.149999999999998
+      }
+    },
+    {
+      "samples": 90,
+      "cumRegret": {
+        "fixed": 5.1,
+        "ucb_partial": 11.625000000000004,
+        "ucb_shadow": 5.1499999999999995,
+        "thompson_partial": 7.749999999999999,
+        "thompson_shadow": 6.149999999999998
+      }
+    },
+    {
+      "samples": 95,
+      "cumRegret": {
+        "fixed": 5.1499999999999995,
+        "ucb_partial": 12.425000000000002,
+        "ucb_shadow": 5.1499999999999995,
+        "thompson_partial": 7.749999999999999,
+        "thompson_shadow": 6.149999999999998
+      }
+    },
+    {
+      "samples": 100,
+      "cumRegret": {
+        "fixed": 5.6499999999999995,
+        "ucb_partial": 13.525000000000004,
+        "ucb_shadow": 6.249999999999999,
+        "thompson_partial": 8.85,
+        "thompson_shadow": 7.249999999999997
+      }
+    },
+    {
+      "samples": 105,
+      "cumRegret": {
+        "fixed": 5.6499999999999995,
+        "ucb_partial": 14.125000000000004,
+        "ucb_shadow": 6.249999999999999,
+        "thompson_partial": 9.25,
+        "thompson_shadow": 7.249999999999997
+      }
+    },
+    {
+      "samples": 110,
+      "cumRegret": {
+        "fixed": 5.6499999999999995,
+        "ucb_partial": 14.125000000000004,
+        "ucb_shadow": 6.249999999999999,
+        "thompson_partial": 9.25,
+        "thompson_shadow": 7.249999999999997
+      }
+    },
+    {
+      "samples": 115,
+      "cumRegret": {
+        "fixed": 5.8,
+        "ucb_partial": 14.475000000000003,
+        "ucb_shadow": 6.3999999999999995,
+        "thompson_partial": 9.4,
+        "thompson_shadow": 7.399999999999998
+      }
+    },
+    {
+      "samples": 120,
+      "cumRegret": {
+        "fixed": 5.8,
+        "ucb_partial": 15.375000000000004,
+        "ucb_shadow": 6.3999999999999995,
+        "thompson_partial": 9.4,
+        "thompson_shadow": 7.399999999999998
+      }
+    }
+  ],
+  "final_ucb_shadow": {
+    "q": [
+      0.586,
+      0.834,
+      0.58
+    ],
+    "n": [
+      120,
+      120,
+      120
+    ]
+  },
+  "final_thompson_shadow": {
+    "alpha": [
+      71.293,
+      101.12,
+      70.593
+    ],
+    "beta": [
+      50.707,
+      20.88,
+      51.407
+    ]
+  }
+}

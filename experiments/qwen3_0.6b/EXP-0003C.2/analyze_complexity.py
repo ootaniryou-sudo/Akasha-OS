@@ -156,11 +156,13 @@ def main():
 
     series = data["series"]
     N = np.array([s["samples"] for s in series], dtype=float)
-    methods = ["fixed", "qlearn", "ucb", "thompson"]
+    methods = data.get("config", {}).get("methods") or ["fixed", "qlearn", "ucb", "thompson"]
     labels = {
-        "fixed": "Fixed", "qlearn": "Q-Learning",
-        "ucb": "UCB1", "thompson": "Thompson",
+        "fixed": "Fixed", "qlearn": "Q-Learning", "ucb": "UCB1", "thompson": "Thompson",
+        "ucb_partial": "UCB-P", "ucb_shadow": "UCB-S",
+        "thompson_partial": "Thm-P", "thompson_shadow": "Thm-S",
     }
+    label = lambda m: labels.get(m, m)
     R = {m: np.array([s["cumRegret"][m] for s in series], dtype=float) for m in methods}
 
     print("═" * 78)
@@ -174,13 +176,17 @@ def main():
     print()
 
     print("  Raw measured checkpoints:")
-    print("  ┌─────────┬─────────┬──────────┬──────────┬──────────┐")
-    print("  │ Samples │ Fixed   │ Q-Learn  │ UCB      │ Thompson │")
-    print("  ├─────────┼─────────┼──────────┼──────────┼──────────┤")
+    hdr = "  │ Samples" + "".join(f" │ {label(m):>8}" for m in methods) + " │"
+    sep = "  ├" + "─────────" + "".join("┼──────────" for _ in methods) + "┤"
+    top = "  ┌" + "─────────" + "".join("┬──────────" for _ in methods) + "┐"
+    bot = "  └" + "─────────" + "".join("┴──────────" for _ in methods) + "┘"
+    print(top)
+    print(hdr)
+    print(sep)
     for cp in data["checkpoints"]:
         cr = cp["cumRegret"]
-        print(f"  │ {str(cp['samples']).rjust(7)} │ {cr['fixed']:>7.2f} │ {cr['qlearn']:>8.2f} │ {cr['ucb']:>8.2f} │ {cr['thompson']:>8.2f} │")
-    print("  └─────────┴─────────┴──────────┴──────────┴──────────┘")
+        print("  │ " + str(cp["samples"]).rjust(7) + "".join(f" │ {cr[m]:>8.2f}" for m in methods) + " │")
+    print(bot)
     print()
 
     # フィット (冪則を主, 指数飽和を参考)
@@ -189,28 +195,28 @@ def main():
 
     print("  Fitted curves:")
     print(f"  {'Method':<10} {'power a':>8} {'power b':>8} {'R²(pow)':>8} "
-          f"{'R²(exp)':>8} {'R(120)':>8}")
+          f"{'R²(exp)':>8} {'R(Nmax)':>8}")
     print("  " + "-" * 58)
     for m in methods:
         pf = power_fits[m]
         ef = exp_fits[m]
         if pf is None:
-            print(f"  {labels[m]:<10} {'(fit failed)':<20}")
+            print(f"  {label(m):<10} {'(fit failed)':<20}")
             continue
-        print(f"  {labels[m]:<10} {pf['params'][0]:>8.4f} {pf['params'][1]:>8.4f} "
+        print(f"  {label(m):<10} {pf['params'][0]:>8.4f} {pf['params'][1]:>8.4f} "
               f"{pf['r2']:>8.4f} {(ef['r2'] if ef else float('nan')):>8.4f} "
               f"{model_power(N[-1], *pf['params']):>8.2f}")
     print()
 
     # 限界増加率 (実測) — 収束の最も正直な診断
-    print("  Measured marginal regret rate dRegret/dN @ N=120 (last 25% linear fit):")
+    print("  Measured marginal regret rate dRegret/dN @ Nmax (last 25% linear fit):")
     print("  " + "-" * 58)
     rates = {m: marginal_slope(N, R[m]) for m in methods}
     for m in methods:
         marker = " ← baseline" if m == "fixed" else ""
-        print(f"    {labels[m]:<12}: {rates[m]:.4f}/step{marker}")
+        print(f"    {label(m):<12}: {rates[m]:.4f}/step{marker}")
     print()
-    print("  → Fixed の限界増加率が最小。学習器のうち Thompson が最接近 (2x)。")
+    print("  → Fixed の限界増加率が最小。学習器のうち Shadow 系がどの程度接近するかが焦点。")
     print()
 
     # 漸近指数の比較 — 構造的な結論
@@ -222,23 +228,25 @@ def main():
         if pf is None:
             continue
         gap = pf["params"][1] - b_fixed
-        print(f"    {labels[m]:<12}: b={pf['params'][1]:.4f}  (vs Fixed {gap:+.4f})")
+        print(f"    {label(m):<12}: b={pf['params'][1]:.4f}  (vs Fixed {gap:+.4f})")
     print()
-    print(f"  → Fixed の指数 ({b_fixed:.3f}) が全学習器より小さい。冪則の下では")
-    print("    学習器は漸近的に Fixed を追い越せない (b_method > b_fixed)。")
+    print(f"  → Fixed の指数 ({b_fixed:.3f}) が全ての学習器より小さいか / Shadow 系がどの程度")
+    print("    接近するかがフィードバック構造の効果を決める。")
     print()
 
     # N* 推定 (冪則一貫)
     print("  Estimated sample to outperform Fixed (N*, power-law, consistent):")
     print("  " + "-" * 58)
     estimates = {}
-    for m in ["qlearn", "ucb", "thompson"]:
+    for m in methods:
+        if m == "fixed":
+            continue
         n_star = find_crossing_power(power_fits[m], power_fits["fixed"], n_max=args.max_n)
         estimates[m] = n_star
         if n_star is None:
-            print(f"  {labels[m]:<12}: NEVER (asymptotic) — b_method > b_fixed")
+            print(f"  {label(m):<12}: NEVER (asymptotic) — b_method > b_fixed")
         else:
-            print(f"  {labels[m]:<12}: ≈ {n_star:,.0f} samples")
+            print(f"  {label(m):<12}: ≈ {n_star:,.0f} samples")
     print()
 
     print("  ⚠️  推定値であり実測ではない。論文では「estimated via curve fitting」と明記。")
@@ -256,9 +264,7 @@ def main():
             for m in methods
         },
         "estimated": {
-            "qlearn": estimates["qlearn"],
-            "ucb": estimates["ucb"],
-            "thompson": estimates["thompson"],
+            **{m: estimates[m] for m in methods if m != "fixed"},
             "note": "N* are ESTIMATES from power-law curve fitting. None cross Fixed "
                     "asymptotically because Fixed has the lowest growth exponent b.",
             "feedback_asymmetry": "Fixed uses full-information feedback (all nodes observed "
@@ -275,14 +281,18 @@ def main():
     # プロット (任意)
     if args.plot and HAS_MPL:
         fig, ax = plt.subplots(figsize=(9, 6))
-        colors = {"fixed": "#333333", "qlearn": "#d62728", "ucb": "#1f77b4", "thompson": "#2ca02c"}
+        colors = {"fixed": "#333333", "qlearn": "#d62728", "ucb": "#1f77b4", "thompson": "#2ca02c",
+                  "ucb_partial": "#1f77b4", "ucb_shadow": "#7fb3d8",
+                  "thompson_partial": "#2ca02c", "thompson_shadow": "#8fd7a8"}
+        color_cycle = ["#9467bd", "#ff7f0e", "#17becf", "#e377c2", "#bcbd22"]
         xgrid = np.linspace(N[0], max(N[-1], 400), 400)
-        for m in methods:
+        for i, m in enumerate(methods):
             pf = power_fits[m]
-            ax.plot(N, R[m], "o", color=colors[m], markersize=3, alpha=0.6)
+            col = colors.get(m, color_cycle[i % len(color_cycle)])
+            ax.plot(N, R[m], "o", color=col, markersize=3, alpha=0.6)
             if pf is not None:
-                ax.plot(xgrid, model_power(xgrid, *pf["params"]), "-", color=colors[m],
-                        label=f"{labels[m]} (b={pf['params'][1]:.2f})")
+                ax.plot(xgrid, model_power(xgrid, *pf["params"]), "-", color=col,
+                        label=f"{label(m)} (b={pf['params'][1]:.2f})")
         for m, n_star in estimates.items():
             if n_star is not None and n_star <= args.max_n:
                 ax.axvline(n_star, color=colors[m], linestyle=":", alpha=0.5)
