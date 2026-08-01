@@ -1,0 +1,1638 @@
+{
+  "experiment": "EXP-0003D",
+  "description": "Statistical Validation — multi-seed workload randomization, LLM output cached (T=0 deterministic)",
+  "timestamp": "2026-08-01T17:43:17.183Z",
+  "config": {
+    "seeds": 30,
+    "seed_base": 42,
+    "total_steps": 120,
+    "checkpoints": [
+      24,
+      60,
+      100,
+      120
+    ],
+    "phases": [
+      "baseline",
+      "latency",
+      "capjump"
+    ],
+    "ucb_c": 2,
+    "feat_dim": 8,
+    "lambda": 1,
+    "linucb_alpha": 0.3,
+    "reward": {
+      "q": 1,
+      "lat": 0.1,
+      "cost": 0.1,
+      "stab": 0.1
+    },
+    "fixed_w": {
+      "q": 0.6,
+      "lat": 0.2,
+      "cost": 0.05,
+      "stab": 0.15
+    },
+    "methods": [
+      "fixed",
+      "ucb_partial",
+      "ucb_shadow",
+      "linucb_partial",
+      "linucb_shadow"
+    ],
+    "node_attrs": {
+      "qwen": {
+        "memory": 1.2,
+        "temperature": 0.5
+      },
+      "smollm": {
+        "memory": 0.7,
+        "temperature": 0.7
+      },
+      "gemma": {
+        "memory": 2,
+        "temperature": 0.6
+      }
+    },
+    "seed_definition": "workload randomization: task order (0.5/0.5), prompt selection, initial arm order"
+  },
+  "experts": [
+    {
+      "node_id": "node-qwen",
+      "model_id": "Qwen/Qwen3-0.6B",
+      "family": "qwen"
+    },
+    {
+      "node_id": "node-smollm",
+      "model_id": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "family": "smollm"
+    },
+    {
+      "node_id": "node-gemma",
+      "model_id": "unsloth/gemma-3-1b-it",
+      "family": "gemma"
+    }
+  ],
+  "seeds": [
+    {
+      "seed": 0,
+      "regrets": {
+        "fixed": 5.25,
+        "ucb_partial": 17.125000000000004,
+        "ucb_shadow": 7.199999999999999,
+        "linucb_partial": 7.199999999999999,
+        "linucb_shadow": 5.1499999999999995
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 0.9000000000000001,
+            "ucb_partial": 3.3,
+            "ucb_shadow": 1.2000000000000002,
+            "linucb_partial": 1.2000000000000002,
+            "linucb_shadow": 1.2000000000000002
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.4,
+            "ucb_partial": 9.8,
+            "ucb_shadow": 3.5500000000000003,
+            "linucb_partial": 3.5500000000000003,
+            "linucb_shadow": 2
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 5.1,
+            "ucb_partial": 14.25,
+            "ucb_shadow": 7.049999999999999,
+            "linucb_partial": 7.049999999999999,
+            "linucb_shadow": 4.999999999999999
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 5.25,
+            "ucb_partial": 17.125000000000004,
+            "ucb_shadow": 7.199999999999999,
+            "linucb_partial": 7.199999999999999,
+            "linucb_shadow": 5.1499999999999995
+          }
+        }
+      ]
+    },
+    {
+      "seed": 1,
+      "regrets": {
+        "fixed": 6,
+        "ucb_partial": 14.400000000000002,
+        "ucb_shadow": 6.3,
+        "linucb_partial": 5.699999999999999,
+        "linucb_shadow": 5.3
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.6,
+            "ucb_partial": 3.35,
+            "ucb_shadow": 2.2,
+            "linucb_partial": 1.6,
+            "linucb_shadow": 1.6
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 3.6,
+            "ucb_partial": 6.800000000000002,
+            "ucb_shadow": 3.65,
+            "linucb_partial": 3.05,
+            "linucb_shadow": 2.6500000000000004
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 5.85,
+            "ucb_partial": 11.800000000000002,
+            "ucb_shadow": 6.1499999999999995,
+            "linucb_partial": 5.549999999999999,
+            "linucb_shadow": 5.1499999999999995
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 6,
+            "ucb_partial": 14.400000000000002,
+            "ucb_shadow": 6.3,
+            "linucb_partial": 5.699999999999999,
+            "linucb_shadow": 5.3
+          }
+        }
+      ]
+    },
+    {
+      "seed": 2,
+      "regrets": {
+        "fixed": 6.5,
+        "ucb_partial": 14.350000000000005,
+        "ucb_shadow": 5.7,
+        "linucb_partial": 5.5,
+        "linucb_shadow": 6.05
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2,
+            "ucb_partial": 3.7,
+            "ucb_shadow": 1.8,
+            "linucb_partial": 1.6,
+            "linucb_shadow": 1.6
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 3.5,
+            "ucb_partial": 8.075000000000001,
+            "ucb_shadow": 2.4000000000000004,
+            "linucb_partial": 2.2,
+            "linucb_shadow": 2.75
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 6.199999999999999,
+            "ucb_partial": 12.625000000000005,
+            "ucb_shadow": 5.3999999999999995,
+            "linucb_partial": 5.199999999999999,
+            "linucb_shadow": 5.749999999999999
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 6.5,
+            "ucb_partial": 14.350000000000005,
+            "ucb_shadow": 5.7,
+            "linucb_partial": 5.5,
+            "linucb_shadow": 6.05
+          }
+        }
+      ]
+    },
+    {
+      "seed": 3,
+      "regrets": {
+        "fixed": 4.15,
+        "ucb_partial": 16.075,
+        "ucb_shadow": 6.199999999999999,
+        "linucb_partial": 5.6,
+        "linucb_shadow": 4.8
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 0.8,
+            "ucb_partial": 3.0999999999999996,
+            "ucb_shadow": 1.7000000000000002,
+            "linucb_partial": 1.1,
+            "linucb_shadow": 0.6000000000000001
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 1.5,
+            "ucb_partial": 7.725000000000001,
+            "ucb_shadow": 3.2499999999999996,
+            "linucb_partial": 2.65,
+            "linucb_shadow": 1.85
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 4,
+            "ucb_partial": 14.075000000000001,
+            "ucb_shadow": 6.049999999999999,
+            "linucb_partial": 5.449999999999999,
+            "linucb_shadow": 4.6499999999999995
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 4.15,
+            "ucb_partial": 16.075,
+            "ucb_shadow": 6.199999999999999,
+            "linucb_partial": 5.6,
+            "linucb_shadow": 4.8
+          }
+        }
+      ]
+    },
+    {
+      "seed": 4,
+      "regrets": {
+        "fixed": 3.15,
+        "ucb_partial": 14.175,
+        "ucb_shadow": 4.5,
+        "linucb_partial": 3.9499999999999997,
+        "linucb_shadow": 4.75
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 0.9000000000000001,
+            "ucb_partial": 3.8499999999999996,
+            "ucb_shadow": 2.0500000000000003,
+            "linucb_partial": 1.5000000000000002,
+            "linucb_shadow": 2.0500000000000003
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.0500000000000003,
+            "ucb_partial": 8.075000000000001,
+            "ucb_shadow": 3.25,
+            "linucb_partial": 2.7,
+            "linucb_shadow": 3.5
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 3,
+            "ucb_partial": 13.125000000000002,
+            "ucb_shadow": 4.35,
+            "linucb_partial": 3.8,
+            "linucb_shadow": 4.6
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 3.15,
+            "ucb_partial": 14.175,
+            "ucb_shadow": 4.5,
+            "linucb_partial": 3.9499999999999997,
+            "linucb_shadow": 4.75
+          }
+        }
+      ]
+    },
+    {
+      "seed": 5,
+      "regrets": {
+        "fixed": 4.55,
+        "ucb_partial": 17.000000000000004,
+        "ucb_shadow": 6.2,
+        "linucb_partial": 6,
+        "linucb_shadow": 6.175
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.2999999999999998,
+            "ucb_partial": 4.2,
+            "ucb_shadow": 2.1,
+            "linucb_partial": 1.9,
+            "linucb_shadow": 1.9
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 1.4499999999999997,
+            "ucb_partial": 9.000000000000002,
+            "ucb_shadow": 2.85,
+            "linucb_partial": 2.65,
+            "linucb_shadow": 2.8249999999999997
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 4.3999999999999995,
+            "ucb_partial": 15.350000000000005,
+            "ucb_shadow": 6.05,
+            "linucb_partial": 5.85,
+            "linucb_shadow": 6.0249999999999995
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 4.55,
+            "ucb_partial": 17.000000000000004,
+            "ucb_shadow": 6.2,
+            "linucb_partial": 6,
+            "linucb_shadow": 6.175
+          }
+        }
+      ]
+    },
+    {
+      "seed": 6,
+      "regrets": {
+        "fixed": 5.199999999999999,
+        "ucb_partial": 18.05,
+        "ucb_shadow": 6.3999999999999995,
+        "linucb_partial": 6.3999999999999995,
+        "linucb_shadow": 6.599999999999999
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.9500000000000002,
+            "ucb_partial": 3.1500000000000004,
+            "ucb_shadow": 2.7,
+            "linucb_partial": 2.7,
+            "linucb_shadow": 2.8
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.4999999999999996,
+            "ucb_partial": 9.600000000000001,
+            "ucb_shadow": 3.65,
+            "linucb_partial": 3.65,
+            "linucb_shadow": 3.849999999999999
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 5.049999999999999,
+            "ucb_partial": 16.300000000000004,
+            "ucb_shadow": 6.249999999999999,
+            "linucb_partial": 6.249999999999999,
+            "linucb_shadow": 6.449999999999998
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 5.199999999999999,
+            "ucb_partial": 18.05,
+            "ucb_shadow": 6.3999999999999995,
+            "linucb_partial": 6.3999999999999995,
+            "linucb_shadow": 6.599999999999999
+          }
+        }
+      ]
+    },
+    {
+      "seed": 7,
+      "regrets": {
+        "fixed": 7,
+        "ucb_partial": 16.300000000000008,
+        "ucb_shadow": 6.799999999999999,
+        "linucb_partial": 6.599999999999999,
+        "linucb_shadow": 5.824999999999999
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.5,
+            "ucb_partial": 5.1,
+            "ucb_shadow": 2.3,
+            "linucb_partial": 2.0999999999999996,
+            "linucb_shadow": 1.2999999999999998
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 5.200000000000001,
+            "ucb_partial": 9.400000000000002,
+            "ucb_shadow": 3.4499999999999997,
+            "linucb_partial": 3.2499999999999996,
+            "linucb_shadow": 2.475
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 6.85,
+            "ucb_partial": 14.550000000000008,
+            "ucb_shadow": 6.649999999999999,
+            "linucb_partial": 6.449999999999998,
+            "linucb_shadow": 5.674999999999999
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 7,
+            "ucb_partial": 16.300000000000008,
+            "ucb_shadow": 6.799999999999999,
+            "linucb_partial": 6.599999999999999,
+            "linucb_shadow": 5.824999999999999
+          }
+        }
+      ]
+    },
+    {
+      "seed": 8,
+      "regrets": {
+        "fixed": 8.55,
+        "ucb_partial": 13.750000000000002,
+        "ucb_shadow": 5.9,
+        "linucb_partial": 5.8,
+        "linucb_shadow": 4.65
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 3.05,
+            "ucb_partial": 3,
+            "ucb_shadow": 2.9000000000000004,
+            "linucb_partial": 2.8,
+            "linucb_shadow": 1.6500000000000001
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 6.1000000000000005,
+            "ucb_partial": 6.700000000000001,
+            "ucb_shadow": 4,
+            "linucb_partial": 3.8999999999999995,
+            "linucb_shadow": 2.75
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 8.25,
+            "ucb_partial": 12.050000000000002,
+            "ucb_shadow": 5.6,
+            "linucb_partial": 5.499999999999999,
+            "linucb_shadow": 4.35
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 8.55,
+            "ucb_partial": 13.750000000000002,
+            "ucb_shadow": 5.9,
+            "linucb_partial": 5.8,
+            "linucb_shadow": 4.65
+          }
+        }
+      ]
+    },
+    {
+      "seed": 9,
+      "regrets": {
+        "fixed": 6.899999999999999,
+        "ucb_partial": 13.400000000000002,
+        "ucb_shadow": 4.75,
+        "linucb_partial": 4.35,
+        "linucb_shadow": 4.55
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.25,
+            "ucb_partial": 3.05,
+            "ucb_shadow": 1.2,
+            "linucb_partial": 0.8,
+            "linucb_shadow": 0.8
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 3.3999999999999995,
+            "ucb_partial": 5.550000000000001,
+            "ucb_shadow": 2.1,
+            "linucb_partial": 1.7,
+            "linucb_shadow": 1.9
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 6.749999999999998,
+            "ucb_partial": 11.600000000000001,
+            "ucb_shadow": 4.6,
+            "linucb_partial": 4.199999999999999,
+            "linucb_shadow": 4.3999999999999995
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 6.899999999999999,
+            "ucb_partial": 13.400000000000002,
+            "ucb_shadow": 4.75,
+            "linucb_partial": 4.35,
+            "linucb_shadow": 4.55
+          }
+        }
+      ]
+    },
+    {
+      "seed": 10,
+      "regrets": {
+        "fixed": 3.9999999999999996,
+        "ucb_partial": 15.050000000000006,
+        "ucb_shadow": 4.35,
+        "linucb_partial": 4.1499999999999995,
+        "linucb_shadow": 4.1499999999999995
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.0499999999999998,
+            "ucb_partial": 3.4999999999999996,
+            "ucb_shadow": 1.2,
+            "linucb_partial": 0.9999999999999999,
+            "linucb_shadow": 0.9999999999999999
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 1.15,
+            "ucb_partial": 8,
+            "ucb_shadow": 1.5,
+            "linucb_partial": 1.2999999999999998,
+            "linucb_shadow": 1.2999999999999998
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 3.8499999999999996,
+            "ucb_partial": 13.350000000000005,
+            "ucb_shadow": 4.199999999999999,
+            "linucb_partial": 3.999999999999999,
+            "linucb_shadow": 3.999999999999999
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 3.9999999999999996,
+            "ucb_partial": 15.050000000000006,
+            "ucb_shadow": 4.35,
+            "linucb_partial": 4.1499999999999995,
+            "linucb_shadow": 4.1499999999999995
+          }
+        }
+      ]
+    },
+    {
+      "seed": 11,
+      "regrets": {
+        "fixed": 5.499999999999999,
+        "ucb_partial": 17.525,
+        "ucb_shadow": 7.199999999999998,
+        "linucb_partial": 6.599999999999999,
+        "linucb_shadow": 4.875
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.8499999999999996,
+            "ucb_partial": 4.7,
+            "ucb_shadow": 3.6999999999999993,
+            "linucb_partial": 3.0999999999999996,
+            "linucb_shadow": 1.9500000000000002
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.8999999999999995,
+            "ucb_partial": 11.525,
+            "ucb_shadow": 5.099999999999999,
+            "linucb_partial": 4.499999999999999,
+            "linucb_shadow": 2.775
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 5.199999999999998,
+            "ucb_partial": 15.525000000000004,
+            "ucb_shadow": 6.899999999999998,
+            "linucb_partial": 6.299999999999998,
+            "linucb_shadow": 4.574999999999999
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 5.499999999999999,
+            "ucb_partial": 17.525,
+            "ucb_shadow": 7.199999999999998,
+            "linucb_partial": 6.599999999999999,
+            "linucb_shadow": 4.875
+          }
+        }
+      ]
+    },
+    {
+      "seed": 12,
+      "regrets": {
+        "fixed": 8.299999999999999,
+        "ucb_partial": 16.450000000000003,
+        "ucb_shadow": 6.149999999999998,
+        "linucb_partial": 5.399999999999999,
+        "linucb_shadow": 5.449999999999998
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2,
+            "ucb_partial": 4.1000000000000005,
+            "ucb_shadow": 2.6499999999999995,
+            "linucb_partial": 1.9000000000000001,
+            "linucb_shadow": 1.9500000000000002
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 4.75,
+            "ucb_partial": 8.325000000000003,
+            "ucb_shadow": 4.149999999999999,
+            "linucb_partial": 3.3999999999999995,
+            "linucb_shadow": 3.4499999999999993
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 8.299999999999999,
+            "ucb_partial": 13.875000000000005,
+            "ucb_shadow": 6.149999999999998,
+            "linucb_partial": 5.399999999999999,
+            "linucb_shadow": 5.449999999999998
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 8.299999999999999,
+            "ucb_partial": 16.450000000000003,
+            "ucb_shadow": 6.149999999999998,
+            "linucb_partial": 5.399999999999999,
+            "linucb_shadow": 5.449999999999998
+          }
+        }
+      ]
+    },
+    {
+      "seed": 13,
+      "regrets": {
+        "fixed": 4.45,
+        "ucb_partial": 13.700000000000003,
+        "ucb_shadow": 5.05,
+        "linucb_partial": 5.05,
+        "linucb_shadow": 5.05
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.1,
+            "ucb_partial": 3.2,
+            "ucb_shadow": 1.4000000000000001,
+            "linucb_partial": 1.4000000000000001,
+            "linucb_shadow": 1.4000000000000001
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.15,
+            "ucb_partial": 7.125000000000003,
+            "ucb_shadow": 1.8499999999999999,
+            "linucb_partial": 1.8499999999999999,
+            "linucb_shadow": 1.8499999999999999
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 4.45,
+            "ucb_partial": 12.325000000000003,
+            "ucb_shadow": 5.05,
+            "linucb_partial": 5.05,
+            "linucb_shadow": 5.05
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 4.45,
+            "ucb_partial": 13.700000000000003,
+            "ucb_shadow": 5.05,
+            "linucb_partial": 5.05,
+            "linucb_shadow": 5.05
+          }
+        }
+      ]
+    },
+    {
+      "seed": 14,
+      "regrets": {
+        "fixed": 6.199999999999998,
+        "ucb_partial": 17.025,
+        "ucb_shadow": 7.999999999999998,
+        "linucb_partial": 7.849999999999999,
+        "linucb_shadow": 6.874999999999998
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.1,
+            "ucb_partial": 5.7,
+            "ucb_shadow": 2.8499999999999996,
+            "linucb_partial": 2.7,
+            "linucb_shadow": 1.6500000000000001
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.25,
+            "ucb_partial": 11.15,
+            "ucb_shadow": 4.6,
+            "linucb_partial": 4.45,
+            "linucb_shadow": 2.925
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 6.199999999999998,
+            "ucb_partial": 14.6,
+            "ucb_shadow": 7.999999999999998,
+            "linucb_partial": 7.849999999999999,
+            "linucb_shadow": 6.874999999999998
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 6.199999999999998,
+            "ucb_partial": 17.025,
+            "ucb_shadow": 7.999999999999998,
+            "linucb_partial": 7.849999999999999,
+            "linucb_shadow": 6.874999999999998
+          }
+        }
+      ]
+    },
+    {
+      "seed": 15,
+      "regrets": {
+        "fixed": 6.6,
+        "ucb_partial": 16.350000000000005,
+        "ucb_shadow": 7.3,
+        "linucb_partial": 7.05,
+        "linucb_shadow": 6.55
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.25,
+            "ucb_partial": 3.1500000000000004,
+            "ucb_shadow": 1.9500000000000002,
+            "linucb_partial": 1.7000000000000002,
+            "linucb_shadow": 2.3000000000000003
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.9499999999999997,
+            "ucb_partial": 8.550000000000002,
+            "ucb_shadow": 3.4999999999999996,
+            "linucb_partial": 3.2499999999999996,
+            "linucb_shadow": 3
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 6.299999999999999,
+            "ucb_partial": 14.050000000000002,
+            "ucb_shadow": 6.999999999999999,
+            "linucb_partial": 6.749999999999999,
+            "linucb_shadow": 6.249999999999999
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 6.6,
+            "ucb_partial": 16.350000000000005,
+            "ucb_shadow": 7.3,
+            "linucb_partial": 7.05,
+            "linucb_shadow": 6.55
+          }
+        }
+      ]
+    },
+    {
+      "seed": 16,
+      "regrets": {
+        "fixed": 6.6499999999999995,
+        "ucb_partial": 14.349999999999998,
+        "ucb_shadow": 7.599999999999999,
+        "linucb_partial": 6.999999999999999,
+        "linucb_shadow": 6.399999999999999
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.8500000000000005,
+            "ucb_partial": 2.95,
+            "ucb_shadow": 2.5999999999999996,
+            "linucb_partial": 2,
+            "linucb_shadow": 2.45
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 3.9000000000000004,
+            "ucb_partial": 9.625,
+            "ucb_shadow": 4.8,
+            "linucb_partial": 4.2,
+            "linucb_shadow": 3.5999999999999996
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 6.6499999999999995,
+            "ucb_partial": 12.124999999999998,
+            "ucb_shadow": 7.599999999999999,
+            "linucb_partial": 6.999999999999999,
+            "linucb_shadow": 6.399999999999999
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 6.6499999999999995,
+            "ucb_partial": 14.349999999999998,
+            "ucb_shadow": 7.599999999999999,
+            "linucb_partial": 6.999999999999999,
+            "linucb_shadow": 6.399999999999999
+          }
+        }
+      ]
+    },
+    {
+      "seed": 17,
+      "regrets": {
+        "fixed": 7.349999999999997,
+        "ucb_partial": 15.8,
+        "ucb_shadow": 7.35,
+        "linucb_partial": 7.299999999999999,
+        "linucb_shadow": 5.175
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.5999999999999996,
+            "ucb_partial": 3.3999999999999995,
+            "ucb_shadow": 3.45,
+            "linucb_partial": 3.3999999999999995,
+            "linucb_shadow": 1.7500000000000002
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 4.149999999999999,
+            "ucb_partial": 8.4,
+            "ucb_shadow": 5.65,
+            "linucb_partial": 5.6,
+            "linucb_shadow": 3.475
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 7.349999999999997,
+            "ucb_partial": 13.75,
+            "ucb_shadow": 7.35,
+            "linucb_partial": 7.299999999999999,
+            "linucb_shadow": 5.175
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 7.349999999999997,
+            "ucb_partial": 15.8,
+            "ucb_shadow": 7.35,
+            "linucb_partial": 7.299999999999999,
+            "linucb_shadow": 5.175
+          }
+        }
+      ]
+    },
+    {
+      "seed": 18,
+      "regrets": {
+        "fixed": 5.05,
+        "ucb_partial": 13.15,
+        "ucb_shadow": 4.65,
+        "linucb_partial": 4.25,
+        "linucb_shadow": 4.25
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.95,
+            "ucb_partial": 2.6999999999999997,
+            "ucb_shadow": 1,
+            "linucb_partial": 0.6000000000000001,
+            "linucb_shadow": 0.6000000000000001
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.3,
+            "ucb_partial": 6.450000000000002,
+            "ucb_shadow": 1.9,
+            "linucb_partial": 1.5,
+            "linucb_shadow": 1.5
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 4.8999999999999995,
+            "ucb_partial": 11.500000000000002,
+            "ucb_shadow": 4.5,
+            "linucb_partial": 4.1,
+            "linucb_shadow": 4.1
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 5.05,
+            "ucb_partial": 13.15,
+            "ucb_shadow": 4.65,
+            "linucb_partial": 4.25,
+            "linucb_shadow": 4.25
+          }
+        }
+      ]
+    },
+    {
+      "seed": 19,
+      "regrets": {
+        "fixed": 9.850000000000001,
+        "ucb_partial": 16.85,
+        "ucb_shadow": 7.699999999999999,
+        "linucb_partial": 7.699999999999999,
+        "linucb_shadow": 7.174999999999999
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.45,
+            "ucb_partial": 4.05,
+            "ucb_shadow": 2,
+            "linucb_partial": 2,
+            "linucb_shadow": 2.55
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 5.650000000000001,
+            "ucb_partial": 9.700000000000001,
+            "ucb_shadow": 4.3,
+            "linucb_partial": 4.3,
+            "linucb_shadow": 3.775
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 9.850000000000001,
+            "ucb_partial": 15.850000000000001,
+            "ucb_shadow": 7.699999999999999,
+            "linucb_partial": 7.699999999999999,
+            "linucb_shadow": 7.174999999999999
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 9.850000000000001,
+            "ucb_partial": 16.85,
+            "ucb_shadow": 7.699999999999999,
+            "linucb_partial": 7.699999999999999,
+            "linucb_shadow": 7.174999999999999
+          }
+        }
+      ]
+    },
+    {
+      "seed": 20,
+      "regrets": {
+        "fixed": 6.6499999999999995,
+        "ucb_partial": 17.375000000000004,
+        "ucb_shadow": 5.3999999999999995,
+        "linucb_partial": 5.799999999999999,
+        "linucb_shadow": 5.3
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.9000000000000001,
+            "ucb_partial": 3.3,
+            "ucb_shadow": 0.8999999999999999,
+            "linucb_partial": 1.3,
+            "linucb_shadow": 0.8
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 3.1,
+            "ucb_partial": 7.425000000000001,
+            "ucb_shadow": 2.15,
+            "linucb_partial": 2.55,
+            "linucb_shadow": 2.0500000000000003
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 6.499999999999999,
+            "ucb_partial": 14.775000000000002,
+            "ucb_shadow": 5.249999999999999,
+            "linucb_partial": 5.649999999999999,
+            "linucb_shadow": 5.1499999999999995
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 6.6499999999999995,
+            "ucb_partial": 17.375000000000004,
+            "ucb_shadow": 5.3999999999999995,
+            "linucb_partial": 5.799999999999999,
+            "linucb_shadow": 5.3
+          }
+        }
+      ]
+    },
+    {
+      "seed": 21,
+      "regrets": {
+        "fixed": 5.8500000000000005,
+        "ucb_partial": 15.450000000000003,
+        "ucb_shadow": 5.95,
+        "linucb_partial": 5.3500000000000005,
+        "linucb_shadow": 4.800000000000001
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.9000000000000001,
+            "ucb_partial": 4.4,
+            "ucb_shadow": 2.5,
+            "linucb_partial": 1.9000000000000001,
+            "linucb_shadow": 1.35
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 3.65,
+            "ucb_partial": 9.124999999999998,
+            "ucb_shadow": 3.7499999999999996,
+            "linucb_partial": 3.15,
+            "linucb_shadow": 2.6
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 5.55,
+            "ucb_partial": 13.175,
+            "ucb_shadow": 5.6499999999999995,
+            "linucb_partial": 5.05,
+            "linucb_shadow": 4.5
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 5.8500000000000005,
+            "ucb_partial": 15.450000000000003,
+            "ucb_shadow": 5.95,
+            "linucb_partial": 5.3500000000000005,
+            "linucb_shadow": 4.800000000000001
+          }
+        }
+      ]
+    },
+    {
+      "seed": 22,
+      "regrets": {
+        "fixed": 9.400000000000002,
+        "ucb_partial": 19.975,
+        "ucb_shadow": 9.100000000000001,
+        "linucb_partial": 9.100000000000001,
+        "linucb_shadow": 6.7250000000000005
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.1500000000000001,
+            "ucb_partial": 4.5,
+            "ucb_shadow": 2,
+            "linucb_partial": 2,
+            "linucb_shadow": 1.7500000000000002
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 4.6000000000000005,
+            "ucb_partial": 10.925,
+            "ucb_shadow": 5.4,
+            "linucb_partial": 5.4,
+            "linucb_shadow": 3.0250000000000004
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 9.100000000000001,
+            "ucb_partial": 18.875000000000004,
+            "ucb_shadow": 8.8,
+            "linucb_partial": 8.8,
+            "linucb_shadow": 6.425
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 9.400000000000002,
+            "ucb_partial": 19.975,
+            "ucb_shadow": 9.100000000000001,
+            "linucb_partial": 9.100000000000001,
+            "linucb_shadow": 6.7250000000000005
+          }
+        }
+      ]
+    },
+    {
+      "seed": 23,
+      "regrets": {
+        "fixed": 5.299999999999999,
+        "ucb_partial": 14.925000000000006,
+        "ucb_shadow": 6.849999999999999,
+        "linucb_partial": 6.449999999999998,
+        "linucb_shadow": 5
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.5499999999999994,
+            "ucb_partial": 3.8,
+            "ucb_shadow": 3.0999999999999996,
+            "linucb_partial": 2.6999999999999993,
+            "linucb_shadow": 1.8
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.9499999999999993,
+            "ucb_partial": 8.725,
+            "ucb_shadow": 4.499999999999999,
+            "linucb_partial": 4.099999999999999,
+            "linucb_shadow": 2.65
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 5.149999999999999,
+            "ucb_partial": 13.375000000000005,
+            "ucb_shadow": 6.699999999999998,
+            "linucb_partial": 6.299999999999998,
+            "linucb_shadow": 4.85
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 5.299999999999999,
+            "ucb_partial": 14.925000000000006,
+            "ucb_shadow": 6.849999999999999,
+            "linucb_partial": 6.449999999999998,
+            "linucb_shadow": 5
+          }
+        }
+      ]
+    },
+    {
+      "seed": 24,
+      "regrets": {
+        "fixed": 3.8999999999999995,
+        "ucb_partial": 17.075,
+        "ucb_shadow": 5,
+        "linucb_partial": 5,
+        "linucb_shadow": 4.7
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.1,
+            "ucb_partial": 4.8500000000000005,
+            "ucb_shadow": 1.1,
+            "linucb_partial": 1.1,
+            "linucb_shadow": 1.1
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 1.9,
+            "ucb_partial": 10.525,
+            "ucb_shadow": 2.2,
+            "linucb_partial": 2.2,
+            "linucb_shadow": 1.9
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 3.5999999999999996,
+            "ucb_partial": 15.625000000000004,
+            "ucb_shadow": 4.699999999999999,
+            "linucb_partial": 4.699999999999999,
+            "linucb_shadow": 4.3999999999999995
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 3.8999999999999995,
+            "ucb_partial": 17.075,
+            "ucb_shadow": 5,
+            "linucb_partial": 5,
+            "linucb_shadow": 4.7
+          }
+        }
+      ]
+    },
+    {
+      "seed": 25,
+      "regrets": {
+        "fixed": 7.2,
+        "ucb_partial": 16.35,
+        "ucb_shadow": 6.1,
+        "linucb_partial": 5.5,
+        "linucb_shadow": 4.4
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.9000000000000004,
+            "ucb_partial": 4.750000000000001,
+            "ucb_shadow": 3.3,
+            "linucb_partial": 2.7,
+            "linucb_shadow": 1.35
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 5.050000000000001,
+            "ucb_partial": 9.600000000000001,
+            "ucb_shadow": 4.55,
+            "linucb_partial": 3.9499999999999997,
+            "linucb_shadow": 2.85
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 7.05,
+            "ucb_partial": 14.100000000000003,
+            "ucb_shadow": 5.949999999999999,
+            "linucb_partial": 5.35,
+            "linucb_shadow": 4.25
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 7.2,
+            "ucb_partial": 16.35,
+            "ucb_shadow": 6.1,
+            "linucb_partial": 5.5,
+            "linucb_shadow": 4.4
+          }
+        }
+      ]
+    },
+    {
+      "seed": 26,
+      "regrets": {
+        "fixed": 8.249999999999998,
+        "ucb_partial": 18.500000000000004,
+        "ucb_shadow": 8.999999999999998,
+        "linucb_partial": 8.799999999999997,
+        "linucb_shadow": 8.099999999999998
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 2.05,
+            "ucb_partial": 3.2499999999999996,
+            "ucb_shadow": 2,
+            "linucb_partial": 1.7999999999999998,
+            "linucb_shadow": 1.7999999999999998
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.9499999999999993,
+            "ucb_partial": 8.550000000000002,
+            "ucb_shadow": 3.999999999999999,
+            "linucb_partial": 3.799999999999999,
+            "linucb_shadow": 3.0999999999999996
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 8.249999999999998,
+            "ucb_partial": 16.850000000000005,
+            "ucb_shadow": 8.999999999999998,
+            "linucb_partial": 8.799999999999997,
+            "linucb_shadow": 8.099999999999998
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 8.249999999999998,
+            "ucb_partial": 18.500000000000004,
+            "ucb_shadow": 8.999999999999998,
+            "linucb_partial": 8.799999999999997,
+            "linucb_shadow": 8.099999999999998
+          }
+        }
+      ]
+    },
+    {
+      "seed": 27,
+      "regrets": {
+        "fixed": 6.199999999999999,
+        "ucb_partial": 16.474999999999998,
+        "ucb_shadow": 5.999999999999999,
+        "linucb_partial": 5.999999999999999,
+        "linucb_shadow": 5.6499999999999995
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.1,
+            "ucb_partial": 3.45,
+            "ucb_shadow": 1.1,
+            "linucb_partial": 1.1,
+            "linucb_shadow": 1.1
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 3.3,
+            "ucb_partial": 8.549999999999999,
+            "ucb_shadow": 1.9000000000000001,
+            "linucb_partial": 1.9000000000000001,
+            "linucb_shadow": 2.1500000000000004
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 6.199999999999999,
+            "ucb_partial": 15.3,
+            "ucb_shadow": 5.999999999999999,
+            "linucb_partial": 5.999999999999999,
+            "linucb_shadow": 5.6499999999999995
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 6.199999999999999,
+            "ucb_partial": 16.474999999999998,
+            "ucb_shadow": 5.999999999999999,
+            "linucb_partial": 5.999999999999999,
+            "linucb_shadow": 5.6499999999999995
+          }
+        }
+      ]
+    },
+    {
+      "seed": 28,
+      "regrets": {
+        "fixed": 5.699999999999999,
+        "ucb_partial": 12.749999999999998,
+        "ucb_shadow": 5.8,
+        "linucb_partial": 5.8999999999999995,
+        "linucb_shadow": 4.75
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.1,
+            "ucb_partial": 2.95,
+            "ucb_shadow": 1.6,
+            "linucb_partial": 1.7000000000000002,
+            "linucb_shadow": 1.9000000000000001
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.75,
+            "ucb_partial": 6.25,
+            "ucb_shadow": 4,
+            "linucb_partial": 4.1,
+            "linucb_shadow": 2.95
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 5.699999999999999,
+            "ucb_partial": 11.099999999999998,
+            "ucb_shadow": 5.8,
+            "linucb_partial": 5.8999999999999995,
+            "linucb_shadow": 4.75
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 5.699999999999999,
+            "ucb_partial": 12.749999999999998,
+            "ucb_shadow": 5.8,
+            "linucb_partial": 5.8999999999999995,
+            "linucb_shadow": 4.75
+          }
+        }
+      ]
+    },
+    {
+      "seed": 29,
+      "regrets": {
+        "fixed": 7.25,
+        "ucb_partial": 16.049999999999997,
+        "ucb_shadow": 7.35,
+        "linucb_partial": 7.35,
+        "linucb_shadow": 6.800000000000001
+      },
+      "checkpoints": [
+        {
+          "samples": 24,
+          "cumRegret": {
+            "fixed": 1.7000000000000002,
+            "ucb_partial": 2.8999999999999995,
+            "ucb_shadow": 2.3,
+            "linucb_partial": 2.3,
+            "linucb_shadow": 1.1
+          }
+        },
+        {
+          "samples": 60,
+          "cumRegret": {
+            "fixed": 2.8,
+            "ucb_partial": 7.1000000000000005,
+            "ucb_shadow": 2.8999999999999995,
+            "linucb_partial": 2.8999999999999995,
+            "linucb_shadow": 2.35
+          }
+        },
+        {
+          "samples": 100,
+          "cumRegret": {
+            "fixed": 6.799999999999999,
+            "ucb_partial": 13.9,
+            "ucb_shadow": 6.899999999999999,
+            "linucb_partial": 6.899999999999999,
+            "linucb_shadow": 6.35
+          }
+        },
+        {
+          "samples": 120,
+          "cumRegret": {
+            "fixed": 7.25,
+            "ucb_partial": 16.049999999999997,
+            "ucb_shadow": 7.35,
+            "linucb_partial": 7.35,
+            "linucb_shadow": 6.800000000000001
+          }
+        }
+      ]
+    }
+  ]
+}

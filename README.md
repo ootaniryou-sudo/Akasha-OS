@@ -246,6 +246,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | 0003C.2 | **Sample Complexity Estimation** | ✅ | **実測 (N=5..120) を冪則フィット: Fixed b=0.75 < 全学習器 (0.83〜0.94) → N* = NEVER (漸近).** **フィードバック非対称性を発見: Fixed=フル情報 (オラクル) vs バンディット=部分情報.** Shadow (0002F) との統合が次の動機 |
 | 0003C.3 | **Shadow Feedback (Full-Info Bandit)** | ✅ | **2×2 (UCB/Thompson × partial/shadow). シャドウ実行で UCB のギャップ 94% 解消 (9.58→0.60), Thompson の N* が 6.2倍高速化 (5,456→885). フィードバック構造が支配要因と実証. 残差は重みキャリブレーション → LinUCB** |
 | 0003C.4 | **LinUCB (7-dim features)** | ✅ | **LinUCB-Shadow が初めて Fixed を上回る (gap=-0.40, regret 6.5%減).** **学習重みがメカニズムを実証: gemma latency=0.379 (>Fixed 0.20). 0003C.3 の残差 0.60 を解消し逆転.** Observation→State→Belief→Confidence→Features→Routing パイプライン完成 |
+| 0003D | **Statistical Validation** | ✅ | **30 seeds: LinUCB-S vs Fixed 有意 (p=0.020, d=-0.49, 平均11%低). 部分FB 有意に悪い (p<0.001). UCB-S は同等 (p=0.41). LinUCB-S vs UCB-S p<0.001 (d=-1.10). 10→30 seed で p 0.77→0.02 = 検出力の実証.** |
 
 > **Phase 4 完了**: `Static Knowledge → Observed Evidence → Belief Update → Weight Learning → Routing` の閉ループが実データで成立。
 > 「観測に応じて Belief を更新し、その Belief に応じて Weight を学習することで、未知の環境変化にも適応できる」— 中心仮説に実験的裏付け。
@@ -254,8 +255,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 ### Roadmap
 
 ```
-EXP-0003D ▶ Statistical Validation（multi-seed, 95%CI, Wilcoxon/対応t検定, Cohen's d）← 次
-EXP-0003E 📐 Benchmark Expansion（Phi-3 Mini, Qwen2.5-1.5B, TinyLlama 追加）
+EXP-0003E ▶ Benchmark Expansion（Phi-3 Mini, Qwen2.5-1.5B, TinyLlama 追加）← 次
 EXP-0003C.5 📐 Neural Bandit
 Phase 5 📐 Emergent Controller（Task → Planner → Policy 生成）
 Phase 6 📐 Distributed Frontier AI
