@@ -241,6 +241,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | 0003 | **Heterogeneous Experts** | ✅ | **Qwen3-0.6B / SmolLM2-360M / Gemma-3-1B.** Belief(Node)→Belief(Node,Task) 拡張. **Belief 60% > Fixed 20%.** SmolLM coding最強, Gemma math最強 |
 | 0003B | **Cost-Aware Routing** | ✅ | **Quality+Latency+Cost の総合ルーティング. QPC (Quality-per-Cost) 1.91x. コスト -43% で Accuracy 50%→60%.** 「安くて十分良い」を選ぶ |
 | 0003A | **Dynamic Node State Estimation** | ✅ | **State(t)={Cap,Lat,Cost,Stab}. Router は状態推定器. Regret を導入し Adaptive vs Static で -75.7%.** Capability jump (モデル更新) 追従を実証 |
+| 0003C | **Policy Learning** | ⚠️ | **Q[state][node] を報酬から学習 (State→Policy→Action). 負の結果: 少サンプルでは Fixed 優位 (1.6 vs 4.2).** 「表現力とサンプル数のトレードオフ」を実データで確認 |
 
 > **Phase 4 完了**: `Static Knowledge → Observed Evidence → Belief Update → Weight Learning → Routing` の閉ループが実データで成立。
 > 「観測に応じて Belief を更新し、その Belief に応じて Weight を学習することで、未知の環境変化にも適応できる」— 中心仮説に実験的裏付け。
@@ -249,9 +250,8 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 ### Roadmap
 
 ```
-EXP-0003C ▶ Self-Learning Router（経験から方針を学習）← 次
-Phase 5 📐 Emergent Routing（ルールなし，Policy 生成）
-Phase 6 📐 Multi-Agent Collaboration / Distributed Frontier AI
+Phase 5 ▶ Emergent Controller（Task → Planner → Policy 生成）← 次
+Phase 6 📐 Distributed Frontier AI
 ```
 
 ### Apple Backend Architecture

@@ -134,6 +134,7 @@ Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, 
 | 0003 | Heterogeneous Experts | ✅ | **Qwen/SmolLM/Gemma. Belief(Node,Task). Belief 60% > Fixed 20%. SmolLM coding最強. Gemma math最強.** |
 | 0003B | Cost-Aware Routing | ✅ | **Quality+Latency+Cost. QPC 1.91x. Cost -43% with Accuracy 50%→60%. SmolLM 10/10 選択.** |
 | 0003A | Dynamic Node State Estimation | ✅ | **State(t)={Cap,Lat,Cost,Stab}. Regret指標. Adaptive vs Static: Regret -75.7%. Capability jump追従.** |
+| 0003C | Policy Learning | ⚠️ | **Q[state][node] 学習. 負の結果: 少サンプルでは Fixed 優位 (1.6 vs 4.2). 表現力とサンプル数のトレードオフを実証.** |
 | 0002F | Shadow Expert Feedback | ✅ | **Closed loop. Same-runtime 100% agree.** |
 | 0002F.1 | Cross-Backend Shadow | ✅ | **ONNX vs PyTorch: 88.6% overlap, FLAG=1, Stability 0.992→0.743.** |
 | 0002F.2 | Recovery Dynamics & Hysteresis | ✅ | **Asym α. Drift 1.0→0.91, Recovery 0.91→0.961. Hysteresis 0.567 (conservative). Half-life 7reqs. FalseRecovery 0%.** |
@@ -388,7 +389,10 @@ Routing (Composite Score)
                        QPC 1.91x, Cost -43%, Accuracy 50%→60%
 ✅ EXP-0003A         Dynamic Node State Estimation
                        State(t)={Cap,Lat,Cost,Stab}, Regret -75.7% (Adaptive vs Static)
-📐 EXP-0003C         Self-Learning Router（経験から方針を学習）← 次
+✅ EXP-0003C         Policy Learning（State → Policy → Action）
+                       負の結果: 少サンプルでは Fixed 優位 (1.6 vs 4.2)
+                       「表現力の高い学習器ほどデータを必要とする」を実証
+                       → Phase 5 では状態離散化とサンプル数の設計が要件
 ```
 
 ### Phase 5 ⏳ — Frontier Scale
