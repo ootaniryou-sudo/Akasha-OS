@@ -15,13 +15,21 @@
  * │ 24     │ 4    │ CLUSTER_ID     u32 LE  semantic cluster      │
  * │ 28     │ 4    │ PAYLOAD_LEN    u32 LE  float32 byte length   │
  * │ 32     │ 8    │ TIMESTAMP_US   u64 LE  dispatch timestamp μs │
- * │ 40     │ 4    │ EXPECTED_MS    u32 LE  timeout hint (ms×1000)│
+ * │ 40     │ 4    │ EXPECTED_US    u32 LE  timeout / GPU budget μs│
  * │ 44     │ 4    │ SEQ            u32 LE  sequence / checksum   │
  * │ 48     │ N    │ PAYLOAD        Float32Array (zero-copy view) │
  * └────────┴──────┴──────────────────────────────────────────────┘
  *
  * Total header = 48 bytes. Payload starts at HEADER_SIZE and is
  * always a multiple of 4 (raw f32 activations for WebGPU upload).
+ *
+ * Bootstrap lifecycle:
+ *  - A socket MUST REGISTER (Cmd=0x01) before the master promotes it to
+ *    BENCHMARK. REGISTER for an unknown socket is rejected (FAIL_BAD_REGISTER).
+ *  - A nodeId may be owned by exactly one live socket; a duplicate REGISTER
+ *    evicts the prior owner (FAIL_DUP_REGISTER).
+ *  - On RESULT (Cmd=0x04), EXPECTED_US carries the edge-reported GPU kernel µs;
+ *    RTT is derived server-side from TIMESTAMP_US echo.
  */
 
 export const MAGIC = 0x414b5348; // "AKSH"

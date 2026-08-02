@@ -155,6 +155,10 @@ export interface BootstrapCtx {
 const FAIL_TIMEOUT = 1;
 const FAIL_BAD_RESULT = 2;
 const FAIL_DISCONNECT = 3;
+/** REGISTER from a socket that was never enqueued (protocol violation). */
+const FAIL_BAD_REGISTER = 4;
+/** nodeId already owned by another live socket (duplicate registration). */
+const FAIL_DUP_REGISTER = 5;
 
 // ─── IPv4 → topology (pure bit ops, no string split on hot path) ─────────────
 
@@ -478,13 +482,28 @@ export class AkashaBootstrapper {
 
   /**
    * Bind nodeId once REGISTER packet arrives (still O(1), no promotion).
+   *
+   * Unregistered-node robustness:
+   *  - REGISTER from a socket slot that was never enqueued (or already failed)
+   *    is a protocol violation → emit `failed` (FAIL_BAD_REGISTER), no state created.
+   *  - A nodeId already owned by a different live socket (duplicate registration)
+   *    evicts the prior owner (FAIL_DUP_REGISTER) BEFORE re-binding, so one nodeId
+   *    maps to exactly one live ctx (prevents inflightBench/byRole corruption).
+   *  - Idempotent re-REGISTER on the same slot is a no-op.
    */
   bindRegister(socketSlot: number, nodeId: bigint): void {
     const ctx = this.bySlot.get(socketSlot);
-    if (!ctx) return;
-    if (ctx.nodeId !== 0n && ctx.nodeId !== nodeId) {
-      this.nodes.delete(ctx.nodeId.toString());
+    if (!ctx) {
+      // Unknown slot: nothing to bind to — surface it for observability.
+      this.opts.onEvent?.({ type: 'failed', nodeId, reason: FAIL_BAD_REGISTER });
+      return;
     }
+    if (ctx.nodeId === nodeId) return; // idempotent
+    const priorHolder = this.nodes.get(nodeId.toString());
+    if (priorHolder && priorHolder !== ctx) {
+      this.fail(priorHolder, FAIL_DUP_REGISTER); // evict stale owner first
+    }
+    if (ctx.nodeId !== 0n) this.nodes.delete(ctx.nodeId.toString());
     ctx.nodeId = nodeId;
     this.nodes.set(nodeId.toString(), ctx);
   }
@@ -497,6 +516,14 @@ export class AkashaBootstrapper {
     const key = nodeId.toString();
     const ctx = this.inflightBench.get(key);
     if (!ctx || ctx.phase !== BootstrapPhase.BENCHMARKING) return;
+    // Robustness: the inflight ctx must actually own this nodeId (defensive —
+    // duplicate-registration eviction makes this structurally impossible, but a
+    // spoofed/mismatched RESULT must never mutate another node's ctx).
+    if (ctx.nodeId !== nodeId) {
+      this.inflightBench.delete(key);
+      this.fail(ctx, FAIL_BAD_RESULT);
+      return;
+    }
     this.inflightBench.delete(key);
 
     // Sanity: reject impossibly fast (>60s GPU kernel is absurd)
