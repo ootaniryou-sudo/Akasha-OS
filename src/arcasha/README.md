@@ -48,7 +48,8 @@ src/arcasha/
   experts/registry.ts  WS サーバ (エキスパート登録/推論/決定論キャッシュ + generate)
   verifier/verifier.ts 検証 + 統合 (EXP-0005D)
   memory/memory.ts     EpisodeMemory (EXP-0005E) + Vector Memory (n-gram Embedding 検索)
-  controller/controller.ts Emergent Controller (EXP-0005F) — topK コミット + 並列実行
+  search/tree.ts       Tree Search: PlanGenerator (複数バリアント) + 信念推定 Beam + 最弱サブタスク展開
+  controller/controller.ts Emergent Controller (EXP-0005F) — topK コミット + 並列実行 + executePlan
   index.ts             Demo CLI
 ```
 
@@ -86,14 +87,16 @@ npx tsx src/arcasha/index.ts
 - [x] EXP-0005D Verifier (閾値 + 拒否語 + 統合)
 - [x] EXP-0005E EpisodeMemory
 - [x] **Vector Memory** — 文字 n-gram Embedding + cosine で類似エピソード検索 (実ノードで検証済み)
+- [x] **Tree Search** — 複数プラン生成 → 信念推定で Beam 枝刈り → シャドウ実行 → Verifier 選抜 →
+      最弱サブタスク展開 (accept-if-improved)。`search/tree.ts`
 - [x] EXP-0005F Emergent Controller (Task→Planner→Router→Verifier→Memory)
-- [ ] Tree Search (複数プラン → Verifier 選抜, FRAMEWORK §7)
 
 ## 実ノード検証結果 (2026-08-03, 3 エキスパート)
 
 - ウォームアップ: **cache miss=72 / hit=144** (直列化で 3 コントローラ間の決定論出力を共有)
 - demo-web (coding): `parallel=true`, code サブタスク `topK=2` (consulted: node-qwen)
 - demo-train (math): solve サブタスク `topK=2` (consulted: node-gemma), 正解 80km/h
-- demo-feather (reasoning): LLM Planner は node-qwen の出力が形式不適合 → ルールへ正常フォールバック
+- demo-feather (reasoning): Tree Search — 3 プラン生成 (standard/committee/deep) → Beam=2 実行 →
+  standard が最良 (score=0.250) → 最弱展開は改善なしで打ち切り
 - Vector Memory: 「python web scraper extract links」→ episode #0 (coding, sim=0.511) を最上位取得
 - 学習重み: capability=0.585 支配 (EXP-0003F と整合)

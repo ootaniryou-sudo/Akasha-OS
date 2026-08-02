@@ -281,7 +281,7 @@ $$
 | **EXP-0005B** | LLM Planner: 分解自体を学習対象に | 分解の品質をタスクレベルリグレットで測る新指標が必要 | ✅ |
 | **EXP-0005C** | Dynamic Expert Assignment: 何人/誰/並列/逐次の決定 | サブタスク数を $K$ 自体の最適化に拡張 | ✅ |
 | **Vector Memory** | Embedding 検索で類似エピソードを取得し信念へ注入 | 事前信念 $\mu_0$ をエピソードから初期化 (転移学習) | ✅ (検索まで) |
-| **Tree Search** | 複数プラン生成 → Verifier で選抜 (Reasoning Tree) | プラン空間での探索を Policy 生成と分離 | 📐 |
+| **Tree Search** | 複数プラン生成 → Beam (信念推定) → 実行 → Verifier 選抜 → 最弱展開 | プラン空間での探索を Policy 生成と分離。\n$\text{BestPlan} = \arg\max_{p\in\text{Beam}} \text{Verifier}(\text{Route}(p))$ | ✅ |
 
 ---
 

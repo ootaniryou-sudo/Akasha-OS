@@ -267,8 +267,8 @@ EXP-0005D ✅ Verifier (閾値 + 拒否語 + 統合)
 EXP-0005E ✅ EpisodeMemory
 Vector Memory ✅ n-gram Embedding + cosine で類似エピソード検索
 EXP-0005F ✅ Emergent Controller (End-to-End デモ実証)
+Tree Search ✅ 複数プラン → Beam 枝刈り → Verifier 選抜 → 最弱展開 (search/tree.ts)
 EXP-0003C.5 📐 Neural Bandit
-Tree Search 📐 複数プラン → Verifier 選抜
 Phase 6 📐 Distributed Frontier AI
 ```
 

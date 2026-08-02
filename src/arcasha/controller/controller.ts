@@ -145,6 +145,15 @@ export class ArcAshaController {
   ): Promise<RunResult> {
     const planner = opts?.planner ?? this.planner;
     const decomposition = await planner.decompose(task);
+    return this.executePlan(decomposition, { inject: opts?.inject ?? null, task });
+  }
+
+  /** 与えられた分解をそのまま実行 (Tree Search / プラン比較用) */
+  async executePlan(
+    decomposition: Decomposition,
+    opts?: { inject?: Injection | null; task?: Task },
+  ): Promise<RunResult> {
+    const task = opts?.task ?? decomposition.task;
     const decisions: Decision[] = [];
     const verifications: Verification[] = [];
     const subResults: Record<string, EvalResult> = {};

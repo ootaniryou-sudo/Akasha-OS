@@ -21,6 +21,7 @@ import { EpisodeMemory } from './memory/memory.js';
 import { LLMPlanner } from './planner/llm_planner.js';
 import { RuleBasedPlanner } from './planner/decomposer.js';
 import { FixedRouter, LinUCBShadowRouter, UCBShadowRouter } from './router/router.js';
+import { PlanGenerator, TreeSearch } from './search/tree.js';
 import { Verifier } from './verifier/verifier.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -81,12 +82,10 @@ async function main(): Promise<void> {
   console.log(`     cumulative regret: LinUCB-Shadow=${lin.totalCumulativeRegret().toFixed(3)}  UCB-Shadow=${ucb.totalCumulativeRegret().toFixed(3)}  Fixed=${fixed.totalCumulativeRegret().toFixed(3)}`);
 
   // ── Phase 2: 実タスク実行 (Planner → Router → Verifier → Memory) ──
-  // EXP-0005B: demo-feather は LLM Planner (node-qwen) で分解。フォーマット不適合時はルールへフォールバック
   const llmPlanner = new LLMPlanner(hub, 'node-qwen');
   const demoTasks: { task: Task; planner?: typeof llmPlanner }[] = [
     { task: { id: 'demo-web', capability: 'coding', prompt: 'Write a Python web scraper that fetches a webpage and extracts all links (href) from the HTML.' } },
     { task: { id: 'demo-train', capability: 'math', prompt: 'A train travels 60 km in 45 minutes. What is its average speed in km/h? Show your work.' } },
-    { task: { id: 'demo-feather', capability: 'reasoning', prompt: 'Which weighs more: a kilogram of feathers or a kilogram of iron? Explain your reasoning.' }, planner: llmPlanner },
   ];
 
   for (const { task, planner: taskPlanner } of demoTasks) {
@@ -103,7 +102,29 @@ async function main(): Promise<void> {
     console.log(`     → episode #${run.episodeId} saved to memory`);
   }
 
-  // ── Phase 2.5: Vector Memory (類似エピソード検索) ────────────────
+  // ── Phase 2.5: Tree Search (Plan A/B/C → Beam → Verifier → Best Plan) ──
+  const featherTask: Task = {
+    id: 'demo-feather', capability: 'reasoning',
+    prompt: 'Which weighs more: a kilogram of feathers or a kilogram of iron? Explain your reasoning.',
+  };
+  console.log('\n  🌳 Tree Search: 5 plans → beam=2 → expand(weakest)');
+  const generator = new PlanGenerator(new RuleBasedPlanner(), llmPlanner);
+  const search = new TreeSearch(lin, generator, 5, 2, 1);
+  const ts = await search.search(featherTask);
+  console.log('     generated plans (belief-based estimate):');
+  for (const e of ts.beamEstimates) {
+    console.log(`       [est=${e.estimate.toFixed(3)}] ${e.plan.rationale} (${e.plan.subtasks.length} subtasks)`);
+  }
+  console.log('     executed (verifier score):');
+  const all = [ts.best, ...ts.alternatives];
+  for (const o of all) {
+    console.log(`       [score=${o.score.toFixed(3)}] ${o.plan.rationale}${o === ts.best ? '  ← BEST' : ''}`);
+  }
+  console.log(`     → BEST: ${ts.best.plan.rationale}  (score=${ts.best.score.toFixed(3)}), alternatives=${ts.alternatives.length}`);
+  line('INTEGRATED RESULT (Tree Search)', ts.best.run.integrated);
+  console.log(`     → episodes ${ts.best.run.episodeId} saved to memory`);
+
+  // ── Phase 2.6: Vector Memory (類似エピソード検索) ────────────────
   console.log('\n  🔍 vector memory: search "python web scraper extract links"');
   const hits = mem.search('python web scraper extract links', 2);
   if (hits.length === 0) {
