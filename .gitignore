@@ -46,3 +46,9 @@ Thumbs.db
 # Docker
 docker-compose.override.yml
 __pycache__/
+
+# Python ビルド成果物
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
