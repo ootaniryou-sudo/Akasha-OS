@@ -111,3 +111,20 @@ npx tsx src/arcasha/index.ts
   reasoning n₀=6。実行後 posterior — qwen coding μ=0.800, smollm 0.200→0.300。episode #6 が次の μ₀'
 - Vector Memory: 「python web scraper extract links」→ episode #0 (coding, sim=0.511) を最上位取得
 - 学習重み: capability=0.585 支配 (EXP-0003F と整合)
+
+## 手法比較ベンチマーク (2026-08-03, 3 エキスパート / 保持 9 タスク / 3 seeds)
+
+> `npx tsx src/arcasha/benchmark/run_benchmark.ts --seeds 3` — レポート: `benchmark/reports/`
+
+| 手法 | meanScore | passRate | cumRegret | lat(ms) |
+|---|---|---|---|---|
+| **LinUCB-Shadow (ArcAsha)** | **0.646** | 0.861 | **1.200** | 2138 |
+| Fixed | 0.632 | 0.917 | 1.450 | 2018 |
+| Random | 0.542 | 0.778 | 4.650 | 2190 |
+| RoundRobin | 0.542 | 0.861 | 4.350 | 2353 |
+| UCB-Shadow | 0.514 | 0.917 | 4.400 | 1835 |
+
+- **LinUCB-Shadow が最高品質 + 最小リグレット** (論文 0003D/E と整合)
+- UCB-Shadow (素朴な報酬最大化) が最低品質 — 0003E の「安くて弱いモデルに誘惑される」危険を再現
+- 3 seeds で完全一致 = **決定論** (T=0 + キャッシュ) の実証
+- 既存フレームワークとの位置づけ: [`docs/COMPARISON.md`](docs/COMPARISON.md)

@@ -188,3 +188,65 @@ export class FixedRouter implements Router {
     return null;
   }
 }
+
+// ── ベースライン (評価用) ─────────────────────────────────────────
+
+/** Random: 選択をランダム化する baseline (学習なし) */
+export class RandomRouter implements Router {
+  readonly name = 'Random';
+
+  constructor(
+    private readonly experts: ExpertInfo[],
+    private readonly seed = 42,
+  ) {}
+
+  select(ctx: StepContext): string {
+    const i = Math.floor(this.rand(ctx.step + this.seed) * ctx.order.length);
+    return ctx.order[Math.min(i, ctx.order.length - 1)];
+  }
+
+  scores(ctx: StepContext): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const e of this.experts) out[e.nodeId] = this.rand(ctx.step + this.seed + e.nodeId.length);
+    return out;
+  }
+
+  observe(_ctx: StepContext): void {
+    // 学習なし
+  }
+
+  learnedWeights(): null {
+    return null;
+  }
+
+  private rand(seed: number): number {
+    const x = Math.sin(seed * 12.9898) * 43758.5453;
+    return x - Math.floor(x);
+  }
+}
+
+/** RoundRobin: 順番に割り当てる baseline (学習なし) */
+export class RoundRobinRouter implements Router {
+  readonly name = 'RoundRobin';
+
+  constructor(private readonly experts: ExpertInfo[]) {}
+
+  select(ctx: StepContext): string {
+    return ctx.order[ctx.step % ctx.order.length];
+  }
+
+  scores(ctx: StepContext): Record<string, number> {
+    const out: Record<string, number> = {};
+    const pick = ctx.order[ctx.step % ctx.order.length];
+    for (const e of this.experts) out[e.nodeId] = e.nodeId === pick ? 1 : 0;
+    return out;
+  }
+
+  observe(_ctx: StepContext): void {
+    // 学習なし
+  }
+
+  learnedWeights(): null {
+    return null;
+  }
+}
