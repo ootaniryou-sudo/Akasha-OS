@@ -4,6 +4,10 @@
 自律型マルチエキスパートコントローラ。論文 (Zenodo DOI 10.5281/zenodo.21755612) は
 凍結済み。本モジュールはその検証結果を製品コードに落とし込む Phase 5 の実装。
 
+> 📐 **統一理論**: [`FRAMEWORK.md`](FRAMEWORK.md) — Observation→Belief→Confidence→Features→
+> LinUCB-Shadow→Planner→Verifier→Memory を数式レベルで統合した ArcAsha Framework。
+> 「なぜこの設計になるのか」の形式的根拠 (設計原理 P1-P5 + 命題 Prop.1-4)。
+
 ## アーキテクチャ
 
 ```

@@ -272,7 +272,8 @@ Phase 6 📐 Distributed Frontier AI
 
 > **ArcAsha v0.1**: 研究で検証した Observation→Belief→Confidence→Features→LinUCB-Shadow→Routing の
 > パイプラインを `src/arcasha/` に実装。実ノード 3 台 (Qwen3-0.6B / SmolLM2-360M / Gemma-3-1B) で
-> エンドツーエンド動作を確認。詳細: [`src/arcasha/README.md`](src/arcasha/README.md)
+> エンドツーエンド動作を確認。詳細: [`src/arcasha/README.md`](src/arcasha/README.md) |
+> 統一理論: [`src/arcasha/FRAMEWORK.md`](src/arcasha/FRAMEWORK.md)
 
 ### Apple Backend Architecture
 
