@@ -49,7 +49,8 @@ src/arcasha/
   verifier/verifier.ts 検証 + 統合 (EXP-0005D)
   memory/memory.ts     EpisodeMemory (EXP-0005E) + Vector Memory (n-gram Embedding 検索)
   search/tree.ts       Tree Search: PlanGenerator (複数バリアント) + 信念推定 Beam + 最弱サブタスク展開
-  controller/controller.ts Emergent Controller (EXP-0005F) — topK コミット + 並列実行 + executePlan
+  reflect/reflector.ts Self Reflection: 失敗を Belief (μ, n) から診断 → re-route/committee/re-decompose
+  controller/controller.ts Emergent Controller (EXP-0005F) — topK コミット + 並列実行 + executePlan + executeReflective
   index.ts             Demo CLI
 ```
 
@@ -89,6 +90,8 @@ npx tsx src/arcasha/index.ts
 - [x] **Vector Memory** — 文字 n-gram Embedding + cosine で類似エピソード検索 (実ノードで検証済み)
 - [x] **Tree Search** — 複数プラン生成 → 信念推定で Beam 枝刈り → シャドウ実行 → Verifier 選抜 →
       最弱サブタスク展開 (accept-if-improved)。`search/tree.ts`
+- [x] **Self Reflection** — 失敗サブタスクを Belief (μ, n) から診断 → re-route (force) /
+      committee (topK) / re-decompose (分割) → 再実行 → 改善時のみ採用。`reflect/reflector.ts`
 - [x] EXP-0005F Emergent Controller (Task→Planner→Router→Verifier→Memory)
 
 ## 実ノード検証結果 (2026-08-03, 3 エキスパート)
@@ -98,5 +101,8 @@ npx tsx src/arcasha/index.ts
 - demo-train (math): solve サブタスク `topK=2` (consulted: node-gemma), 正解 80km/h
 - demo-feather (reasoning): Tree Search — 3 プラン生成 (standard/committee/deep) → Beam=2 実行 →
   standard が最良 (score=0.250) → 最弱展開は改善なしで打ち切り
+- demo-reflect (coding, palindrome): 初期 4/4 PASS → 反射ループは失敗なしのため即終了
+  (診断ロジックはモックで 4 ケース検証: expert-capability→force / refusal→re-route /
+  low-confidence→topK / task-hard→分割)
 - Vector Memory: 「python web scraper extract links」→ episode #0 (coding, sim=0.511) を最上位取得
 - 学習重み: capability=0.585 支配 (EXP-0003F と整合)

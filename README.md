@@ -268,7 +268,11 @@ EXP-0005E ✅ EpisodeMemory
 Vector Memory ✅ n-gram Embedding + cosine で類似エピソード検索
 EXP-0005F ✅ Emergent Controller (End-to-End デモ実証)
 Tree Search ✅ 複数プラン → Beam 枝刈り → Verifier 選抜 → 最弱展開 (search/tree.ts)
+Self Reflection ✅ 失敗を Belief (μ, n) から診断 → re-route/committee/re-decompose (reflect/reflector.ts)
 EXP-0003C.5 📐 Neural Bandit
+Long-term Memory 📐 検索エピソード → 事前信念 μ0 初期化
+MCTS 📐 PUCT によるプラン空間探索
+Multi-Agent Debate 📐 専門エキスパートによる議論
 Phase 6 📐 Distributed Frontier AI
 ```
 

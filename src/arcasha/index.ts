@@ -14,7 +14,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ArcAshaController } from './controller/controller.js';
+import { ArcAshaController, planScore } from './controller/controller.js';
 import type { Capability, Task } from './core/types.js';
 import { ExpertHub } from './experts/registry.js';
 import { EpisodeMemory } from './memory/memory.js';
@@ -124,7 +124,35 @@ async function main(): Promise<void> {
   line('INTEGRATED RESULT (Tree Search)', ts.best.run.integrated);
   console.log(`     → episodes ${ts.best.run.episodeId} saved to memory`);
 
-  // ── Phase 2.6: Vector Memory (類似エピソード検索) ────────────────
+  // ── Phase 2.6: Self Reflection (Verifier → Failure reason → Planner → Next plan) ──
+  const reflectTask: Task = {
+    id: 'demo-reflect', capability: 'coding',
+    prompt: 'Write a Python function that checks if a string is a palindrome (ignoring case) and returns True or False.',
+  };
+  console.log('\n  🔄 Self Reflection: fail → diagnose (Belief) → remedy → re-run (maxIter=2)');
+  const rr = await lin.executeReflective(reflectTask, { maxIter: 2 });
+  console.log(`     initial: ${rr.initialRun.decomposition.rationale}  (pass=${rr.initialRun.verifications.filter(v => v.passed).length}/${rr.initialRun.verifications.length})`);
+  for (const v of rr.initialRun.verifications) {
+    const d = rr.initialRun.decisions.find(x => x.subtask.id === v.subtask.id)!;
+    console.log(`       [${v.subtask.order}] ${v.subtask.role.padEnd(9)} -> ${d.nodeId}  score=${d.result.score.toFixed(3)}  ${v.passed ? 'PASS' : 'FAIL'}`);
+  }
+  for (const it of rr.iterations) {
+    console.log(`     iter ${it.iteration + 1}:`);
+    for (const r of it.reflections) {
+      console.log(`       ✗ ${r.cause.padEnd(18)} → ${r.remedy.padEnd(12)} (${r.detail})`);
+    }
+    console.log(`       next plan: ${it.nextPlan.rationale}  (pass=${it.nextRun.verifications.filter(v => v.passed).length}/${it.nextRun.verifications.length}, score=${planScore(it.nextRun).toFixed(3)})`);
+    for (const v of it.nextRun.verifications) {
+      const d = it.nextRun.decisions.find(x => x.subtask.id === v.subtask.id)!;
+      const forced = d.subtask.expertPolicy?.force ? ` [forced:${d.subtask.expertPolicy.force}]` : '';
+      console.log(`         [${v.subtask.order}] ${v.subtask.role.padEnd(9)} -> ${d.nodeId}${forced}  score=${d.result.score.toFixed(3)}  ${v.passed ? 'PASS' : 'FAIL'}`);
+    }
+  }
+  console.log(`     → final: ${rr.finalPlan.rationale}  (pass=${rr.finalRun.verifications.filter(v => v.passed).length}/${rr.finalRun.verifications.length}, score=${planScore(rr.finalRun).toFixed(3)})`);
+  line('INTEGRATED RESULT (Reflection)', rr.finalRun.integrated);
+  console.log(`     → episode #${rr.finalRun.episodeId} saved to memory`);
+
+  // ── Phase 2.7: Vector Memory (類似エピソード検索) ────────────────
   console.log('\n  🔍 vector memory: search "python web scraper extract links"');
   const hits = mem.search('python web scraper extract links', 2);
   if (hits.length === 0) {

@@ -17,7 +17,7 @@
 
 import type { Capability, Decomposition, Subtask, Task } from '../core/types.js';
 import type { BeliefSnapshot } from '../belief/bayesian.js';
-import type { ArcAshaController, RunResult } from '../controller/controller.js';
+import { planScore, type ArcAshaController, type RunResult } from '../controller/controller.js';
 import type { LLMPlanner } from '../planner/llm_planner.js';
 import { RuleBasedPlanner } from '../planner/decomposer.js';
 
@@ -34,13 +34,6 @@ export interface TreeSearchResult {
   best: PlanOutcome;
   alternatives: PlanOutcome[];
   beamEstimates: { plan: Decomposition; estimate: number }[];
-}
-
-/** 実行結果の計画スコア: サブタスク検証スコアの平均 */
-export function planScore(run: RunResult): number {
-  if (run.decisions.length === 0) return 0;
-  const s = run.decisions.reduce((acc, d) => acc + d.result.score, 0) / run.decisions.length;
-  return Math.round(s * 1000) / 1000;
 }
 
 /** 最弱サブタスク (最低スコアの決定) */

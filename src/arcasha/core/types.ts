@@ -37,8 +37,12 @@ export interface Subtask extends Task {
   parentId: string;
   order: number;
   role: string; // 'design' | 'code' | 'test' | 'review' | ...
-  /** EXP-0005C Dynamic Expert Assignment: このサブタスクにコミットするエキスパート数 */
-  expertPolicy?: { topK?: number };
+  /**
+   * EXP-0005C Dynamic Expert Assignment:
+   *   topK — このサブタスクにコミットするエキスパート数 (committee)
+   *   force — Self Reflection による強制ルーティング先
+   */
+  expertPolicy?: { topK?: number; force?: string };
 }
 
 export interface EvalResult {

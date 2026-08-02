@@ -19,11 +19,19 @@ import type {
 import type { ExpertHub } from '../experts/registry.js';
 import type { EpisodeMemory } from '../memory/memory.js';
 import type { Planner } from '../planner/decomposer.js';
+import { Reflector, type Reflection } from '../reflect/reflector.js';
 import type { Router } from '../router/router.js';
 import { evaluateAll, type Injection } from '../shadow/shadow.js';
 import type { Verifier, Verification } from '../verifier/verifier.js';
 
 const CAPS: Capability[] = ['coding', 'math', 'reasoning'];
+
+/** 実行結果の計画スコア: サブタスク検証スコアの平均 (Tree Search / Reflection 共通) */
+export function planScore(run: RunResult): number {
+  if (run.decisions.length === 0) return 0;
+  const s = run.decisions.reduce((acc, d) => acc + d.result.score, 0) / run.decisions.length;
+  return Math.round(s * 1000) / 1000;
+}
 
 export interface Decision {
   subtask: Subtask;
@@ -43,6 +51,21 @@ export interface RunResult {
   integrated: string;
   episodeId: number;
   totalRegret: number;
+}
+
+export interface ReflectiveIteration {
+  iteration: number;
+  reflections: Reflection[];
+  nextPlan: Decomposition;
+  nextRun: RunResult;
+}
+
+export interface ReflectiveRun {
+  task: Task;
+  initialRun: RunResult;
+  finalPlan: Decomposition;
+  finalRun: RunResult;
+  iterations: ReflectiveIteration[];
 }
 
 export class ArcAshaController {
@@ -117,12 +140,16 @@ export class ArcAshaController {
       step: this.stepCounter,
     };
 
-    // EXP-0005C Dynamic Expert Assignment:
-    // topK>1 なら UCB スコア上位 K エキスパートをコミットし、その中で最高品質を採用 (committee)
+    // EXP-0005C Dynamic Expert Assignment / Self Reflection:
+    //   force — 信念診断による強制ルーティング
+    //   topK>1 — UCB スコア上位 K をコミットし、その中で最高品質を採用 (committee)
+    const force = subtask.expertPolicy?.force;
     const topK = subtask.expertPolicy?.topK ?? 1;
     let decision: string;
     let consulted: string[] = [];
-    if (topK > 1) {
+    if (force && results[force]) {
+      decision = force;
+    } else if (topK > 1) {
       const scores = this.router.scores(ctx);
       const ranked = [...this.hub.experts].map(e => e.nodeId).sort((a, b) => scores[b] - scores[a]);
       const top = ranked.slice(0, Math.min(topK, ranked.length));
@@ -179,6 +206,43 @@ export class ArcAshaController {
       integrated,
     });
     return { task, decomposition, decisions, verifications, integrated, episodeId, totalRegret: this.totalRegret };
+  }
+
+  /**
+   * Self Reflection (Belief-Driven Self-Improvement):
+   *   Verifier が失敗を検出 → Reflector が Belief (μ, n) から原因診断 →
+   *   Planner が次プラン生成 (re-route / committee / re-decompose) →
+   *   再実行 → 合格数 or スコアが改善した場合のみ採用
+   */
+  async executeReflective(
+    task: Task,
+    opts?: { maxIter?: number; planner?: Planner },
+  ): Promise<ReflectiveRun> {
+    const planner = opts?.planner ?? this.planner;
+    const maxIter = opts?.maxIter ?? 2;
+    const reflector = new Reflector(() => this.beliefSnapshot());
+    let plan = await planner.decompose(task);
+    const initialRun = await this.executePlan(plan);
+    let run = initialRun;
+    const iterations: ReflectiveIteration[] = [];
+
+    for (let i = 0; i < maxIter; i++) {
+      const reflections = reflector.reflect(run);
+      if (reflections.length === 0) break;
+      const nextPlan = reflector.remedyPlan(run, plan);
+      if (!nextPlan) break;
+      const nextRun = await this.executePlan(nextPlan);
+      iterations.push({ iteration: i, reflections, nextPlan, nextRun });
+      const passBefore = run.verifications.filter(v => v.passed).length;
+      const passAfter = nextRun.verifications.filter(v => v.passed).length;
+      if (passAfter > passBefore || (passAfter === passBefore && planScore(nextRun) > planScore(run))) {
+        plan = nextPlan;
+        run = nextRun;
+      } else {
+        break; // 改善なし → 探索打ち切り
+      }
+    }
+    return { task, initialRun, finalPlan: plan, finalRun: run, iterations };
   }
 
   /** 学習タスク: 分解なしでシャドウ学習だけ回す (Router の事前学習) */
