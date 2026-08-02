@@ -72,6 +72,28 @@ Phase-wise:
 4. **科学的教訓**: 「Policy を学習する」ことは可能だが、**少サンプルでは手設計の重み (事前知識) が優位**。Policy Learning の価値はサンプルが多く、環境変化が頻繁な場合に出る。このトレードオフ自体が研究上の発見。
 5. **Policy Learning が追従を見せたフェーズ**: latency spike (0.60 vs 0.40) と capjump 後半では差が縮小。学習が進めば追従する兆候。
 
+## Learning Depth Hypothesis (理論枠組み)
+
+0003C の負の結果を、実験系列全体に一般化する理論として整理する:
+
+> **Learning Depth Hypothesis: 学習対象の「深さ」が増すほど、必要な経験量 (Sample Complexity) は急増する。**
+
+```
+Depth ↑      Sample Complexity ↑
+────────────────────────────────
+Layer 1: weight         少ないデータで十分 (0002E.3: 96% ≥ 86%)
+Layer 2: state          中程度 (0003A: Regret −75.7%)
+Layer 3: policy         大量 (0003C: 24 リクエストでは Fixed に届かず)
+```
+
+この仮説はオンライン学習・RL の既知の性質 (表現力の高い学習器ほどデータを必要とする) を、
+実データで段階的に確認したもの。
+
+**検証実験 (次):** サンプル数を 24 → 50 → 100 → 250 → 500 → 1000 と増やし、
+Policy Learning / Contextual Bandit の Regret が何サンプルで Fixed を超えるかを測定する。
+
+→ **EXP-0003C.1 (Contextual Bandit / UCB Router)** で実施
+
 ## 比較: 全実験の Regret フレームワーク
 
 | 実験 | 学習対象 | 事前知識 | 結果 |
@@ -83,7 +105,26 @@ Phase-wise:
 > **学ぶ対象が「重み → 状態 → 方策」と深くなるほど、必要なサンプル数は増える。**
 > これは「表現力の高い学習器ほどデータを必要とする」というオンライン学習の原則を実データで確認した結果。
 
-## Next: Phase 5 (Emergent Controller)
+## 方向性: Contextual Bandit Router
+
+ArcAsha のルーティングは「文脈 (state) を見てノードを選び、即座に報酬を得る」構造なので、
+**フル RL ではなく Contextual Bandit** の定式化が自然:
+
+```
+Context (state: Capability, Latency, Stability, Cost)
+    ↓
+Arm (node: qwen / smollm / gemma)
+    ↓
+Reward (Quality + Latency + Cost + Stability)
+```
+
+候補手法 (0003C.1〜):
+- 0003C.1: **UCB1** (楽観的探索 — サンプル効率が高い)
+- 0003C.2: Thompson Sampling (ベイズ的探索)
+- 0003C.3: Experience Replay (過去経験の再利用)
+- 0003C.4: Contextual Bandit (LinUCB — 文脈を線形特徴で扱う)
+
+## Next: EXP-0003C.1 (Contextual Bandit / UCB Router)
 
 ```
 Task → Planner → Policy 生成 → Routing

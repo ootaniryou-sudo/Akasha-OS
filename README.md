@@ -257,12 +257,22 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 ### Roadmap
 
 ```
-理論整理 ▶ Observation→State→Belief→Confidence→Features→Routing の統一フレームワーク ← 次
-論文執筆 📐 arXiv 向け (Introduction〜Discussion)
+📜 論文凍結 ✅ Zenodo DOI 10.5281/zenodo.21755612 (Observation-Driven Routing)
+ArcAsha v0.1 ✅ src/arcasha/ — 検証済みパイプラインを内部エンジンとして製品化
+Phase 5 🚧 Emergent Controller (Task → Planner → Router → Verifier → Memory) ← 進行中
+EXP-0005A ✅ Task Decomposition (RuleBasedPlanner)
+EXP-0005B 📐 LLM Planner
+EXP-0005C 📐 Dynamic Expert Assignment
+EXP-0005D ✅ Verifier (閾値 + 拒否語 + 統合)
+EXP-0005E ✅ EpisodeMemory
+EXP-0005F ✅ Emergent Controller (End-to-End デモ実証)
 EXP-0003C.5 📐 Neural Bandit
-Phase 5 📐 Emergent Controller（Task → Planner → Policy 生成）
 Phase 6 📐 Distributed Frontier AI
 ```
+
+> **ArcAsha v0.1**: 研究で検証した Observation→Belief→Confidence→Features→LinUCB-Shadow→Routing の
+> パイプラインを `src/arcasha/` に実装。実ノード 3 台 (Qwen3-0.6B / SmolLM2-360M / Gemma-3-1B) で
+> エンドツーエンド動作を確認。詳細: [`src/arcasha/README.md`](src/arcasha/README.md)
 
 ### Apple Backend Architecture
 

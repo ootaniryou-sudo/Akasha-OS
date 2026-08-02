@@ -9,6 +9,28 @@
 
 ---
 
+## 📜 論文凍結 & ArcAsha v0.1 移行 (2026-07)
+
+> **論文は Zenodo に凍結**: [10.5281/zenodo.21755612](https://doi.org/10.5281/zenodo.21755612)
+> — Observation-Driven Routing for Distributed Heterogeneous Language Models
+>
+> 検証済みパイプライン (Observation→State→Belief→Confidence→Features→LinUCB-Shadow→Routing) は
+> **`src/arcasha/` に製品コードとして実装済み**。実ノード 3 台で End-to-End 動作確認済み。
+> 詳細: [`src/arcasha/README.md`](../../src/arcasha/README.md)
+
+### Phase 5 — Emergent Controller (進行中)
+
+| EXP | Component | Status |
+|-----|-----------|:---:|
+| 0005A | Task Decomposition (RuleBasedPlanner) | ✅ |
+| 0005D | Verifier (閾値 + 拒否語 + 統合) | ✅ |
+| 0005E | EpisodeMemory | ✅ |
+| 0005F | Emergent Controller (Task→Planner→Router→Verifier→Memory) | ✅ |
+| 0005B | LLM Planner | 📐 |
+| 0005C | Dynamic Expert Assignment | 📐 |
+
+---
+
 ## ArcAsha 3-Layer Routing Model
 
 ```
