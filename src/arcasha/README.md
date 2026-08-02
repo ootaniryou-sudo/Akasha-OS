@@ -36,17 +36,19 @@
 
 ```
 src/arcasha/
+  FRAMEWORK.md       統合理論 (設計原理 P1-P5 + 命題 Prop.1-4)
   core/types.ts        基本型 (Task/Subtask/NodeState/StepContext)
   core/observation.ts  ルールベース評価 + 多目的報酬 (REWARD_W) + Oracle
   belief/bayesian.ts   BayesianBelief (μ,n,confidence) + EmaLatency
   router/linucb.ts     LinUCB (disjoint, Gauss-Jordan 逆行列)
-  router/router.ts     Router インターフェース + LinUCB/UCB/Fixed 実装 + 特徴量構築
+  router/router.ts     Router インターフェース (select/scores/observe) + LinUCB/UCB/Fixed
   shadow/shadow.ts     シャドウ評価 (フル情報フィードバック + 注入)
-  planner/decomposer.ts タスク分解 (EXP-0005A)
-  experts/registry.ts  WS サーバ (エキスパート登録/推論/決定論キャッシュ)
+  planner/decomposer.ts タスク分解 (EXP-0005A) + 動的ポリシー (topK/parallel, EXP-0005C)
+  planner/llm_planner.ts LLM Planner (EXP-0005B) — フォーマット不適合時はルールへフォールバック
+  experts/registry.ts  WS サーバ (エキスパート登録/推論/決定論キャッシュ + generate)
   verifier/verifier.ts 検証 + 統合 (EXP-0005D)
-  memory/memory.ts     EpisodeMemory (EXP-0005E)
-  controller/controller.ts Emergent Controller (EXP-0005F)
+  memory/memory.ts     EpisodeMemory (EXP-0005E) + Vector Memory (n-gram Embedding 検索)
+  controller/controller.ts Emergent Controller (EXP-0005F) — topK コミット + 並列実行
   index.ts             Demo CLI
 ```
 
@@ -77,9 +79,21 @@ npx tsx src/arcasha/index.ts
 ## Phase 5 ロードマップ
 
 - [x] EXP-0005A タスク分解 (RuleBasedPlanner)
+- [x] **EXP-0005B LLM Planner** — エキスパートによる分解 (`llm_planner.ts`)。
+      フォーマット不適合時は RuleBasedPlanner へフォールバック (実ノードで検証済み)
+- [x] **EXP-0005C Dynamic Expert Assignment** — Planner が「何人 (topK) / 並列か逐次か」を決定。
+      Router.scores() で上位 K をコミットし Verifier が仲裁 (実ノードで検証済み)
 - [x] EXP-0005D Verifier (閾値 + 拒否語 + 統合)
 - [x] EXP-0005E EpisodeMemory
+- [x] **Vector Memory** — 文字 n-gram Embedding + cosine で類似エピソード検索 (実ノードで検証済み)
 - [x] EXP-0005F Emergent Controller (Task→Planner→Router→Verifier→Memory)
-- [ ] EXP-0005B LLM Planner (llmDecomposePrompt/parseSubtasks は hook 済み)
-- [ ] EXP-0005C Dynamic Expert Assignment (負荷/故障時の再割当)
-- [ ] ベクトル化メモリ・圧縮エピソード
+- [ ] Tree Search (複数プラン → Verifier 選抜, FRAMEWORK §7)
+
+## 実ノード検証結果 (2026-08-03, 3 エキスパート)
+
+- ウォームアップ: **cache miss=72 / hit=144** (直列化で 3 コントローラ間の決定論出力を共有)
+- demo-web (coding): `parallel=true`, code サブタスク `topK=2` (consulted: node-qwen)
+- demo-train (math): solve サブタスク `topK=2` (consulted: node-gemma), 正解 80km/h
+- demo-feather (reasoning): LLM Planner は node-qwen の出力が形式不適合 → ルールへ正常フォールバック
+- Vector Memory: 「python web scraper extract links」→ episode #0 (coding, sim=0.511) を最上位取得
+- 学習重み: capability=0.585 支配 (EXP-0003F と整合)

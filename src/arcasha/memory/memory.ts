@@ -1,8 +1,10 @@
 /**
- * ArcAsha — Episode Memory (EXP-0005E)
+ * ArcAsha — Episode Memory (EXP-0005E) + Vector Memory
  *
  * タスク実行のエピソードを保存し、後のルーティング/計画に参照させる。
- * v0.1 ではシンプルな配列 + 検索。将来はベクトル化・圧縮へ拡張。
+ * Vector Memory: 外部モデル不要の自己完結 Embedding (文字 n-gram ハッシュ)
+ * で類似エピソードを検索し、Agent らしい「記憶からの帰還」を実現する
+ * (FRAMEWORK §7)。
  */
 
 import type { Task } from '../core/types.js';
@@ -13,6 +15,36 @@ export interface Episode {
   decisions: { subtaskId: string; nodeId: string; score: number }[];
   integrated: string;
   timestamp: string;
+}
+
+// ── 自己完結 Embedding (文字 bigram ハッシュ → L2 正規化) ──────────
+
+export function embedText(text: string, dim = 256): Float64Array {
+  const v = new Float64Array(dim);
+  const s = text.toLowerCase();
+  for (let i = 0; i <= s.length - 2; i++) {
+    const gram = s.slice(i, i + 2);
+    let h = 0;
+    for (let j = 0; j < gram.length; j++) h = (h * 31 + gram.charCodeAt(j)) >>> 0;
+    v[h % dim] += 1;
+  }
+  // 単語境界の bigram を強くする軽量な重み
+  for (const token of s.split(/\s+/)) {
+    if (token.length >= 3) {
+      let h = 0;
+      for (let j = 0; j < token.length; j++) h = (h * 31 + token.charCodeAt(j)) >>> 0;
+      v[h % dim] += 2;
+    }
+  }
+  const norm = Math.sqrt(v.reduce((a, b) => a + b * b, 0)) || 1;
+  for (let i = 0; i < dim; i++) v[i] /= norm;
+  return v;
+}
+
+export function cosine(a: Float64Array, b: Float64Array): number {
+  let dot = 0;
+  for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
+  return dot;
 }
 
 export class EpisodeMemory {
@@ -42,5 +74,17 @@ export class EpisodeMemory {
 
   size(): number {
     return this.episodes.length;
+  }
+
+  /** Vector Memory: クエリに類似したエピソードを cosine 類似度で上位 k 件返す */
+  search(query: string, k = 3): { episode: Episode; similarity: number }[] {
+    const q = embedText(query);
+    return this.episodes
+      .map(ep => ({
+        episode: ep,
+        similarity: cosine(q, embedText(`${ep.task.capability} ${ep.task.prompt} ${ep.integrated}`)),
+      }))
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, k);
   }
 }

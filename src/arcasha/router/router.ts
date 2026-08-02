@@ -19,6 +19,8 @@ export interface Router {
   name: string;
   /** タスクに対するノード選択 (order 順でタイブレーク) */
   select(ctx: StepContext): string;
+  /** 全ノードのスコア (EXP-0005C topK 動的割当用) */
+  scores(ctx: StepContext): Record<string, number>;
   /** シャドウ評価後の全アーム観測による更新 */
   observe(ctx: StepContext): void;
   /** 学習済み重み (デバッグ/可視化用) */
@@ -68,13 +70,21 @@ export class LinUCBShadowRouter implements Router {
   }
 
   select(ctx: StepContext): string {
+    const sc = this.scores(ctx);
     let best = '';
     let bestScore = -Infinity;
     for (const id of ctx.order) {
-      const score = this.lin.get(id)!.score(buildFeatures(this.experts, ctx, id, this.removeIdx));
-      if (score > bestScore) { bestScore = score; best = id; }
+      if (sc[id] > bestScore) { bestScore = sc[id]; best = id; }
     }
     return best;
+  }
+
+  scores(ctx: StepContext): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const e of this.experts) {
+      out[e.nodeId] = this.lin.get(e.nodeId)!.score(buildFeatures(this.experts, ctx, e.nodeId, this.removeIdx));
+    }
+    return out;
   }
 
   observe(ctx: StepContext): void {
@@ -105,14 +115,23 @@ export class UCBShadowRouter implements Router {
   }
 
   select(ctx: StepContext): string {
+    const sc = this.scores(ctx);
     let best = '';
     let bestScore = -Infinity;
-    const t = ctx.step;
     for (const id of ctx.order) {
-      const score = this.n[id] === 0 ? Infinity : this.q[id] + Math.sqrt(this.c * Math.log(t + 1) / this.n[id]);
-      if (score > bestScore) { bestScore = score; best = id; }
+      if (sc[id] > bestScore) { bestScore = sc[id]; best = id; }
     }
     return best;
+  }
+
+  scores(ctx: StepContext): Record<string, number> {
+    const out: Record<string, number> = {};
+    const t = ctx.step;
+    for (const e of this.experts) {
+      const id = e.nodeId;
+      out[id] = this.n[id] === 0 ? Infinity : this.q[id] + Math.sqrt(this.c * Math.log(t + 1) / this.n[id]);
+    }
+    return out;
   }
 
   observe(ctx: StepContext): void {
@@ -137,21 +156,28 @@ export class FixedRouter implements Router {
   constructor(private readonly experts: ExpertInfo[]) {}
 
   select(ctx: StepContext): string {
-    const taskCap = ctx.task.capability as Capability;
-    const maxLat = Math.max(...this.experts.map(e => ctx.states[e.nodeId].latencyMs), 1);
-    const maxParams = Math.max(...this.experts.map(e => e.paramsM), 1);
+    const sc = this.scores(ctx);
     let best = '';
     let bestScore = -Infinity;
     for (const id of ctx.order) {
-      const st = ctx.states[id];
-      const node = this.experts.find(e => e.nodeId === id)!;
-      const comp = FixedRouter.W.q * (st.capability[taskCap].effective || 0.5)
-        + FixedRouter.W.lat * (1 - st.latencyMs / maxLat)
-        + FixedRouter.W.cost * (1 - node.paramsM / maxParams)
-        + FixedRouter.W.stab * st.stability;
-      if (comp > bestScore) { bestScore = comp; best = id; }
+      if (sc[id] > bestScore) { bestScore = sc[id]; best = id; }
     }
     return best;
+  }
+
+  scores(ctx: StepContext): Record<string, number> {
+    const taskCap = ctx.task.capability as Capability;
+    const maxLat = Math.max(...this.experts.map(e => ctx.states[e.nodeId].latencyMs), 1);
+    const maxParams = Math.max(...this.experts.map(e => e.paramsM), 1);
+    const out: Record<string, number> = {};
+    for (const e of this.experts) {
+      const st = ctx.states[e.nodeId];
+      out[e.nodeId] = FixedRouter.W.q * (st.capability[taskCap].effective || 0.5)
+        + FixedRouter.W.lat * (1 - st.latencyMs / maxLat)
+        + FixedRouter.W.cost * (1 - e.paramsM / maxParams)
+        + FixedRouter.W.stab * st.stability;
+    }
+    return out;
   }
 
   observe(_ctx: StepContext): void {

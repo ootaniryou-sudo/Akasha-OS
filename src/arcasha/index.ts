@@ -18,6 +18,7 @@ import { ArcAshaController } from './controller/controller.js';
 import type { Capability, Task } from './core/types.js';
 import { ExpertHub } from './experts/registry.js';
 import { EpisodeMemory } from './memory/memory.js';
+import { LLMPlanner } from './planner/llm_planner.js';
 import { RuleBasedPlanner } from './planner/decomposer.js';
 import { FixedRouter, LinUCBShadowRouter, UCBShadowRouter } from './router/router.js';
 import { Verifier } from './verifier/verifier.js';
@@ -63,7 +64,8 @@ async function main(): Promise<void> {
   // ── 3 コントローラ (同一ハブ, 独立した状態/ポリシー) ──────────────
   const planner = new RuleBasedPlanner();
   const verifier = new Verifier(0.4);
-  const lin = new ArcAshaController(hub, new LinUCBShadowRouter(hub.experts), planner, verifier, new EpisodeMemory());
+  const mem = new EpisodeMemory(); // Lin と共有 (Vector Memory 参照用)
+  const lin = new ArcAshaController(hub, new LinUCBShadowRouter(hub.experts), planner, verifier, mem);
   const ucb = new ArcAshaController(hub, new UCBShadowRouter(hub.experts), planner, verifier, new EpisodeMemory());
   const fixed = new ArcAshaController(hub, new FixedRouter(hub.experts), planner, verifier, new EpisodeMemory());
 
@@ -79,22 +81,36 @@ async function main(): Promise<void> {
   console.log(`     cumulative regret: LinUCB-Shadow=${lin.totalCumulativeRegret().toFixed(3)}  UCB-Shadow=${ucb.totalCumulativeRegret().toFixed(3)}  Fixed=${fixed.totalCumulativeRegret().toFixed(3)}`);
 
   // ── Phase 2: 実タスク実行 (Planner → Router → Verifier → Memory) ──
-  const demoTasks: Task[] = [
-    { id: 'demo-web', capability: 'coding', prompt: 'Write a Python web scraper that fetches a webpage and extracts all links (href) from the HTML.' },
-    { id: 'demo-train', capability: 'math', prompt: 'A train travels 60 km in 45 minutes. What is its average speed in km/h? Show your work.' },
-    { id: 'demo-feather', capability: 'reasoning', prompt: 'Which weighs more: a kilogram of feathers or a kilogram of iron? Explain your reasoning.' },
+  // EXP-0005B: demo-feather は LLM Planner (node-qwen) で分解。フォーマット不適合時はルールへフォールバック
+  const llmPlanner = new LLMPlanner(hub, 'node-qwen');
+  const demoTasks: { task: Task; planner?: typeof llmPlanner }[] = [
+    { task: { id: 'demo-web', capability: 'coding', prompt: 'Write a Python web scraper that fetches a webpage and extracts all links (href) from the HTML.' } },
+    { task: { id: 'demo-train', capability: 'math', prompt: 'A train travels 60 km in 45 minutes. What is its average speed in km/h? Show your work.' } },
+    { task: { id: 'demo-feather', capability: 'reasoning', prompt: 'Which weighs more: a kilogram of feathers or a kilogram of iron? Explain your reasoning.' }, planner: llmPlanner },
   ];
 
-  for (const task of demoTasks) {
+  for (const { task, planner: taskPlanner } of demoTasks) {
     console.log(`\n  🚀 TASK [${task.id}] (${task.capability}): ${task.prompt}`);
-    const run = await lin.execute(task);
-    console.log(`     planner: ${run.decomposition.rationale}`);
+    const run = await lin.execute(task, { planner: taskPlanner });
+    console.log(`     planner: ${run.decomposition.rationale}  (parallel=${run.decomposition.parallel ?? false})`);
     for (const d of run.decisions) {
       const v = run.verifications.find(x => x.subtask.id === d.subtask.id);
-      console.log(`       [${d.subtask.order}] ${d.subtask.role.padEnd(9)} -> ${d.nodeId}  (score=${d.result.score.toFixed(3)}, regret=${d.regret.toFixed(3)}, ${v?.passed ? 'PASS' : 'FAIL'})`);
+      const topk = d.subtask.expertPolicy?.topK ? ` topK=${d.subtask.expertPolicy.topK}` : '';
+      const consulted = d.consulted.length > 0 ? ` (consulted: ${d.consulted.join(', ')})` : '';
+      console.log(`       [${d.subtask.order}] ${d.subtask.role.padEnd(9)} -> ${d.nodeId}${topk}${consulted}  (score=${d.result.score.toFixed(3)}, regret=${d.regret.toFixed(3)}, ${v?.passed ? 'PASS' : 'FAIL'})`);
     }
     line('INTEGRATED RESULT', run.integrated);
     console.log(`     → episode #${run.episodeId} saved to memory`);
+  }
+
+  // ── Phase 2.5: Vector Memory (類似エピソード検索) ────────────────
+  console.log('\n  🔍 vector memory: search "python web scraper extract links"');
+  const hits = mem.search('python web scraper extract links', 2);
+  if (hits.length === 0) {
+    console.log('     (no episodes yet)');
+  }
+  for (const { episode, similarity } of hits) {
+    console.log(`     episode #${episode.id} (${episode.task.capability}, sim=${similarity.toFixed(3)})  task: ${episode.task.prompt.slice(0, 60)}`);
   }
 
   // ── Phase 3: 学習済み重みの可視化 ────────────────────────────────

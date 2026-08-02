@@ -7,30 +7,37 @@
 
 import type { Capability, Decomposition, Subtask, Task } from '../core/types.js';
 
-/** ルールベース分解: タスク能力に応じたサブタスクロール列 */
-const RULE_PLAN: Record<Capability, { role: string; capability: Capability; template: string }[]> = {
+/** ルールベース分解: タスク能力に応じたサブタスクロール列 (topK = EXP-0005C の動的割当) */
+const RULE_PLAN: Record<Capability, { role: string; capability: Capability; template: string; topK?: number }[]> = {
   coding: [
     { role: 'design', capability: 'reasoning', template: 'Design the approach for the following task. Explain steps and data structures.\nTask: {prompt}' },
-    { role: 'code', capability: 'coding', template: 'Implement the solution in Python. Write clean, working code.\nTask: {prompt}' },
+    { role: 'code', capability: 'coding', template: 'Implement the solution in Python. Write clean, working code.\nTask: {prompt}', topK: 2 },
     { role: 'test', capability: 'reasoning', template: 'Propose test cases for the implementation, including edge cases.\nTask: {prompt}' },
     { role: 'review', capability: 'reasoning', template: 'Review the implementation for correctness and suggest improvements.\nTask: {prompt}' },
   ],
   math: [
-    { role: 'solve', capability: 'math', template: 'Solve the problem step by step and give the final answer.\nTask: {prompt}' },
+    { role: 'solve', capability: 'math', template: 'Solve the problem step by step and give the final answer.\nTask: {prompt}', topK: 2 },
     { role: 'verify', capability: 'reasoning', template: 'Verify the solution by checking the reasoning and calculations.\nTask: {prompt}' },
   ],
   reasoning: [
     { role: 'analyze', capability: 'reasoning', template: 'Analyze the question and lay out the key considerations.\nQuestion: {prompt}' },
-    { role: 'conclude', capability: 'reasoning', template: 'Give the final answer with a concise explanation.\nQuestion: {prompt}' },
+    { role: 'conclude', capability: 'reasoning', template: 'Give the final answer with a concise explanation.\nQuestion: {prompt}', topK: 2 },
   ],
 };
 
+/** サブタスクを並列実行するか (EXP-0005C: 並列 vs 逐次) */
+const RULE_PARALLEL: Record<Capability, boolean> = {
+  coding: true,   // design/code/test/review は自己完結プロンプトなので並列可
+  math: false,    // solve → verify は依存
+  reasoning: true,
+};
+
 export interface Planner {
-  decompose(task: Task): Decomposition;
+  decompose(task: Task): Promise<Decomposition>;
 }
 
 export class RuleBasedPlanner implements Planner {
-  decompose(task: Task): Decomposition {
+  async decompose(task: Task): Promise<Decomposition> {
     const plan = RULE_PLAN[task.capability] ?? RULE_PLAN.reasoning;
     const subtasks: Subtask[] = plan.map((p, i) => ({
       id: `${task.id}-${i}`,
@@ -39,8 +46,14 @@ export class RuleBasedPlanner implements Planner {
       role: p.role,
       capability: p.capability,
       prompt: p.template.replace('{prompt}', task.prompt),
+      ...(p.topK ? { expertPolicy: { topK: p.topK } } : {}),
     }));
-    return { task, subtasks, rationale: `rule-based ${task.capability} decomposition (${subtasks.length} subtasks)` };
+    return {
+      task,
+      subtasks,
+      parallel: RULE_PARALLEL[task.capability] ?? false,
+      rationale: `rule-based ${task.capability} decomposition (${subtasks.length} subtasks)`,
+    };
   }
 }
 

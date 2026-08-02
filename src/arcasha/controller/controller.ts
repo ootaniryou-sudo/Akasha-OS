@@ -31,6 +31,8 @@ export interface Decision {
   oracle: string;
   result: EvalResult;
   regret: number;
+  /** EXP-0005C: topK でコミットしたが選ばれなかった参照エキスパート */
+  consulted: string[];
 }
 
 export interface RunResult {
@@ -114,25 +116,51 @@ export class ArcAshaController {
       order: this.hub.experts.map(e => e.nodeId),
       step: this.stepCounter,
     };
-    const decision = this.router.select(ctx);
+
+    // EXP-0005C Dynamic Expert Assignment:
+    // topK>1 なら UCB スコア上位 K エキスパートをコミットし、その中で最高品質を採用 (committee)
+    const topK = subtask.expertPolicy?.topK ?? 1;
+    let decision: string;
+    let consulted: string[] = [];
+    if (topK > 1) {
+      const scores = this.router.scores(ctx);
+      const ranked = [...this.hub.experts].map(e => e.nodeId).sort((a, b) => scores[b] - scores[a]);
+      const top = ranked.slice(0, Math.min(topK, ranked.length));
+      decision = [...top].sort((a, b) => results[b].score - results[a].score)[0];
+      consulted = top.filter(n => n !== decision);
+    } else {
+      decision = this.router.select(ctx);
+    }
+
     this.router.observe(ctx);
     const regret = Math.max(0, results[oracle].score - results[decision].score);
     this.totalRegret += regret;
-    return { subtask, nodeId: decision, oracle, result: results[decision], regret };
+    return { subtask, nodeId: decision, oracle, result: results[decision], regret, consulted };
   }
 
   /** タスク実行: 分解 → 各サブタスクをルーティング → 検証 → 統合 → 記憶 */
-  async execute(task: Task, opts?: { inject?: Injection | null }): Promise<RunResult> {
-    const decomposition = this.planner.decompose(task);
+  async execute(
+    task: Task,
+    opts?: { inject?: Injection | null; planner?: Planner },
+  ): Promise<RunResult> {
+    const planner = opts?.planner ?? this.planner;
+    const decomposition = await planner.decompose(task);
     const decisions: Decision[] = [];
     const verifications: Verification[] = [];
     const subResults: Record<string, EvalResult> = {};
 
-    for (const st of decomposition.subtasks) {
+    const runOne = async (st: Subtask): Promise<void> => {
       const d = await this.routeStep(st, opts?.inject ?? null);
       decisions.push(d);
       verifications.push(this.verifier.verify(st, d.result));
       subResults[st.id] = d.result;
+    };
+
+    // EXP-0005C: 並列 vs 逐次 (分解結果が parallel なら Promise.all)
+    if (decomposition.parallel) {
+      await Promise.all(decomposition.subtasks.map(runOne));
+    } else {
+      for (const st of decomposition.subtasks) await runOne(st);
     }
 
     const integrated = this.verifier.integrate(decomposition.subtasks, subResults);

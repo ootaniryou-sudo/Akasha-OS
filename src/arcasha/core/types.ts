@@ -37,6 +37,8 @@ export interface Subtask extends Task {
   parentId: string;
   order: number;
   role: string; // 'design' | 'code' | 'test' | 'review' | ...
+  /** EXP-0005C Dynamic Expert Assignment: このサブタスクにコミットするエキスパート数 */
+  expertPolicy?: { topK?: number };
 }
 
 export interface EvalResult {
@@ -69,4 +71,6 @@ export interface Decomposition {
   task: Task;
   subtasks: Subtask[];
   rationale: string;
+  /** EXP-0005C: サブタスクを並列実行するか */
+  parallel?: boolean;
 }

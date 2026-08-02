@@ -261,12 +261,14 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 ArcAsha v0.1 ✅ src/arcasha/ — 検証済みパイプラインを内部エンジンとして製品化
 Phase 5 🚧 Emergent Controller (Task → Planner → Router → Verifier → Memory) ← 進行中
 EXP-0005A ✅ Task Decomposition (RuleBasedPlanner)
-EXP-0005B 📐 LLM Planner
-EXP-0005C 📐 Dynamic Expert Assignment
+EXP-0005B ✅ LLM Planner (フォールバック付き, 実ノード検証済み)
+EXP-0005C ✅ Dynamic Expert Assignment (topK コミット + 並列実行)
 EXP-0005D ✅ Verifier (閾値 + 拒否語 + 統合)
 EXP-0005E ✅ EpisodeMemory
+Vector Memory ✅ n-gram Embedding + cosine で類似エピソード検索
 EXP-0005F ✅ Emergent Controller (End-to-End デモ実証)
 EXP-0003C.5 📐 Neural Bandit
+Tree Search 📐 複数プラン → Verifier 選抜
 Phase 6 📐 Distributed Frontier AI
 ```
 

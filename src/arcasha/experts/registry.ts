@@ -29,8 +29,11 @@ export class ExpertHub {
   readonly experts: ExpertInfo[] = [];
   private sockets = new Map<string, WebSocket>();
   private cache = new Map<string, EvalResult>();
+  private genCache = new Map<string, string>();
   cacheMiss = 0;
   cacheHit = 0;
+  genCacheMiss = 0;
+  genCacheHit = 0;
   private started = false;
 
   /** WS サーバ開始。minNodes 接続で onReady を呼ぶ */
@@ -81,11 +84,24 @@ export class ExpertHub {
     const ws = this.sockets.get(node.nodeId);
     if (!ws) throw new Error(`expert ${node.nodeId} not connected`);
     const chat = node.family !== 'qwen';
-    const res = await this.sendCompute(ws, `arcasha-${this.cacheMiss}-${node.nodeId}`, task.prompt, chat);
+    const res = await this.sendCompute(ws, `arcasha-${this.cacheMiss}-${node.nodeId}`, task.prompt, chat, 60);
     const val = evaluateWith(node, task, res.text, res.timing.total_ms);
     this.cache.set(key, val);
     this.cacheMiss++;
     return val;
+  }
+
+  /** 生テキスト生成 (EXP-0005B LLM Planner 用)。(node,prompt) キャッシュで決定論 */
+  async generate(nodeId: string, prompt: string, maxTokens = 200): Promise<string> {
+    const key = `gen|${nodeId}|${prompt}`;
+    const hit = this.genCache.get(key);
+    if (hit !== undefined) { this.genCacheHit++; return hit; }
+    const ws = this.sockets.get(nodeId);
+    if (!ws) throw new Error(`expert ${nodeId} not connected`);
+    const res = await this.sendCompute(ws, `gen-${this.genCacheMiss}-${nodeId}`, prompt, true, maxTokens);
+    this.genCache.set(key, res.text);
+    this.genCacheMiss++;
+    return res.text;
   }
 
   private sendCompute(
@@ -93,6 +109,7 @@ export class ExpertHub {
     requestId: string,
     prompt: string,
     chat: boolean,
+    maxTokens = 60,
   ): Promise<{ text: string; timing: { total_ms: number } }> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('timeout')), 120000);
@@ -109,7 +126,7 @@ export class ExpertHub {
       ws.on('message', handler);
       ws.send(JSON.stringify({
         type: 'compute', request_id: requestId, prompt,
-        max_new_tokens: 60, temperature: 0, top_p: 1, chat,
+        max_new_tokens: maxTokens, temperature: 0, top_p: 1, chat,
       }));
     });
   }
