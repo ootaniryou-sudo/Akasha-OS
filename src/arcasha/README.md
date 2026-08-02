@@ -47,10 +47,10 @@ src/arcasha/
   planner/llm_planner.ts LLM Planner (EXP-0005B) — フォーマット不適合時はルールへフォールバック
   experts/registry.ts  WS サーバ (エキスパート登録/推論/決定論キャッシュ + generate)
   verifier/verifier.ts 検証 + 統合 (EXP-0005D)
-  memory/memory.ts     EpisodeMemory (EXP-0005E) + Vector Memory (n-gram Embedding 検索)
+  memory/memory.ts     EpisodeMemory (EXP-0005E) + Vector Memory + priorFor (事前信念 μ₀ 集計)
   search/tree.ts       Tree Search: PlanGenerator (複数バリアント) + 信念推定 Beam + 最弱サブタスク展開
   reflect/reflector.ts Self Reflection: 失敗を Belief (μ, n) から診断 → re-route/committee/re-decompose
-  controller/controller.ts Emergent Controller (EXP-0005F) — topK コミット + 並列実行 + executePlan + executeReflective
+  controller/controller.ts Emergent Controller — topK + 並列 + executePlan + executeReflective + seedBeliefsFromMemory
   index.ts             Demo CLI
 ```
 
@@ -92,6 +92,9 @@ npx tsx src/arcasha/index.ts
       最弱サブタスク展開 (accept-if-improved)。`search/tree.ts`
 - [x] **Self Reflection** — 失敗サブタスクを Belief (μ, n) から診断 → re-route (force) /
       committee (topK) / re-decompose (分割) → 再実行 → 改善時のみ採用。`reflect/reflector.ts`
+- [x] **Long-term Memory → Prior Belief μ₀** — 類似エピソードの決定を集計し、新タスクの
+      信念を μ₀/n₀ で初期化 (Closed Bayesian Loop: μ₀ → Observation → μ → Memory → μ₀')。
+      `memory.priorFor` + `controller.seedBeliefsFromMemory`
 - [x] EXP-0005F Emergent Controller (Task→Planner→Router→Verifier→Memory)
 
 ## 実ノード検証結果 (2026-08-03, 3 エキスパート)
@@ -104,5 +107,7 @@ npx tsx src/arcasha/index.ts
 - demo-reflect (coding, palindrome): 初期 4/4 PASS → 反射ループは失敗なしのため即終了
   (診断ロジックはモックで 4 ケース検証: expert-capability→force / refusal→re-route /
   low-confidence→topK / task-hard→分割)
+- demo-memory (coding, URL 抽出): 記憶から **μ₀ 初期化** — smollm coding μ₀=0.200 (n=1, demo-web 由来),
+  reasoning n₀=6。実行後 posterior — qwen coding μ=0.800, smollm 0.200→0.300。episode #6 が次の μ₀'
 - Vector Memory: 「python web scraper extract links」→ episode #0 (coding, sim=0.511) を最上位取得
 - 学習重み: capability=0.585 支配 (EXP-0003F と整合)

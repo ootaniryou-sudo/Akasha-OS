@@ -17,7 +17,7 @@ ArcAsha の全モジュールは、独立した部品ではなく **「Belief (�
 |------|----------------|----------------|-----------|
 | **誰が解くか** (Routing) | capability μ を特徴量に組み込み LinUCB が重み学習 | `belief → features → LinUCB` | F: capability 除去で **+37.6%** |
 | **どんなプランか** (Planning) | 有効能力 $\hat\mu$ でプランを事前評価し Beam 枝刈り | `estimate → beam → execute` | Tree Search (実機検証済み) |
-| **何を思い出すか** (Memory) | 類似エピソードを検索し事前信念 $\mu_0$ を初期化 | `memory.search → planner` | Vector Memory (実機検証済み) |
+| **何を思い出すか** (Memory) | 類似エピソードを検索し **事前信念 $\mu_0$ を初期化** | `memory.priorFor → seedBeliefs` | Long-term Memory (実機検証済み) |
 | **どう改善するか** (Reflection) | 失敗サブタスクの信念 (μ, n) から原因診断 → 対処 | `verifier → reflector → planner` | Self Reflection (実機検証済み) |
 
 統合パイプライン (§6) の Belief 中心の書き換え:
@@ -27,9 +27,15 @@ $$
 \begin{cases}
 \text{Routing: } & \hat e = \arg\max_{e \in \mathcal{E}} \;\theta_e^\top \phi_e(\mu_e, g_e) + \alpha\sqrt{\cdot} \\
 \text{Planning: } & p^{*} = \arg\max_{p \in \text{Beam}} \;\text{Estimate}(\hat\mu;\, p) \\
-\text{Memory: } & \mathcal{H}^{*} = \arg\max_{\mathcal{H}} \;\text{sim}\big(\text{emb}(T),\, \text{emb}(\mathcal{H})\big) \\
+\text{Memory: } & \mu_0 = \text{PriorFrom}(\mathcal{H}^{\text{sim}}), \quad \mathcal{H}^{*} = \arg\max_{\mathcal{H}} \;\text{sim}(\text{emb}(T),\, \text{emb}(\mathcal{H})) \\
 \text{Reflection: } & \text{remedy} = \mathcal{R}\big(\mu_{\hat e, c},\; n_{\hat e, c}\big)
 \end{cases}
+$$
+
+**Closed Bayesian Loop**: 記憶が事前分布、観測が事後分布へ更新し、新しいエピソードが次の事前分布になる:
+
+$$
+\mu_0 \xrightarrow{\;\text{Observation (Shadow)}\;} \mu \xrightarrow{\;\text{Memory (Episode)}\;} \mu_0'
 $$
 
 この構図により ArcAsha は「ルーティングライブラリ」ではなく、
@@ -315,7 +321,8 @@ Reflect が失敗から自己改善する。**Belief はそのすべての判断
 |------|------|------|:---:|
 | **EXP-0005B** | LLM Planner: 分解自体を学習対象に | 分解の品質をタスクレベルリグレットで測る新指標が必要 | ✅ |
 | **EXP-0005C** | Dynamic Expert Assignment: 何人/誰/並列/逐次の決定 | サブタスク数を $K$ 自体の最適化に拡張 | ✅ |
-| **Vector Memory** | Embedding 検索で類似エピソードを取得し信念へ注入 | 事前信念 $\mu_0$ をエピソードから初期化 (転移学習) | ✅ (検索まで) |
+| **Vector Memory** | Embedding 検索で類似エピソードを取得し信念へ注入 | 事前信念 $\mu_0$ をエピソードから初期化 (転移学習) | ✅ |
+| **Long-term Memory → Prior** | 類似エピソードの決定を集計し **μ₀/n₀ として信念を初期化** | 閉じたベイズループ $\mu_0 \to \mu \to \mu_0'$。\n$\mu_0 = \text{PriorFrom}(\mathcal{H}^{\text{sim}})$ | ✅ |
 | **Tree Search** | 複数プラン生成 → Beam (信念推定) → 実行 → Verifier 選抜 → 最弱展開 | プラン空間での探索を Policy 生成と分離。$\text{BestPlan} = \arg\max_{p\in\text{Beam}} \text{Verifier}(\text{Route}(p))$ | ✅ |
 | **Self Reflection** | 失敗サブタスクの信念 (μ, n) から原因診断 → re-route / committee / re-decompose → 再実行 | 自己改善の判断に Belief を使用。$\text{remedy} = \mathcal{R}(\mu_{\hat e,c}, n_{\hat e,c})$ | ✅ |
 | **Long-term Memory** | 検索エピソードから事前信念 $\mu_0$ を初期化 (転移学習) | Vector Memory を Planner の入力に接続 | 📐 |

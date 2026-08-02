@@ -1,18 +1,26 @@
 /**
- * ArcAsha — Episode Memory (EXP-0005E) + Vector Memory
+ * ArcAsha — Episode Memory (EXP-0005E) + Vector Memory + Prior Belief
  *
  * タスク実行のエピソードを保存し、後のルーティング/計画に参照させる。
  * Vector Memory: 外部モデル不要の自己完結 Embedding (文字 n-gram ハッシュ)
- * で類似エピソードを検索し、Agent らしい「記憶からの帰還」を実現する
- * (FRAMEWORK §7)。
+ * で類似エピソードを検索し、Agent らしい「記憶からの帰還」を実現する。
+ * Prior Belief: 類似エピソードの決定 (node, capability, score) を集計し、
+ * **Bayesian 事前分布 μ₀ / n₀** として新タスクの信念を初期化する (Closed Bayesian Loop)。
  */
 
-import type { Task } from '../core/types.js';
+import type { Capability, Task } from '../core/types.js';
+
+export interface EpisodeDecision {
+  subtaskId: string;
+  nodeId: string;
+  score: number;
+  capability: Capability;
+}
 
 export interface Episode {
   id: number;
   task: Task;
-  decisions: { subtaskId: string; nodeId: string; score: number }[];
+  decisions: EpisodeDecision[];
   integrated: string;
   timestamp: string;
 }
@@ -86,5 +94,32 @@ export class EpisodeMemory {
       }))
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, k);
+  }
+
+  /** 事前信念 (Prior): 類似エピソードの決定を (node, capability) ごとに集計し μ₀/n₀ を返す */
+  priorFor(
+    task: Task,
+    k = 3,
+  ): Record<string, Partial<Record<Capability, { mu: number; n: number }>>> {
+    const similar = this.search(task.prompt, k);
+    const acc: Record<string, Partial<Record<Capability, { sum: number; n: number }>>> = {};
+    for (const { episode } of similar) {
+      for (const d of episode.decisions) {
+        if (!acc[d.nodeId]) acc[d.nodeId] = {};
+        const node = acc[d.nodeId];
+        if (!node[d.capability]) node[d.capability] = { sum: 0, n: 0 };
+        node[d.capability]!.sum += d.score;
+        node[d.capability]!.n += 1;
+      }
+    }
+    const out: Record<string, Partial<Record<Capability, { mu: number; n: number }>>> = {};
+    for (const [nodeId, caps] of Object.entries(acc)) {
+      out[nodeId] = {};
+      for (const [cap, v] of Object.entries(caps)) {
+        if (!v) continue;
+        out[nodeId][cap as Capability] = { mu: Math.round((v.sum / v.n) * 1000) / 1000, n: v.n };
+      }
+    }
+    return out;
   }
 }

@@ -152,7 +152,28 @@ async function main(): Promise<void> {
   line('INTEGRATED RESULT (Reflection)', rr.finalRun.integrated);
   console.log(`     → episode #${rr.finalRun.episodeId} saved to memory`);
 
-  // ── Phase 2.7: Vector Memory (類似エピソード検索) ────────────────
+  // ── Phase 2.7: Long-term Memory → Prior Belief μ₀ (Closed Bayesian Loop) ──
+  const priorTask: Task = {
+    id: 'demo-memory', capability: 'coding',
+    prompt: 'Write a Python function that extracts all URLs (href attributes) from an HTML string.',
+  };
+  console.log('\n  🧠 long-term memory → prior belief μ₀  (μ₀ → Observation → μ → Memory → μ₀\')');
+  console.log(`     task: ${priorTask.prompt.slice(0, 60)}...`);
+  const fresh = new ArcAshaController(hub, new LinUCBShadowRouter(hub.experts), new RuleBasedPlanner(), new Verifier(0.4), mem);
+  console.log('     default μ₀ (no memory): all μ=0.500 n=0');
+  fresh.seedBeliefsFromMemory(priorTask, 3);
+  const priorSnap = fresh.beliefSnapshot();
+  for (const [nodeId, caps] of Object.entries(priorSnap)) {
+    console.log(`     μ₀ ${nodeId}: coding μ=${caps.coding.mu.toFixed(3)} (n=${caps.coding.n})  math μ=${caps.math.mu.toFixed(3)} (n=${caps.math.n})  reasoning μ=${caps.reasoning.mu.toFixed(3)} (n=${caps.reasoning.n})`);
+  }
+  const runMem = await fresh.execute(priorTask);
+  const postSnap = fresh.beliefSnapshot();
+  for (const [nodeId, caps] of Object.entries(postSnap)) {
+    console.log(`     μ  ${nodeId}: coding μ=${caps.coding.mu.toFixed(3)} (n=${caps.coding.n})  math μ=${caps.math.mu.toFixed(3)} (n=${caps.math.n})  reasoning μ=${caps.reasoning.mu.toFixed(3)} (n=${caps.reasoning.n})`);
+  }
+  console.log(`     executed → posterior: pass=${runMem.verifications.filter(v => v.passed).length}/${runMem.verifications.length}  → episode #${runMem.episodeId} (μ₀' として保存)`);
+
+  // ── Phase 2.8: Vector Memory (類似エピソード検索) ────────────────
   console.log('\n  🔍 vector memory: search "python web scraper extract links"');
   const hits = mem.search('python web scraper extract links', 2);
   if (hits.length === 0) {

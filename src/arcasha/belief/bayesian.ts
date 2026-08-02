@@ -12,9 +12,25 @@ export interface BeliefSnapshot {
   effective: number;
 }
 
+export interface BeliefSeed {
+  mu: number;
+  n: number;
+}
+
 export class BayesianBelief {
   private mu = 0.5;
   private n = 0;
+
+  /**
+   * 事前分布シード: Long-term Memory から集計した μ₀/n₀ で初期化
+   * (Closed Bayesian Loop: Memory → Prior μ₀ → Observation → Posterior μ)
+   */
+  constructor(seed?: BeliefSeed) {
+    if (seed && seed.n > 0) {
+      this.mu = Math.max(0, Math.min(1, seed.mu));
+      this.n = Math.floor(seed.n);
+    }
+  }
 
   /** 観測 x (0-1) でベイズ更新 (標本平均) */
   update(x: number): void {

@@ -202,10 +202,31 @@ export class ArcAshaController {
     const integrated = this.verifier.integrate(decomposition.subtasks, subResults);
     const episodeId = this.memory.record({
       task,
-      decisions: decisions.map(d => ({ subtaskId: d.subtask.id, nodeId: d.nodeId, score: d.result.score })),
+      decisions: decisions.map(d => ({
+        subtaskId: d.subtask.id, nodeId: d.nodeId, score: d.result.score, capability: d.subtask.capability,
+      })),
       integrated,
     });
     return { task, decomposition, decisions, verifications, integrated, episodeId, totalRegret: this.totalRegret };
+  }
+
+  /**
+   * Long-term Memory → 事前信念 μ₀ (Closed Bayesian Loop)
+   * 類似エピソードの決定を集計し、新タスクの信念を μ₀/n₀ で初期化する。
+   * その後 Observation (Shadow) が μ へ更新する:  μ₀ → Observation → μ → Memory → μ₀'
+   */
+  seedBeliefsFromMemory(task: Task, k = 3): void {
+    this.ensureStates();
+    const prior = this.memory.priorFor(task, k);
+    for (const [nodeId, caps] of Object.entries(prior)) {
+      if (!this.beliefs[nodeId]) continue;
+      for (const [cap, p] of Object.entries(caps)) {
+        if (!p) continue;
+        const c = cap as Capability;
+        this.beliefs[nodeId][c] = new BayesianBelief({ mu: p.mu, n: p.n });
+        this.states[nodeId].capability[c] = this.beliefs[nodeId][c].snapshot();
+      }
+    }
   }
 
   /**
