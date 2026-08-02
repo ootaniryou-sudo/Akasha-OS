@@ -141,6 +141,7 @@ Execution Backend     ← 実際にどこで実行するか（MPS, ONNX, Metal, 
 | 0003C.4 | LinUCB (7-dim features) | ✅ | **LinUCB-Shadow が初めて Fixed を超える (gap=-0.40, regret 6.5%減). 学習重みがメカニズムを実証: gemma latency=0.379 (キャリブレーション). 0003C.3 の残差 0.60 を解消しさらに逆転.** |
 | 0003D | Statistical Validation (30 seeds) | ✅ | **30シードで LinUCB-S vs Fixed が有意 (p=0.020, d=-0.49). 部分FBは有意に悪い (p<0.001). UCB-S は同等 (p=0.41). 特徴量学習の効果は p<0.001.** |
 | 0003E | Benchmark Expansion (Set B) | ✅ | **異なるモデルセット (Qwen2.5-Coder/SmolLM2-135M/Llama-3.2-1B) + reasoning タスクでも LinUCB-S > Fixed が再現 (p<0.001, d=-0.88, 効果量増大). Set B では UCB-S は有意に悪い → 特徴量学習の必要性が強まる.** |
+| 0003F | Feature Ablation (LinUCB) | ✅ | **capability 除去で Regret +37.6% 悪化 (p<0.001) — LinUCB の優位は「観測→信念→能力推定」に由来することをメカニズムとして解明. 他特徴は Set A ではほぼ無影響.** |
 | 0002F | Shadow Expert Feedback | ✅ | **Closed loop. Same-runtime 100% agree.** |
 | 0002F.1 | Cross-Backend Shadow | ✅ | **ONNX vs PyTorch: 88.6% overlap, FLAG=1, Stability 0.992→0.743.** |
 | 0002F.2 | Recovery Dynamics & Hysteresis | ✅ | **Asym α. Drift 1.0→0.91, Recovery 0.91→0.961. Hysteresis 0.567 (conservative). Half-life 7reqs. FalseRecovery 0%.** |
@@ -419,6 +420,9 @@ Routing (Composite Score)
                        3タスク (coding/math/reasoning), 30 seeds
                        LinUCB-S vs Fixed: p<0.001, d=-0.88 (効果量増大) → 一般化確立
                        Set B では UCB-S は有意に悪い → 特徴量学習が必須
+✅ EXP-0003F         Feature Ablation (LinUCB)
+                       capability 除去で +37.6% 悪化 (p<0.001) → 能力推定が主役
+                       他の特徴は Set A ではほぼ無影響 (メカニズム解明)
 ▶ 理論整理           Observation→State→Belief→Confidence→Features→Routing ← 次
 ▶ 論文執筆           arXiv 向け (Introduction〜Discussion)
 ▶ EXP-0003C.5       Neural Bandit
@@ -432,8 +436,9 @@ Routing (Composite Score)
 > **0003C.2 の深化**: ギャップは「サンプル数」だけでなく「フィードバック構造」が原因。
 > **0003C.3 の決着**: シャドウ実行 (フル情報化) でギャップ 94% 解消。
 > **0003C.4 の完成**: LinUCB が Fixed を上回る。
-> **0003D の確立**: 30 シードで統計的に確立 (p=0.020)。
+> **0003D の確立**: 30 シードで統計的に確立。
 > **0003E の一般化**: 別モデルセット + reasoning でも再現 (p<0.001, d=-0.88)。
+> **0003F のメカニズム**: capability (能力推定) が主役 (+37.6% 悪化)。
 > 「観測→信念→特徴量→学習ルーティング」が手設計の事前知識を超えることは一般的原理。
 
 ### Phase 5 ⏳ — Frontier Scale

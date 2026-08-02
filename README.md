@@ -248,6 +248,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | 0003C.4 | **LinUCB (7-dim features)** | ✅ | **LinUCB-Shadow が初めて Fixed を上回る (gap=-0.40, regret 6.5%減).** **学習重みがメカニズムを実証: gemma latency=0.379 (>Fixed 0.20). 0003C.3 の残差 0.60 を解消し逆転.** Observation→State→Belief→Confidence→Features→Routing パイプライン完成 |
 | 0003D | **Statistical Validation** | ✅ | **30 seeds: LinUCB-S vs Fixed 有意 (p=0.020, d=-0.49, 平均11%低). 部分FB 有意に悪い (p<0.001). UCB-S は同等 (p=0.41). LinUCB-S vs UCB-S p<0.001 (d=-1.10). 10→30 seed で p 0.77→0.02 = 検出力の実証.** |
 | 0003E | **Benchmark Expansion** | ✅ | **Set B (Qwen2.5-Coder-0.5B/SmolLM2-135M/Llama-3.2-1B) + reasoning で LinUCB-S > Fixed が再現 (p<0.001, d=-0.88, 効果量増大). Set B では UCB-S は有意に悪い (p<0.001) → 素朴な報酬最大化は品質分散下で危険、特徴量学習が必須. モデル・タスク一般化を確立.** |
+| 0003F | **Feature Ablation** | ✅ | **LinUCB の capability (信念からの能力推定) を除去すると Regret +37.6% 悪化 (p<0.001). 他の特徴はほぼ無影響. → LinUCB 優位のメカニズムは「観測→信念→能力推定」にあり、Observation-Driven Routing の本質を解明.** |
 
 > **Phase 4 完了**: `Static Knowledge → Observed Evidence → Belief Update → Weight Learning → Routing` の閉ループが実データで成立。
 > 「観測に応じて Belief を更新し、その Belief に応じて Weight を学習することで、未知の環境変化にも適応できる」— 中心仮説に実験的裏付け。
