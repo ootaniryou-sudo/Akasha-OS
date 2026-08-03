@@ -56,3 +56,21 @@ export interface EvalResult {
   score: number;
   latencyMs: number;
 }
+
+/** Planner が生成するサブタスク (タスク分解) */
+export interface Subtask extends Task {
+  parentId: string;
+  order: number;
+  role: string;
+  /** topK: コミットするエキスパート数 (committee) / force: 強制ルーティング先 */
+  expertPolicy?: { topK?: number; force?: string };
+}
+
+/** プランナーの分解結果 */
+export interface Decomposition {
+  task: Task;
+  subtasks: Subtask[];
+  rationale: string;
+  /** サブタスクを並列実行するか */
+  parallel?: boolean;
+}

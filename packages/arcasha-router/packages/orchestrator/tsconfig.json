@@ -9,7 +9,15 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true
+    "declaration": true,
+    "composite": true,
+    "outDir": "dist",
+    "rootDir": "src"
   },
+  "references": [
+    { "path": "../core" },
+    { "path": "../belief" },
+    { "path": "../router" }
+  ],
   "include": ["src"]
 }

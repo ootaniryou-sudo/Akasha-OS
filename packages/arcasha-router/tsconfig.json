@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/belief" },
+    { "path": "./packages/router" },
+    { "path": "./packages/orchestrator" }
+  ]
+}

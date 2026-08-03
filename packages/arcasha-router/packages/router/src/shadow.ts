@@ -5,8 +5,8 @@
  * Router に供給する。compute は呼び出し側 (WS/WebGPU/任意バックエンド) が注入する。
  */
 
-import type { EvalResult, ExpertInfo, Task } from '../core/types.js';
-import { evaluateTask } from '../core/observation.js';
+import type { EvalResult, ExpertInfo, Task } from '@arcasha/core';
+import { evaluateTask } from '@arcasha/core';
 
 export interface Injection {
   type: 'latency' | 'capability';

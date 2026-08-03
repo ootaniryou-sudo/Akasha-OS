@@ -1,4 +1,4 @@
-// @arcasha/router — consumer smoke test (build 後に実行: node test/smoke.mjs)
+// @arcasha/router — consumer smoke test (build 後に実行: node packages/router/test/smoke.mjs)
 import {
   BayesianBelief,
   LinUCBShadowRouter,
@@ -6,7 +6,7 @@ import {
   UCBShadowRouter,
   computeRewards,
   findOracle,
-} from '../dist/esm/index.js';
+} from '../dist/index.js';
 
 const experts = [
   { nodeId: 'node-a', modelId: 'M1', family: 'qwen', paramsM: 500, memoryGB: 1, temperature: 0.6 },

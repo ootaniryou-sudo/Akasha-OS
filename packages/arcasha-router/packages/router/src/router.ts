@@ -9,7 +9,7 @@
  *   [1, capability, latency, cost, stability, confidence, memory, temperature]
  */
 
-import type { Capability, ExpertInfo, StepContext } from '../core/types.js';
+import type { Capability, ExpertInfo, StepContext } from '@arcasha/core';
 import { LinUCB } from './linucb.js';
 
 export const FEATURE_DIM = 8;
