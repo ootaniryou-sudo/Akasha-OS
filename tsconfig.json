@@ -20,5 +20,5 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "public", "src/edge/**/*"]
+  "exclude": ["node_modules", "dist", "public", "src/edge/**/*", "src/arcasha/nodes/**/*"]
 }
