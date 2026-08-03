@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -9,20 +10,62 @@ class MetalEngine {
   static final MetalEngine instance = MetalEngine._();
 
   static const _channel = MethodChannel('arcasha/metal');
-  static const modelAsset = 'assets/models/smollm2-135m-instruct-q4_k_m.gguf';
-  static const modelFileName = 'smollm2-135m-instruct-q4_k_m.gguf';
-  static const modelId = 'HuggingFaceTB/SmolLM2-135M-Instruct';
+  static const modelAsset = 'assets/models/qwen2.5-1.5b-instruct-q4_k_m.gguf';
+  static const modelFileName = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
+  static const modelId = 'Qwen/Qwen2.5-1.5B-Instruct';
 
   bool _loaded = false;
   bool get isLoaded => _loaded;
 
-  /// アセットの GGUF を Application Support に展開してパスを返す (初回のみコピー)。
+  /// 端末情報を取得 (iPad / iPhone の判別に使用)。
+  static Future<Map<String, dynamic>> deviceInfo() async {
+    final res = await _channel.invokeMapMethod<String, dynamic>('deviceInfo');
+    return res ?? {};
+  }
+
+  /// アセットの GGUF を Application Support に展開してパスを返す。
+  /// 1B モデル (約800MB) 対応:
+  ///  - iOS では flutter_assets がアプリバンドル内の実ファイルなので、直接コピー
+  ///    (rootBundle.load のように 800MB をメモリに載せず、ストリーミングで高速・省メモリ)
+  ///  - **サイズ検証付き**: 既存ファイルのサイズがバンドルと一致しない場合は破損とみなして再コピー
+  ///    (中断されたコピー/rootBundle.load 失敗で残った破損ファイルを自己修復)
   Future<String> _ensureModelFile() async {
     final dir = await getApplicationSupportDirectory();
     final file = File('${dir.path}/$modelFileName');
-    if (!await file.exists()) {
-      final data = await rootBundle.load(modelAsset);
-      await file.writeAsBytes(data.buffer.asUint8List(), flush: true);
+
+    // バンドル内ソースのパス (iOS: Runner.app/Frameworks/App.framework/flutter_assets)
+    File? src;
+    try {
+      final exe = Platform.resolvedExecutable; // .../Runner.app/Runner
+      final bundleDir = File(exe).parent.path;  // .../Runner.app
+      final s = File('$bundleDir/Frameworks/App.framework/flutter_assets/$modelAsset');
+      if (await s.exists()) src = s;
+    } catch (_) {}
+
+    final exists = await file.exists();
+    final sizeOk = exists && src != null && await file.length() == await src.length();
+
+    if (!sizeOk) {
+      if (exists) {
+        try { await file.delete(); } catch (_) {}
+      }
+      if (src != null) {
+        await src.copy(file.path); // ストリーミングコピー (メモリ圧なし)
+      } else {
+        // フォールバック: rootBundle.load + チャンク書き込み
+        final data = await rootBundle.load(modelAsset);
+        final bytes = data.buffer.asUint8List();
+        final raf = file.openSync(mode: FileMode.write);
+        try {
+          const chunk = 1 << 20; // 1MB
+          for (int i = 0; i < bytes.length; i += chunk) {
+            final len = math.min(chunk, bytes.length - i);
+            raf.writeFromSync(bytes, i, len);
+          }
+        } finally {
+          raf.closeSync();
+        }
+      }
     }
     return file.path;
   }

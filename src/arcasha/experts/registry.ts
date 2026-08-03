@@ -15,7 +15,9 @@ const KNOWN_PARAMS: Record<string, number> = {
   'unsloth/gemma-3-1b-it': 1000,
   'Qwen/Qwen2.5-Coder-0.5B': 494,
   'HuggingFaceTB/SmolLM2-135M-Instruct': 135,
+  'meta-llama/Llama-3.2-1B-Instruct': 1235,
   'unsloth/Llama-3.2-1B-Instruct': 1235,
+  'Qwen/Qwen2.5-1.5B-Instruct': 1540,
 };
 
 export function paramsOf(modelId: string): number {
@@ -120,6 +122,10 @@ export class ExpertHub {
             clearTimeout(timeout);
             ws.removeListener('message', handler);
             resolve({ text: m.text, timing: m.timing });
+          } else if (m.type === 'error' && m.request_id === requestId) {
+            clearTimeout(timeout);
+            ws.removeListener('message', handler);
+            reject(new Error(`node error: ${m.error}`));
           }
         } catch { /* ignore */ }
       };

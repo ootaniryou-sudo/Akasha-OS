@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# ArcAsha iOS Node — バンドル用 GGUF (SmolLM2-135M-Instruct Q4_K_M) を assets/models/ に取得
-# 使い方: ./download_model.sh   (GitHub の 100MB 制限のため git には含めない)
+# ArcAsha iOS Node — バンドル用 GGUF (Qwen2.5-1.5B-Instruct Q4_K_M) を assets/models/ に取得
+# 使い方: ./download_model.sh   (日本語に強いモデル)
 set -euo pipefail
 cd "$(dirname "$0")"
 
-URL="https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf"
-OUT="assets/models/smollm2-135m-instruct-q4_k_m.gguf"
-EXPECTED="105454432"
+URL="https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf"
+OUT="assets/models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+EXPECTED="986048768"
 
 mkdir -p assets/models
 

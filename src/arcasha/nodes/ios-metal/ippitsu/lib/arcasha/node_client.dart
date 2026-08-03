@@ -72,8 +72,9 @@ class ArcAshaNodeClient {
     ));
   }
 
-  Future<void> start() async {
-    if (_running) return;
+  /// 接続を開始する。成功で true、失敗で false（呼び出し側で状態をリセットするため）。
+  Future<bool> start() async {
+    if (_running) return true;
     _running = true;
     _status = NodeStatus.connecting;
     _emit();
@@ -109,10 +110,13 @@ class ArcAshaNodeClient {
           'capabilities': {'coding': 0.4, 'math': 0.4, 'general': 0.5},
         },
       }));
+      return true;
     } catch (e) {
       _lastError = '接続失敗: $e';
       _status = NodeStatus.error;
+      _running = false; // 失敗時はリセットして再試行可能にする
       _emit();
+      return false;
     }
   }
 

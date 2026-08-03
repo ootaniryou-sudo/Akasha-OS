@@ -104,6 +104,8 @@
     if (_model == NULL || _ctx == NULL) {
         return @{ @"error": @"model not loaded" };
     }
+    // 新しい生成の前に KV キャッシュをクリア (連続呼び出しで decode が失敗しないように)
+    llama_memory_clear(llama_get_memory(_ctx), true);
     const llama_vocab * vocab = llama_model_get_vocab(_model);
     NSTimeInterval t0 = [NSDate date].timeIntervalSince1970;
 
@@ -124,11 +126,15 @@
     }
 
     // ── 2. Tokenize ────────────────────────────────────────────────────────
+    // 最新 llama.cpp: クエリ呼び出し(tokens=NULL, n_tokens_max=0)は
+    // 負数(-必要トークン数)を返す。INT32_MIN はオーバーフロー。
     int32_t nTokens = llama_tokenize(vocab, genPrompt.c_str(), (int32_t)genPrompt.size(), NULL, 0, true, true);
-    if (nTokens <= 0) { return @{ @"error": @"tokenize failed" }; }
-    std::vector<llama_token> tokens((size_t)nTokens, 0);
-    int32_t tokN = llama_tokenize(vocab, genPrompt.c_str(), (int32_t)genPrompt.size(), tokens.data(), nTokens, true, true);
-    if (tokN <= 0) { return @{ @"error": @"tokenize failed" }; }
+    if (nTokens == INT32_MIN) { return @{ @"error": @"tokenize overflow" }; }
+    int32_t required = nTokens < 0 ? -nTokens : nTokens; // 負数 = 必要なバッファサイズ
+    if (required <= 0) { return @{ @"error": @"tokenize failed" }; }
+    std::vector<llama_token> tokens((size_t)required, 0);
+    int32_t tokN = llama_tokenize(vocab, genPrompt.c_str(), (int32_t)genPrompt.size(), tokens.data(), required, true, true);
+    if (tokN < 0) { return @{ @"error": @"tokenize failed" }; }
     tokens.resize((size_t)tokN);
 
     // ── 3. Sampler chain ───────────────────────────────────────────────────

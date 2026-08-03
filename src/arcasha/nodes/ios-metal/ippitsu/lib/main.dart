@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'arcasha/metal_engine.dart';
 import 'arcasha/node_client.dart';
@@ -47,7 +50,83 @@ class _NodeScreenState extends State<NodeScreen> {
   bool _modelLoaded = false;
   bool _loadingModel = false;
   bool _connecting = false;
+  bool _autoStarting = false;
   NodeSnapshot? _snap;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAutoNode();
+  }
+
+  // ── 自律ノード: 起動時に保存済み設定でモデルロード+自動接続 ──────────
+  Future<File> _configFile() async {
+    final dir = await getApplicationSupportDirectory();
+    return File('${dir.path}/node_config.txt');
+  }
+
+  Future<void> _loadConfig() async {
+    try {
+      final f = await _configFile();
+      if (await f.exists()) {
+        final lines = (await f.readAsString()).split('\n');
+        if (lines.isNotEmpty && lines[0].trim().isNotEmpty) {
+          _hubCtrl.text = lines[0].trim();
+        }
+        if (lines.length > 1 && lines[1].trim().isNotEmpty) {
+          _nodeIdCtrl.text = lines[1].trim();
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveConfig() async {
+    try {
+      final f = await _configFile();
+      await f.writeAsString('${_hubCtrl.text.trim()}\n${_nodeIdCtrl.text.trim()}');
+    } catch (_) {}
+  }
+
+  Future<void> _initAutoNode() async {
+    await _applyDeviceDefaults(); // 端末に応じたデフォルト (iPad/iPhone) を設定
+    await _loadConfig();          // 保存済み設定があれば上書き
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoStart();
+    });
+  }
+
+  /// 端末 (iPad / iPhone) を自動判別して、ハブURLとノードIDのデフォルトを設定する。
+  /// これにより手入力なしで自動接続できる (変更時はUIから編集し保存される)。
+  Future<void> _applyDeviceDefaults() async {
+    try {
+      final info = await MetalEngine.deviceInfo();
+      final model = (info['model'] as String? ?? '').toLowerCase();
+      if (model.contains('ipad')) {
+        _hubCtrl.text = 'ws://169.254.238.70:8080'; // iPad (Mac en10)
+        _nodeIdCtrl.text = 'node-ios-ipad';
+      } else {
+        _hubCtrl.text = 'ws://169.254.172.114:8080'; // iPhone (Mac en11)
+        _nodeIdCtrl.text = 'node-ios-iphone15';
+      }
+      _log('📱 端末判別: ${info['model']} (${info['name']}) → デフォルト設定適用');
+    } catch (_) {
+      // ネイティブ呼び出し失敗時はデフォルト値のまま
+    }
+  }
+
+  /// モデルロード → ハブ接続を自動実行。失敗しても手動操作は可能。
+  Future<void> _autoStart() async {
+    if (_autoStarting) return;
+    _autoStarting = true;
+    _log('🔄 自律ノード: モデルロード → 自動接続');
+    if (!_modelLoaded) {
+      await _loadModel();
+    }
+    if (_modelLoaded && !_connecting) {
+      await _connect();
+    }
+    _autoStarting = false;
+  }
 
   void _log(String line) {
     final ts = DateTime.now().toIso8601String().substring(11, 19);
@@ -75,7 +154,7 @@ class _NodeScreenState extends State<NodeScreen> {
         _modelLoaded = ok;
         _loadingModel = false;
       });
-      _log(ok ? '✅ モデルロード完了 (SmolLM2-135M-Instruct / Metal)' : '❌ モデルロード失敗');
+      _log(ok ? '✅ モデルロード完了 (Qwen2.5-1.5B-Instruct / Metal)' : '❌ モデルロード失敗');
     } catch (e) {
       setState(() => _loadingModel = false);
       _log('❌ モデルロード例外: $e');
@@ -103,7 +182,12 @@ class _NodeScreenState extends State<NodeScreen> {
     );
     _node = client;
     _log('ノード起動: ${_nodeIdCtrl.text.trim()} → ${_hubCtrl.text.trim()}');
-    await client.start();
+    final ok = await client.start();
+    if (!ok) {
+      setState(() => _connecting = false); // 接続失敗時はボタンを復帰させる
+    } else {
+      await _saveConfig(); // 接続成功時に設定を保存（次回起動時の自動接続用）
+    }
   }
 
   Future<void> _selfTest() async {
@@ -175,7 +259,7 @@ class _NodeScreenState extends State<NodeScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               _kv('モデル', MetalEngine.modelId),
               _kv('バックエンド', 'llama.cpp + ggml-metal (metallib 埋め込み)'),
-              _kv('量子化', 'Q4_K_M (105MB)'),
+              _kv('量子化', 'Q4_K_M (約800MB)'),
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,

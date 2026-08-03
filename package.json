@@ -14,7 +14,10 @@
     "edge": "npm run build:edge && npx --yes serve public -p 4173",
     "sim": "npm run build && node dist/sim/demo.js",
     "selftest": "tsx src/sim/selftest.ts",
-    "sim:failover": "npm run build && AKASHA_DEMO_FAILOVER=1 node dist/sim/demo.js"
+    "sim:failover": "npm run build && AKASHA_DEMO_FAILOVER=1 node dist/sim/demo.js",
+    "demo:hub": "tsx src/arcasha/demo-hub.ts",
+    "demo:web": "tsx src/arcasha/demo-web.ts",
+    "demo:mock-node": "tsx src/arcasha/demo-mock-node.ts"
   },
   "engines": {
     "node": ">=20.0.0"

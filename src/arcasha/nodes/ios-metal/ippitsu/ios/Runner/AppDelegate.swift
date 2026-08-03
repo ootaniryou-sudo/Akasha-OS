@@ -49,6 +49,14 @@ import ArcAshaLlama
         case "isLoaded":
           result(engine.isLoaded)
 
+        case "deviceInfo":
+          // 端末判別 (iPad / iPhone) に使う。デバイス別のデフォルトURL・ノードIDを自動設定するため。
+          result([
+            "model": UIDevice.current.model,       // "iPad" / "iPhone"
+            "name": UIDevice.current.name,         // 例: "大谷涼のiPad"
+            "systemName": UIDevice.current.systemName,
+          ])
+
         default:
           result(FlutterMethodNotImplemented)
         }
