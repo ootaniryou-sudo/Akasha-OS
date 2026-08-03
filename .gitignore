@@ -20,6 +20,7 @@ yarn-error.log*
 .env.local
 .env.*.local
 *.pem
+.npmrc
 
 # OS一時ファイル
 .DS_Store
