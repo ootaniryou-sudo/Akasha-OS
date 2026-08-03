@@ -1,5 +1,5 @@
 /**
- * @arcasha/orchestrator — Emergent Controller (EXP-0005F)
+ * arcasha-orchestrator — Emergent Controller (EXP-0005F)
  *
  * Task → Planner → Subtasks → Router (LinUCB-Shadow) → Experts → Verifier → Memory → Integrator
  * の Belief-Driven 思考ループ。バックエンド (WS / Ollama / WebGPU) は ComputeBackend で抽象化。
@@ -9,12 +9,12 @@
  *   + Tree Search / Self Reflection / Prior Belief μ₀ (Closed Bayesian Loop)
  */
 
-import { BayesianBelief, EmaLatency, type BeliefSnapshot } from '@arcasha/belief';
-import { computeRewards, findOracle } from '@arcasha/core';
+import { BayesianBelief, EmaLatency, type BeliefSnapshot } from 'arcasha-belief';
+import { computeRewards, findOracle } from 'arcasha-core';
 import type {
   Capability, Decomposition, EvalResult, ExpertInfo, NodeState, StepContext, Subtask, Task,
-} from '@arcasha/core';
-import { evaluateAll, type Injection, type Router } from '@arcasha/router';
+} from 'arcasha-core';
+import { evaluateAll, type Injection, type Router } from 'arcasha-router';
 import type { ComputeBackend } from './backend.js';
 import type { EpisodeMemory } from './memory.js';
 import type { Planner } from './planner.js';

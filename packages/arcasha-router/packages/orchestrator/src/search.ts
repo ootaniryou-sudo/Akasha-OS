@@ -1,13 +1,13 @@
 /**
- * @arcasha/orchestrator — Tree Search (Emergent Planning)
+ * arcasha-orchestrator — Tree Search (Emergent Planning)
  *
  * 複数プラン (Plan A/B/C ...) を生成 → Belief ベースの事前評価 (estimate) で Beam 枝刈り →
  * シャドウ実行 → Verifier スコアで選抜 → 最弱サブタスクを展開 (accept-if-improved)。
  * LLM を探索に連続呼び出ししないため探索コストが低い。
  */
 
-import type { BeliefSnapshot } from '@arcasha/belief';
-import type { Capability, Decomposition, Subtask, Task } from '@arcasha/core';
+import type { BeliefSnapshot } from 'arcasha-belief';
+import type { Capability, Decomposition, Subtask, Task } from 'arcasha-core';
 import { planScore, type ArcAshaController, type RunResult } from './controller.js';
 import { RuleBasedPlanner, type LLMPlanner } from './planner.js';
 

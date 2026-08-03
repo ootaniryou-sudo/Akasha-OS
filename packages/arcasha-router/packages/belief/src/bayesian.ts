@@ -1,5 +1,5 @@
 /**
- * @arcasha/router — Bayesian Belief (EXP-0002D.1 / 0003 系)
+ * arcasha-router — Bayesian Belief (EXP-0002D.1 / 0003 系)
  *
  * 観測から信念を更新し、confidence (1-exp(-n/8)) と effective (μ×confidence) を提供。
  * Belief-Driven AI Orchestration の核心 (状態推定)。

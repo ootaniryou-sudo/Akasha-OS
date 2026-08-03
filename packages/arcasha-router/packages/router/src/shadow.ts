@@ -1,12 +1,12 @@
 /**
- * @arcasha/router — Shadow Evaluation (EXP-0002F / 0003C.3)
+ * arcasha-router — Shadow Evaluation (EXP-0002F / 0003C.3)
  *
  * 全エキスパートを毎ステップ評価 (オラクル = シャドウ) し、フル情報フィードバックを
  * Router に供給する。compute は呼び出し側 (WS/WebGPU/任意バックエンド) が注入する。
  */
 
-import type { EvalResult, ExpertInfo, Task } from '@arcasha/core';
-import { evaluateTask } from '@arcasha/core';
+import type { EvalResult, ExpertInfo, Task } from 'arcasha-core';
+import { evaluateTask } from 'arcasha-core';
 
 export interface Injection {
   type: 'latency' | 'capability';

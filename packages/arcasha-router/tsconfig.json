@@ -4,6 +4,7 @@
     { "path": "./packages/core" },
     { "path": "./packages/belief" },
     { "path": "./packages/router" },
-    { "path": "./packages/orchestrator" }
+    { "path": "./packages/orchestrator" },
+    { "path": "./packages/arcasha" }
   ]
 }

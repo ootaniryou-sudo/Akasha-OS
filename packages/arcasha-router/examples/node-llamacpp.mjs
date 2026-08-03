@@ -1,10 +1,10 @@
 // examples/node-llamacpp.mjs
-// @arcasha/orchestrator を llama.cpp サーバー (llama-server) に接続するサンプル。
+// arcasha-orchestrator を llama.cpp サーバー (llama-server) に接続するサンプル。
 // 前提: llama-server を起動しておく。
 //   llama-server -m model.gguf --port 8080 -n 256
 // 実行: node examples/node-llamacpp.mjs
-import { ArcAshaController, RuleBasedPlanner, Verifier, EpisodeMemory } from '@arcasha/orchestrator';
-import { LinUCBShadowRouter } from '@arcasha/router';
+import { ArcAshaController, RuleBasedPlanner, Verifier, EpisodeMemory } from 'arcasha-orchestrator';
+import { LinUCBShadowRouter } from 'arcasha-router';
 
 const SERVER = process.env.LLAMACPP_HOST || 'http://localhost:8080';
 const MODELS = [

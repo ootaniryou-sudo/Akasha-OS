@@ -1,5 +1,5 @@
 {
-  "name": "@arcasha/router",
+  "name": "arcasha-router",
   "version": "0.1.0",
   "description": "Observation-Driven Adaptive Routing (ODAR) — belief-driven routing engine for heterogeneous LLM pools. LinUCB-Shadow with Bayesian belief features. Pure TypeScript, works in Node/WebGPU/edge.",
   "type": "module",
@@ -18,8 +18,8 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@arcasha/belief": "0.1.0",
-    "@arcasha/core": "0.1.0"
+    "arcasha-belief": "0.1.0",
+    "arcasha-core": "0.1.0"
   },
   "scripts": {
     "build": "tsc -b",
@@ -34,5 +34,13 @@
     "arcasha",
     "belief"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ootaniryou-sudo/ArcAsha-os.git"
+  },
+  "homepage": "https://github.com/ootaniryou-sudo/ArcAsha-os",
+  "bugs": {
+    "url": "https://github.com/ootaniryou-sudo/ArcAsha-os/issues"
+  }
 }

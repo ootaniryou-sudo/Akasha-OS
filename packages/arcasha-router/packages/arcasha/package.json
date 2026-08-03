@@ -1,7 +1,7 @@
 {
-  "name": "arcasha-orchestrator",
+  "name": "arcasha",
   "version": "0.1.0",
-  "description": "ArcAsha orchestrator — Belief-Driven AI Orchestration: Planner (task decomposition) + LinUCB-Shadow routing + Verifier + EpisodeMemory (prior μ0) + Self Reflection + Tree Search.",
+  "description": "ArcAsha — Belief-Driven AI Orchestration meta package. Bundles arcasha-core / arcasha-belief / arcasha-router / arcasha-orchestrator into a single import.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,6 +20,7 @@
   "dependencies": {
     "arcasha-belief": "0.1.0",
     "arcasha-core": "0.1.0",
+    "arcasha-orchestrator": "0.1.0",
     "arcasha-router": "0.1.0"
   },
   "scripts": {
@@ -29,12 +30,11 @@
   "keywords": [
     "arcasha",
     "orchestration",
-    "planner",
-    "verifier",
-    "reflection",
-    "memory",
-    "tree-search",
-    "llm"
+    "routing",
+    "llm",
+    "belief",
+    "odar",
+    "bayesian"
   ],
   "license": "MIT",
   "repository": {

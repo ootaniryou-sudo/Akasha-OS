@@ -1,11 +1,11 @@
 /**
- * @arcasha/orchestrator — Planner / Task Decomposition
+ * arcasha-orchestrator — Planner / Task Decomposition
  *
  * タスクをサブタスクに分解する。ルールベース (v0) と LLM ベース (EXP-0005B) を提供。
  * Dynamic Expert Assignment (EXP-0005C): topK (committee) / parallel を分解に埋め込む。
  */
 
-import type { Capability, Decomposition, Subtask, Task } from '@arcasha/core';
+import type { Capability, Decomposition, Subtask, Task } from 'arcasha-core';
 import type { ComputeBackend } from './backend.js';
 
 /** ルールベース分解: タスク能力に応じたサブタスクロール列 (topK = Dynamic Assignment) */

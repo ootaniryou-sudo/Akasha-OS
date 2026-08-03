@@ -1,5 +1,5 @@
 /**
- * @arcasha/router — Observation (タスク評価 + 報酬)
+ * arcasha-router — Observation (タスク評価 + 報酬)
  *
  * ルールベースのタスク評価 (coding / math / reasoning) と、
  * 多目的報酬 (Quality + Latency + Cost + Stability) の計算。

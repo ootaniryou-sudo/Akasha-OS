@@ -1,4 +1,4 @@
-// @arcasha/orchestrator — consumer smoke test (build 後に実行: node packages/orchestrator/test/smoke.mjs)
+// arcasha-orchestrator — consumer smoke test (build 後に実行: node packages/orchestrator/test/smoke.mjs)
 import { ArcAshaController, RuleBasedPlanner, Verifier, EpisodeMemory, TreeSearch, PlanGenerator, Reflector } from '../dist/index.js';
 import { LinUCBShadowRouter } from '../../router/dist/index.js';
 
@@ -47,5 +47,5 @@ console.log('3) reflective: final pass =', rr.finalRun.verifications.filter(v =>
 const ok3 = rr.finalRun.decisions.length > 0;
 
 const allOk = ok1 && ok2 && ok3;
-console.log(allOk ? '\nPASS: @arcasha/orchestrator ✅' : '\nFAIL ❌');
+console.log(allOk ? '\nPASS: arcasha-orchestrator ✅' : '\nFAIL ❌');
 process.exit(allOk ? 0 : 1);

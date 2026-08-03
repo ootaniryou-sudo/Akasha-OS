@@ -1,9 +1,9 @@
-# @arcasha/belief
+# arcasha-belief
 
 Bayesian 状態推定 — 依存なしで他研究にも再利用可能。
 
 ```ts
-import { BayesianBelief } from '@arcasha/belief';
+import { BayesianBelief } from 'arcasha-belief';
 
 const b = new BayesianBelief();        // μ=0.5, n=0
 b.update(0.9);                          // 観測でベイズ更新

@@ -1,5 +1,5 @@
 /**
- * @arcasha/router — Core Types
+ * arcasha-router — Core Types
  *
  * Observation-Driven Adaptive Routing (ODAR) の統合パイプラインで使う基本型。
  * ArcAsha (Belief-Driven AI Orchestration) の検証済み設計をそのまま抽出。

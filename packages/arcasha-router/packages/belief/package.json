@@ -1,5 +1,5 @@
 {
-  "name": "@arcasha/belief",
+  "name": "arcasha-belief",
   "version": "0.1.0",
   "description": "ArcAsha belief — Bayesian state estimation (mu, n, confidence=1-exp(-n/8), effective) + EMA latency. Dependency-free, reusable in any research.",
   "type": "module",
@@ -27,5 +27,13 @@
     "bayesian",
     "confidence"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ootaniryou-sudo/ArcAsha-os.git"
+  },
+  "homepage": "https://github.com/ootaniryou-sudo/ArcAsha-os",
+  "bugs": {
+    "url": "https://github.com/ootaniryou-sudo/ArcAsha-os/issues"
+  }
 }

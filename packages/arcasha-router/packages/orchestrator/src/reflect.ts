@@ -1,12 +1,12 @@
 /**
- * @arcasha/orchestrator — Self Reflection (Belief-Driven Self-Improvement)
+ * arcasha-orchestrator — Self Reflection (Belief-Driven Self-Improvement)
  *
  * Verifier が失敗を検出 → Reflector が Belief (μ, n) から原因診断 →
  * Planner が次プラン生成 (re-route / committee / re-decompose) → 再実行 → 改善時のみ採用。
  */
 
-import type { BeliefSnapshot } from '@arcasha/belief';
-import type { Capability, Decomposition, Subtask } from '@arcasha/core';
+import type { BeliefSnapshot } from 'arcasha-belief';
+import type { Capability, Decomposition, Subtask } from 'arcasha-core';
 import type { RunResult } from './controller.js';
 
 type BeliefMap = Record<string, Record<Capability, BeliefSnapshot>>;

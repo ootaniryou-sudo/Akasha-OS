@@ -2,7 +2,7 @@
   "name": "arcasha-monorepo",
   "private": true,
   "version": "0.1.0",
-  "description": "ArcAsha OSS monorepo — 4 packages: @arcasha/core ↑ @arcasha/belief ↑ @arcasha/router ↑ @arcasha/orchestrator",
+  "description": "ArcAsha OSS monorepo — 5 packages: arcasha-core ↑ arcasha-belief ↑ arcasha-router ↑ arcasha-orchestrator (+ arcasha meta)",
   "workspaces": [
     "packages/*"
   ],
@@ -10,7 +10,7 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "test": "npm run build && node packages/router/test/smoke.mjs && node packages/orchestrator/test/smoke.mjs",
-    "pack:all": "npm run build && npm pack --workspace @arcasha/core --workspace @arcasha/belief --workspace @arcasha/router --workspace @arcasha/orchestrator"
+    "pack:all": "npm run build && npm pack --workspace arcasha-core --workspace arcasha-belief --workspace arcasha-router --workspace arcasha-orchestrator --workspace arcasha"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

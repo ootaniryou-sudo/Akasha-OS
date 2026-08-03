@@ -14,14 +14,14 @@ npx typedoc --options typedoc.json
 
 | パッケージ | 主なシンボル |
 |---|---|
-| `@arcasha/core` | `Capability`, `ExpertInfo`, `Task`, `Subtask`, `Decomposition`, `StepContext`, `EvalResult`, `computeRewards`, `findOracle`, `evaluateCoding/Math/Reasoning/Task` |
-| `@arcasha/belief` | `BayesianBelief`, `EmaLatency` |
-| `@arcasha/router` | `LinUCBShadowRouter`, `UCBShadowRouter`, `FixedRouter`, `RandomRouter`, `RoundRobinRouter`, `buildFeatures`, `evaluateAll`, `evaluateWith` |
-| `@arcasha/orchestrator` | `ArcAshaController`, `ComputeBackend`, `RuleBasedPlanner`, `LLMPlanner`, `Verifier`, `EpisodeMemory`, `Reflector`, `PlanGenerator`, `TreeSearch` |
+| `arcasha-core` | `Capability`, `ExpertInfo`, `Task`, `Subtask`, `Decomposition`, `StepContext`, `EvalResult`, `computeRewards`, `findOracle`, `evaluateCoding/Math/Reasoning/Task` |
+| `arcasha-belief` | `BayesianBelief`, `EmaLatency` |
+| `arcasha-router` | `LinUCBShadowRouter`, `UCBShadowRouter`, `FixedRouter`, `RandomRouter`, `RoundRobinRouter`, `buildFeatures`, `evaluateAll`, `evaluateWith` |
+| `arcasha-orchestrator` | `ArcAshaController`, `ComputeBackend`, `RuleBasedPlanner`, `LLMPlanner`, `Verifier`, `EpisodeMemory`, `Reflector`, `PlanGenerator`, `TreeSearch` |
 
 ## 例: クイックスタート
 
 ```ts
-import { LinUCBShadowRouter } from '@arcasha/router';
-import { ArcAshaController } from '@arcasha/orchestrator';
+import { LinUCBShadowRouter } from 'arcasha-router';
+import { ArcAshaController } from 'arcasha-orchestrator';
 ```

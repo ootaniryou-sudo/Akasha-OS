@@ -1,11 +1,11 @@
-# @arcasha/orchestrator — Belief-Driven AI Orchestration
+# arcasha-orchestrator — Belief-Driven AI Orchestration
 
 Planner → Router → Verifier → Memory → Reflection → Tree Search を統合した実行系。
 バックエンド (WS / Ollama / llama.cpp / WebGPU) は `ComputeBackend` で抽象化。
 
 ```ts
-import { ArcAshaController, RuleBasedPlanner, Verifier, EpisodeMemory } from '@arcasha/orchestrator';
-import { LinUCBShadowRouter } from '@arcasha/router';
+import { ArcAshaController, RuleBasedPlanner, Verifier, EpisodeMemory } from 'arcasha-orchestrator';
+import { LinUCBShadowRouter } from 'arcasha-router';
 
 const ctrl = new ArcAshaController(backend, new LinUCBShadowRouter(experts), new RuleBasedPlanner(), new Verifier(0.4), new EpisodeMemory());
 await ctrl.warmup(tasks);                                   // シャドウ学習

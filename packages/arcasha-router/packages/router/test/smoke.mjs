@@ -1,4 +1,4 @@
-// @arcasha/router — consumer smoke test (build 後に実行: node packages/router/test/smoke.mjs)
+// arcasha-router — consumer smoke test (build 後に実行: node packages/router/test/smoke.mjs)
 import {
   BayesianBelief,
   LinUCBShadowRouter,

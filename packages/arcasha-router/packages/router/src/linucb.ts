@@ -1,5 +1,5 @@
 /**
- * @arcasha/router — LinUCB (EXP-0003C.4 で検証済みの実装)
+ * arcasha-router — LinUCB (EXP-0003C.4 で検証済みの実装)
  *
  * Disjoint LinUCB (Li et al. 2010): θ_a = A_a^{-1} b_a,
  * 選択: argmax_a θ_a^T x_{t,a} + α√(x^T A_a^{-1} x)。

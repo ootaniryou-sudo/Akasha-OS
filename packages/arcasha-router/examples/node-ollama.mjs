@@ -1,9 +1,9 @@
 // examples/node-ollama.mjs
-// @arcasha/orchestrator + @arcasha/router で Ollama を ComputeBackend として使うサンプル。
+// arcasha-orchestrator + arcasha-router で Ollama を ComputeBackend として使うサンプル。
 // 前提: `ollama serve` が起動済み (デフォルト http://localhost:11434)。
 // 実行: node examples/node-ollama.mjs
-import { ArcAshaController, RuleBasedPlanner, Verifier, EpisodeMemory } from '@arcasha/orchestrator';
-import { LinUCBShadowRouter } from '@arcasha/router';
+import { ArcAshaController, RuleBasedPlanner, Verifier, EpisodeMemory } from 'arcasha-orchestrator';
+import { LinUCBShadowRouter } from 'arcasha-router';
 
 const OLLAMA = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const MODELS = [

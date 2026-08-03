@@ -1,11 +1,11 @@
 /**
- * @arcasha/orchestrator — Episode Memory + Vector Memory + Prior Belief
+ * arcasha-orchestrator — Episode Memory + Vector Memory + Prior Belief
  *
  * エピソード蓄積 (EXP-0005E) + 自己完結 n-gram Embedding 検索 (Vector Memory) +
  * 類似エピソードから Bayesian 事前分布 μ₀/n₀ を集計 (Closed Bayesian Loop)。
  */
 
-import type { Capability, Task } from '@arcasha/core';
+import type { Capability, Task } from 'arcasha-core';
 
 export interface EpisodeDecision {
   subtaskId: string;

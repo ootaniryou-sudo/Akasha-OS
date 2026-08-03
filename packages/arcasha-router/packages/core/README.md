@@ -1,9 +1,9 @@
-# @arcasha/core
+# arcasha-core
 
 共通型 + Observation (ルールベース評価) + Reward (多目的報酬)。
 
 ```ts
-import { computeRewards, findOracle, evaluateTask } from '@arcasha/core';
+import { computeRewards, findOracle, evaluateTask } from 'arcasha-core';
 
 const rewards = computeRewards(experts, results, states, maxLat, maxParams);
 const oracle = findOracle(results);   // Quality 最大のノード

@@ -1,5 +1,5 @@
 /**
- * @arcasha/orchestrator — 公開 API
+ * arcasha-orchestrator — 公開 API
  *
  * Belief-Driven AI Orchestration: Planner → LinUCB-Shadow Router → Verifier →
  * EpisodeMemory (Prior μ₀) → Self Reflection → Tree Search。

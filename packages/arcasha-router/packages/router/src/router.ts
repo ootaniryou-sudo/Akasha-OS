@@ -1,5 +1,5 @@
 /**
- * @arcasha/router — Routers (LinUCB-Shadow / UCB-Shadow / Fixed / baselines)
+ * arcasha-router — Routers (LinUCB-Shadow / UCB-Shadow / Fixed / baselines)
  *
  * EXP-0003C.4 で検証した LinUCB-Shadow と、EXP-0003C.3 の UCB-Shadow、手設計 Fixed、
  * 評価用ベースライン (Random / RoundRobin) を統一インターフェースで実装。
@@ -9,7 +9,7 @@
  *   [1, capability, latency, cost, stability, confidence, memory, temperature]
  */
 
-import type { Capability, ExpertInfo, StepContext } from '@arcasha/core';
+import type { Capability, ExpertInfo, StepContext } from 'arcasha-core';
 import { LinUCB } from './linucb.js';
 
 export const FEATURE_DIM = 8;
