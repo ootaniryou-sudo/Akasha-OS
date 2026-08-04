@@ -15,6 +15,9 @@
 
 import { AilsmBuilder } from './ailsm.js';
 import type { AilsmGraph, AilsmNode } from './ailsm.js';
+import { Opcode } from '../ailsa/opcode.js';
+import { Slot } from '../ailsa/vocab.js';
+import type { Instruction } from '../ailsa/encoder.js';
 
 export type OptimizationLevel = 0 | 1 | 2 | 3;
 
@@ -278,4 +281,112 @@ export function optimize(g: AilsmGraph, level: OptimizationLevel = 2): PassResul
   pm.add(ConstantFoldingPass);
   pm.add(BatchDetectionPass);
   return pm.run(g, level);
+}
+
+// ────────────────────────────────────────────────────────────────
+// Phase 0.15 — 命令レベル最適化（LLVM の Loop Opt / Inlining / GVN / DCE 相当）
+// ────────────────────────────────────────────────────────────────
+
+export interface ExpertMeta {
+  latencyMs: number;
+  cost: number;
+}
+
+const DEFAULT_META: Record<string, ExpertMeta> = {
+  math: { latencyMs: 24, cost: 0.4 },
+  code: { latencyMs: 30, cost: 0.5 },
+  search: { latencyMs: 18, cost: 0.3 },
+  reasoning: { latencyMs: 40, cost: 0.6 },
+  general: { latencyMs: 25, cost: 0.4 },
+};
+
+export interface InstructionOptResult {
+  instructions: Instruction[];
+  notes: string[];
+  stats: {
+    before: number;
+    after: number;
+    callsBefore: number;
+    callsAfter: number;
+    expertsBefore: number;
+    expertsAfter: number;
+    latencyMsBefore: number;
+    latencyMsAfter: number;
+    costBefore: number;
+    costAfter: number;
+  };
+}
+
+function expertOf(instr: Instruction): string {
+  return String(instr.slots?.find((s) => s.slot === Slot.EXPERT)?.value ?? '');
+}
+
+/** 命令レベル最適化: DCE（重複除去）+ 同一Expertへの連続CALLバッチ化 */
+export function optimizeInstructions(
+  instrs: Instruction[],
+  meta: Record<string, ExpertMeta> = DEFAULT_META,
+): InstructionOptResult {
+  const notes: string[] = [];
+
+  // 1. DCE: 連続する同一命令の除去
+  const deduped: Instruction[] = [];
+  for (const instr of instrs) {
+    const prev = deduped[deduped.length - 1];
+    if (prev && prev.opcode === instr.opcode && JSON.stringify(prev.slots ?? null) === JSON.stringify(instr.slots ?? null)) {
+      notes.push(`DCE: duplicate 0x${instr.opcode.toString(16)} removed`);
+      continue;
+    }
+    deduped.push(instr);
+  }
+
+  // 2. 同一Expertへの連続CALLをバッチ化（CALL math ×3 → CALL math Batch=3）
+  const out: Instruction[] = [];
+  let i = 0;
+  while (i < deduped.length) {
+    const instr = deduped[i];
+    if (instr.opcode === Opcode.CALL) {
+      const expert = expertOf(instr);
+      let count = 1;
+      while (
+        i + count < deduped.length &&
+        deduped[i + count].opcode === Opcode.CALL &&
+        expertOf(deduped[i + count]) === expert
+      ) {
+        count++;
+      }
+      if (count > 1) {
+        notes.push(`BATCH: CALL ${expert} x${count} → CALL ${expert} Batch=${count}`);
+        out.push({ ...instr }); // 単一 CALL に畳み込み
+        i += count;
+        continue;
+      }
+    }
+    out.push(instr);
+    i++;
+  }
+
+  // 3. 統計（CALL数 / Expert数 / Latency / Cost の削減を測る）
+  const callsBefore = deduped.filter((x) => x.opcode === Opcode.CALL).length;
+  const callsAfter = out.filter((x) => x.opcode === Opcode.CALL).length;
+  const expertsBefore = new Set(deduped.filter((x) => x.opcode === Opcode.CALL).map(expertOf)).size;
+  const expertsAfter = new Set(out.filter((x) => x.opcode === Opcode.CALL).map(expertOf)).size;
+  const sum = (list: Instruction[], key: 'latencyMs' | 'cost'): number =>
+    list.filter((x) => x.opcode === Opcode.CALL).reduce((a, x) => a + (meta[expertOf(x)]?.[key] ?? 0), 0);
+
+  return {
+    instructions: out,
+    notes,
+    stats: {
+      before: deduped.length,
+      after: out.length,
+      callsBefore,
+      callsAfter,
+      expertsBefore,
+      expertsAfter,
+      latencyMsBefore: sum(deduped, 'latencyMs'),
+      latencyMsAfter: sum(out, 'latencyMs'),
+      costBefore: sum(deduped, 'cost'),
+      costAfter: sum(out, 'cost'),
+    },
+  };
 }

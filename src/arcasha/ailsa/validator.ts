@@ -104,9 +104,8 @@ export function validateProgram(program: Instruction[]): ValidationResult {
       } else {
         depth--;
       }
-      if (i !== program.length - 1) {
-        issues.push({ index: i, message: `${nameOf(instr.opcode)} は最終命令でなければならない` });
-      }
+      // 注意: RETURN は必ずしも最終命令でなくてよい
+      // （AI Linker が複数 CALL セグメントを結合するため。Phase 0.16）
     } else if (instr.opcode === Opcode.CALL) {
       depth++;
     }

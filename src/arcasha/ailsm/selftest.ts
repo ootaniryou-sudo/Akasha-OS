@@ -6,6 +6,11 @@
 
 import { Slot, Task } from '../ailsa/vocab.js';
 import { MathOpcode } from '../ailsa/dialect.js';
+import { Opcode, SyscallOpcode } from '../ailsa/opcode.js';
+import type { Instruction } from '../ailsa/encoder.js';
+import { AiProgram } from './program.js';
+import { link } from './linker.js';
+import { optimizeInstructions } from './optimizer.js';
 import { compile, compileAndRun, describeGraph, toHex } from './compiler.js';
 import { execute } from './executor.js';
 import { run } from './runtime.js';
@@ -281,6 +286,48 @@ const pages = pageMemory(gn);
 check('Memory Page 分割', pages.length >= 1);
 const page1 = loadPage(pages, 1);
 check('LOAD PAGE 1 でエントリ取得', page1 !== undefined && page1.entries.length >= 1);
+
+// [17] AI Program（AILSM で直接プログラムを書く）
+console.log('\n[17] AI Program');
+const prog = new AiProgram('solve-and-verify')
+  .plan('solve x^2-4=0')
+  .call('math', 'x^2-4=0')
+  .math(MathOpcode.EQ, 'x^2-4=0')
+  .verify()
+  .reflect('precision', 'retry fp64')
+  .call('math', 'x^2-4=0')
+  .returns('x=2');
+const progInstrs = prog.assemble();
+check('AI Program が AILSA 命令列を生成', progInstrs.length >= 5, `len=${progInstrs.length}`);
+check('CALL が含まれる', progInstrs.some((i) => i.opcode === Opcode.CALL));
+check('SYSCALL_REFLECT が含まれる', progInstrs.some((i) => i.opcode === SyscallOpcode.REFLECT));
+check('AI Program がエンコード可能（検証込み）', prog.encode().length > 0);
+
+// [18] AILSM Optimizer（命令レベル: DCE + CALLバッチ化）
+console.log('\n[18] AILSM Optimizer');
+// ユーザーの例どおり: CALL Math ×3（連続）→ CALL Math Batch=3
+const raw: Instruction[] = [
+  { opcode: Opcode.CALL, slots: [{ slot: Slot.EXPERT, value: 'math' }, { slot: Slot.TASK_ID, value: '0' }] },
+  { opcode: Opcode.CALL, slots: [{ slot: Slot.EXPERT, value: 'math' }, { slot: Slot.TASK_ID, value: '1' }] },
+  { opcode: Opcode.CALL, slots: [{ slot: Slot.EXPERT, value: 'math' }, { slot: Slot.TASK_ID, value: '2' }] },
+  { opcode: Opcode.RETURN, slots: [{ slot: Slot.TASK_ID, value: '2' }] },
+];
+const opt = optimizeInstructions(raw);
+check('CALL 3→1 にバッチ化', opt.stats.callsBefore === 3 && opt.stats.callsAfter === 1, `calls=${opt.stats.callsBefore}->${opt.stats.callsAfter}`);
+check('Latency 削減', opt.stats.latencyMsAfter < opt.stats.latencyMsBefore);
+check('Cost 削減', opt.stats.costAfter < opt.stats.costBefore);
+check('BATCH ノート', opt.notes.some((n) => n.includes('BATCH')));
+
+// [19] AI Linker（複数 Expert → Executable Task）
+console.log('\n[19] AI Linker');
+const linked = link('pipeline', [
+  { name: 'math', expert: 'math', instructions: [{ opcode: MathOpcode.EQ, slots: [{ slot: Slot.INPUT, value: 'x^2-4=0' }] }] },
+  { name: 'search', expert: 'search', instructions: [{ opcode: Opcode.SEARCH, slots: [{ slot: Slot.INPUT, value: 'similar' }] }] },
+]);
+check('リンクで 2 セグメント', linked.segments.length === 2);
+check('シンボルテーブル（math=task0）', linked.segments[0].taskId === '0');
+check('CALL×2 + RETURN×2 でラップ', linked.instructions.filter((i) => i.opcode === Opcode.CALL).length === 2 && linked.instructions.filter((i) => i.opcode === Opcode.RETURN).length === 2);
+check('リンク後エンコード可能（検証込み）', linked.bytes.length > 0);
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {

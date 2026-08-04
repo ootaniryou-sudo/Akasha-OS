@@ -5,10 +5,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.14** |
+| Status | **Draft v0.15** |
 | Date | 2026-08-05 |
 | Owner | ArcAsha Core Team |
-| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様） |
+| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様） |
 
 ---
 
@@ -488,6 +488,8 @@ v0.13 では **AIProcess / AIThread / ReasoningScheduler** を追加し、AILSM 
 
 v0.14 では **AI System Call / Kernel API** を導入し、Expert（User Space）は Kernel（Memory / Belief / Schedule / Reflection / Capability）に直接触れず、`SYSCALL_*`（AILSA 命令 0x80-0x8A）でのみ要求する（**Kernel-mediated AI Runtime**）。さらに **Namespace**（プロセスごとの Memory Space 分離 = Process Isolation）と **Memory Page**（Virtual Memory）を追加。ArcAsha は AI Compiler でも Distributed Runtime でもなく、**AI Operating System** として説明できる。実機通信（Phase 1）は単なる「実行バックエンドの一つ」になる。
 
+v0.15 では **Toolchain** として体系化する。AI Program（AILSM で直接プログラムを書く）/ AILSM Optimizer（命令レベル: DCE + CALL バッチ化）/ AI Linker（複数 Expert → Executable Task）を追加し、**AI のための GCC / LLVM / GNU Binutils** に相当する階層を提供する（`AI_TOOLCHAIN.md`）。研究の核は ODAR / AILSM / AILSA の3点。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -767,6 +769,9 @@ Case2（AILSA）:
 | **0.11** | ✅ **AI Process / Thread / Reasoning Scheduler**（AI Kernel IR） | `state.ts`（createProcess/spawnThread/setProcessState）, `scheduler.ts`（pickNext/pickRoundRobin + RuntimeEvents）, `runtime.ts`（SPAWN→CALL→WAIT/FINISH） | 完了（AI Runtime Model を v1.0 で凍結） |
 | **0.12** | ✅ **AI System Call / Kernel API**（Kernel-mediated AI Runtime） | `kernel.ts`（AIKernel: EXECUTE/SPAWN/PLAN/VERIFY/REFLECT/ROUTE/MEMORY_*/UPDATE_CAPABILITY + 権限チェック）、Registry **v1.2.0**（SYSCALL 0x80-0x8A） | 完了（別ownerへのDELETE拒否 / Kernel経由メモリ を確認） |
 | **0.13** | ✅ **Namespace / Virtual Memory**（Process Isolation） | `namespace.ts`（createNamespace/assignNamespace/canAccessMemory/pageMemory/loadPage） | 完了（spaceA↔spaceB 分離 / Memory Page を確認） |
+| **0.14** | ✅ **AI Program**（AILSM で直接プログラムを書く） | `program.ts`（AiProgram DSL: plan/call/math/verify/reflect/returns + assemble/encode） | 完了（PLAN→CALL→VERIFY→REFLECT→RETURN を検証込みでエンコード） |
+| **0.15** | ✅ **AILSM Optimizer（命令レベル）** | `optimizer.ts`（optimizeInstructions: DCE + CALLバッチ化 + Latency/Cost統計） | 完了（CALL 3→1 / Latency・Cost削減 を確認） |
+| **0.16** | ✅ **AI Linker**（複数 Expert → Executable Task） | `linker.ts`（link: セグメント結合 + シンボルテーブル + 再検証） | 完了（Math+Search → 単一プログラム） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |
