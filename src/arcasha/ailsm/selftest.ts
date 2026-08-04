@@ -49,6 +49,8 @@ import { initAiOs, aiosExecute, aiosRelay } from './aios.js';
 import { AilsmBuilder } from './ailsm.js';
 import { runComparisonBenchmark } from './comparison.js';
 import { runScalingExperiment, renderScaling } from './experiment.js';
+import { hypothesize, activate, evaluate, accept, merge, hypothesesOf, hypothesisOf } from './reasoning.js';
+import { runReasoning, runReasoningDemo, defaultHypothesisGenerator } from './reasoning-runtime.js';
 
 let failed = 0;
 
@@ -771,6 +773,47 @@ const fb55 = await aiosExecute(aios55, '量子コンピュータについて説�
 check('解釈不能タスクもフォールバックで委譲（400にしない）', fb55.fallback === true && fb55.driverId !== null && fb55.result !== null, String(fb55.driverId));
 check('フォールバックの AILSA は生 CALL', (fb55.compile as { instructions: unknown[] }).instructions.length === 1);
 check('フォールバックでも ODAR 学習', aios55.learner.get(String(fb55.driverId)).samples >= 1);
+
+// [56] Hypothesis SSA（仮説の生成・評価・採用・淘汰・統合）
+console.log('\n[56] Hypothesis SSA');
+const b56 = new AilsmBuilder();
+const t56 = b56.addNode('task', 'solve', 'unknown', { domain: 'math', intent: 'solve' });
+let g56 = b56.graph();
+const h1 = hypothesize(g56, t56, 'x=3 が解', 0.5);
+g56 = h1.graph;
+check('hypothesize で Hypothesis#N 生成', hypothesisOf(g56, h1.id)?.state === 'proposed' && hypothesisOf(g56, h1.id)?.confidence === 0.5);
+check('task hypothesizes hypothesis エッジ', g56.edges.some((e) => e.rel === 'hypothesizes'));
+g56 = activate(g56, h1.id, 'math').graph;
+g56 = evaluate(g56, h1.id, 0.8).graph;
+check('activate/evaluate で active + score', hypothesisOf(g56, h1.id)?.state === 'active' && hypothesisOf(g56, h1.id)?.score === 0.8);
+g56 = accept(g56, h1.id).graph;
+check('accept で accepted', hypothesisOf(g56, h1.id)?.state === 'accepted');
+const h2 = hypothesize(g56, t56, 'x=-3 が解', 0.5);
+g56 = h2.graph;
+const m56 = merge(g56, t56, [h1.id, h2.id], 'x=±3', 0.9);
+g56 = m56.graph;
+check('merge で元は merged / 新仮説生成', hypothesisOf(g56, h1.id)?.state === 'merged' && hypothesisOf(g56, m56.id)?.text === 'x=±3' && hypothesisOf(g56, m56.id)?.parentIds.length === 2);
+check('hypothesesOf で列挙', hypothesesOf(g56, t56).length === 3);
+
+// [57] Reasoning Runtime デモ（x^2=9: SPAWN→EVAL→MERGE/KILL）
+console.log('\n[57] Reasoning Runtime');
+const demo57 = await runReasoningDemo();
+check('デモ: 最終仮説 x=±3', demo57.finalText === 'x=±3', String(demo57.finalText));
+check('デモ: 3 仮説を評価', demo57.rounds[0].evaluated.length === 3);
+check('デモ: 低評価 H3 は KILL（淘汰）', demo57.rounds[0].killed.length === 1);
+check('デモ: H1+H2 を MERGE', demo57.rounds[0].merged.length === 1 && demo57.rounds[0].merged[0].text === 'x=±3');
+check('デモ: 各仮説が独立 Process（OS 並列）', demo57.processes >= 3);
+check('デモ: Expert 呼び出しあり', demo57.expertCalls >= 3);
+
+// [58] 汎用 Reasoning（既定の仮説生成 + 循環）
+console.log('\n[58] 汎用 Reasoning');
+const booted58 = boot();
+const r58 = await runReasoning('新しい数学を考えて', booted58);
+check('汎用: 仮説が生成される', r58.rounds.length >= 1 && r58.rounds[0].spawned.length >= 3);
+check('汎用: Hypothesis ノードが SSA に', r58.graph.nodes.some((n) => n.kind === 'hypothesis'));
+check('汎用: Expert 呼び出し / Process 生成', r58.expertCalls >= 3 && r58.processes >= 3);
+check('汎用: 既定生成がドメイン別（math）', defaultHypothesisGenerator('x^2=9を解く')[0].expert === 'math' && defaultHypothesisGenerator('アプリを作って')[0].expert === 'programming');
+check('汎用: 収束 or 全ラウンド完了', r58.finalText !== null || r58.rounds.every((rd) => rd.accepted.length === 0));
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

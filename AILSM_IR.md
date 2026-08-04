@@ -4,10 +4,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.3（凍結 + MINOR 追加: Context/Page/Slice/Cache/Execution/Chunk/Span/Frame）** |
+| Status | **Spec v1.4（凍結 + MINOR 追加: Context/Page/Slice/Cache/Execution/Chunk/Span/Frame/Hypothesis）** |
 | Date | 2026-08-05 |
 | 実装 | `src/arcasha/ailsm/ailsm.ts`, `types.ts`, `visualizer.ts` |
-| 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSM_COMPILER.md`, `AILSA_RUNTIME.md`, `AI_ABI.md`, `AI_VIRTUAL_MEMORY.md` |
+| 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSM_COMPILER.md`, `AILSA_RUNTIME.md`, `AI_ABI.md`, `AI_VIRTUAL_MEMORY.md`, `AI_REASONING.md` |
 
 ---
 
@@ -49,6 +49,7 @@ AILSMは単なるIRではなく、**AI Operating IR** — CPUだけでなく AI 
 | **Chunk** | `Chunk#N` | `Chunk#70 : string {page=45, index=2, text=...}`（ページ内の段落 — Cache Line 相当） |
 | **Span** | `Span#N` | `Span#75 : string {chunk=70, page=45, index=1, kind=equation, text='x^2+2x+1=0 を解く'}`（文 / 数式 — Register 相当） |
 | **Frame** | `Frame#N` | `Frame#80 : unknown {exec=60, label=branchA, hypothesis='x=2 の可能性', state=merged}`（Reasoning Stack の推論フレーム） |
+| **Hypothesis** | `Hypothesis#N` | `Hypothesis#90 : unknown {text='x=3 が解', confidence=0.5, state=accepted, expert=math, score=0.8, parentIds=[...]}`（AI Reasoning Runtime — 仮説の生成・競争・淘汰・統合） |
 
 各ノード: `{ id, kind, label, type, attrs, constraints? }`
 
@@ -64,6 +65,7 @@ AILSMは単なるIRではなく、**AI Operating IR** — CPUだけでなく AI 
 | `plans` | タスクが実行計画を持つ（Plan SSA） |
 | `reflects` | タスクが自己修正を持つ（Reflection SSA） |
 | `contains` | Context が Page / Slice / Cache を含む（AI Virtual Memory） |
+| `hypothesizes` | Task が仮説を生成（AI Reasoning Runtime） |
 
 ## 5. 型システム（Typed AILSM）
 
@@ -105,8 +107,8 @@ IR は後から変更すると Compiler / Executor / Runtime / Visualizer / Expe
 
 | 安定化対象 | 定義 |
 |-----------|------|
-| **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread / namespace / **context / page / slice / cache / execution / chunk / span / frame** |
-| **エッジカタログ** | uses / input / produces / stores / informs / plans / reflects / schedules / processes / threads / **contains** |
+| **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread / namespace / **context / page / slice / cache / execution / chunk / span / frame / hypothesis** |
+| **エッジカタログ** | uses / input / produces / stores / informs / plans / reflects / schedules / processes / threads / **contains / hypothesizes** |
 | **型システム** | AilsmType + AilsmTypeRef（union / optional）+ NodeConstraints |
 | **状態遷移** | ローカル解決: Result→Memory / 委譲: Belief→Capability→Schedule→CALL |
 | **ABI** | ノード {id, kind, label, type, attrs, constraints} / エッジ {from, to, rel} |

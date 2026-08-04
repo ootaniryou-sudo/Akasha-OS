@@ -5,10 +5,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.23** |
+| Status | **Draft v0.24** |
 | Date | 2026-08-05 |
 | Owner | ArcAsha Core Team |
-| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価） |
+| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価）, `AI_REASONING.md`（Reasoning Runtime） |
 
 ---
 
@@ -506,6 +506,8 @@ v0.22（評価フェーズ）では **「巨大化」ではなく「優れてい
 
 v0.23（Phase 2.3）では **「既存AIにできるタスクの全てを任せられる」** ための 2 点。① **「作って」系意図（create）**（`normalizer.ts`: 作って/実装/書いて/生成/build/create 等 → domain=code → programming へ CALL、タスク文を INPUT に載せる）② **Stage-2 フォールバック**（`aios.ts`: 決定論コンパイラが解釈できないタスクを 400 にせず、生の CALL で実機LLM（general）へ委譲 → 自由文でも応答 + ODAR 学習）。これで「計算・検索・要約は決定論 / それ以外は実機LLM」の**ハイブリッド**になった（ツール呼び出しは未実装のまま）。
 
+v0.24（Phase 2.4）では **AI Reasoning Runtime（第4の柱）** を追加。創発的知能は「Expert 同士の循環」で生まれる — MoE が Transformer 内部で暗黙に行う探索を、OS レベルで明示化する。**Hypothesis SSA**（新ノード: text/confidence/state/expert/score + `task hypothesizes hypothesis`）と **Reasoning Graph Runtime**（`reasoning.ts` / `reasoning-runtime.ts`: SPAWN → EVALUATE（各仮説 = 独立 Process = OS 並列）→ REFLECTION（ACCEPT / KILL / MERGE）→ 収束）。デモ x^2=9: x=3 / x=-3 を並列評価 → 両方 ACCEPT → MERGE「x=±3」/ 低評価は KILL（`AI_REASONING.md`）。AILSM_IR は v1.4。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -807,6 +809,7 @@ Case2（AILSA）:
 | **2.2** | ✅ **ODAR マルチシグナル学習**（success/battery/gpu） | `learning.ts`（EMA 拡張 / score 改良） | 完了（残量・GPU を学習してルーティング） |
 | **3.0** | ✅ **専門 Expert 10 種** | `driver.ts` / `expert-runtime.ts` | 完了（10 Expert リレー全ホップ成功） |
 | **2.3** | ✅ **create 意図 + Stage-2 フォールバック**（一般タスク対応） | `normalizer.ts`（create）, `aios.ts`（fallbackExecute） | 完了（「作って」→ programming / 自由文 → general 委譲を確認） |
+| **2.4** | ✅ **AI Reasoning Runtime**（Hypothesis SSA + Reasoning Graph） | `reasoning.ts`, `reasoning-runtime.ts`（SPAWN/EVAL/ACCEPT/KILL/MERGE） | 完了（x^2=9: 並列評価 → MERGE x=±3 / KILL を確認） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |
