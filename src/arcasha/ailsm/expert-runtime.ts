@@ -45,6 +45,7 @@ export function boot(): BootResult {
   const drivers = new Map<string, ExpertDriver>();
   drivers.set('math', new MockExpertDriver('math', 'Math Expert'));
   drivers.set('search', new MockExpertDriver('search', 'Search Expert'));
+  drivers.set('planning', new MockExpertDriver('planning', 'Planning Expert'));
   drivers.set('reasoning', new MockExpertDriver('reasoning', 'Reasoning Expert'));
 
   return { deviceTree, drivers, kernel: new AIKernel() };
@@ -58,24 +59,35 @@ export interface ExpertExecution {
   driverResponse: DriverResponse | null;
   finalGraph: AilsmGraph;
   result: string | number | null;
+  ms: number;
 }
 
-/** タスクを実行する: ローカル解決 or Driver への CALL → Kernel で結果を保存 */
-export function execute(text: string, booted: BootResult): ExpertExecution {
+/**
+ * タスクを実行する: ローカル解決 or Driver への CALL → Kernel で結果を保存
+ *
+ * resolveDriver: 実LLM（RemoteDriver）等へ差し替えるフック（Phase 1.0）。
+ * 省略時は boot 済みの Mock ドライバを使う。
+ */
+export async function execute(
+  text: string,
+  booted: BootResult,
+  resolveDriver?: (expert: string) => ExpertDriver | undefined,
+): Promise<ExpertExecution> {
   const compiled = compileAndRun(text).compile;
   const trace = run(text);
   let graph = trace.graph;
   let driverId: string | null = null;
   let driverResponse: DriverResponse | null = null;
+  const t0 = Date.now();
 
   if (trace.needsExpert && trace.processId !== undefined) {
     const belief = graph.nodes.find((n) => n.kind === 'belief');
     const expert = String(belief?.attrs.expert ?? 'general');
-    const driver = booted.drivers.get(expert);
+    const driver = resolveDriver ? resolveDriver(expert) : booted.drivers.get(expert);
 
     if (driver) {
       driverId = driver.id;
-      driverResponse = driver.invoke({ program: compiled.instructions, abiVersion: ABI_VERSION_1_0 });
+      driverResponse = await driver.invoke({ program: compiled.instructions, abiVersion: ABI_VERSION_1_0 });
 
       const processId = trace.processId;
       if (driverResponse.ok) {
@@ -101,5 +113,6 @@ export function execute(text: string, booted: BootResult): ExpertExecution {
     driverResponse,
     finalGraph: graph,
     result: driverResponse?.ok ? (driverResponse.result ?? null) : null,
+    ms: Date.now() - t0,
   };
 }

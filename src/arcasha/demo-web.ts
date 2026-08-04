@@ -13,6 +13,9 @@
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { ExpertHub } from './experts/registry.js';
+import { initAiOs, aiosExecute, aiosRelay } from './ailsm/aios.js';
+import { toHex } from './ailsm/compiler.js';
+import { encodeProgram } from './ailsa/encoder.js';
 
 let WS_PORT = Number(process.env.PORT ?? 8080);
 let WEB_PORT = Number(process.env.WEB_PORT ?? 4173);
@@ -25,6 +28,13 @@ for (let i = 0; i < args.length; i++) {
 
 const hub = new ExpertHub();
 hub.start(WS_PORT, 1, () => {});
+
+// ─── AI OS 本体（Phase 1.2: Hub が AI OS の init になる）────────────────
+const aios = initAiOs({
+  listNodes: () => hub.experts.map((e) => ({ nodeId: e.nodeId, modelId: e.modelId, paramsM: e.paramsM })),
+  generate: async (nodeId, prompt, maxTokens = 64) =>
+    hub.generate(nodeId, String(prompt), Number(maxTokens) || 64),
+});
 
 // ─── ダッシュボード HTML ────────────────────────────────────────────────
 const html = `<!DOCTYPE html>
@@ -94,6 +104,16 @@ const html = `<!DOCTYPE html>
       <button id="clear" class="secondary">クリア</button>
     </div>
     <div id="status"></div>
+  </div>
+
+  <div class="card">
+    <h2>AI OS — AILSA 実行（Compile → CALL → 実デバイス → ODAR 学習）</h2>
+    <div class="input-row">
+      <textarea id="ailsm-prompt" placeholder="例: x^2を積分して / 2と3を足して / Webで記事を検索して"></textarea>
+      <button id="ailsm-run">実行</button>
+    </div>
+    <div id="ailsm-status" style="color:var(--mute);font-size:12px;margin-top:8px;min-height:16px"></div>
+    <pre id="ailsm-out" style="white-space:pre-wrap;background:#0e141b;border:1px solid #1e2833;border-radius:8px;padding:12px;margin-top:8px;display:none;font-size:12px;line-height:1.5"></pre>
   </div>
 
   <div id="results"></div>
@@ -177,6 +197,37 @@ async function send() {
 $('send').addEventListener('click', send);
 $('clear').addEventListener('click', () => { resultsEl.innerHTML = ''; statusEl.textContent = ''; });
 promptEl.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send(); });
+
+// ─── AI OS (AILSA) 実行 ────────────────────────────────────────────────
+const ailsmPromptEl = $('ailsm-prompt');
+const ailsmStatusEl = $('ailsm-status');
+const ailsmOutEl = $('ailsm-out');
+$('ailsm-run').addEventListener('click', async () => {
+  const text = ailsmPromptEl.value.trim();
+  if (!text) return;
+  ailsmStatusEl.textContent = '⏳ Compile → CALL → 実デバイス委譲 ...';
+  try {
+    const r = await fetch('/api/ailsm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const d = await r.json();
+    if (d.error) { ailsmStatusEl.textContent = '❌ ' + d.error; return; }
+    ailsmStatusEl.textContent = '✅ ' + (d.driverId ? 'CALL ' + d.driverId + ' → ' + d.deviceId + ' (' + d.ms + 'ms)' : 'ローカル解決') + ' / ODAR学習: ' + (d.learned ? '記録済み' : '-');
+    ailsmOutEl.style.display = 'block';
+    ailsmOutEl.textContent =
+      'result : ' + d.result + '\n' +
+      'driver : ' + (d.driverId ?? 'local') + '\n' +
+      'device : ' + (d.deviceId ?? 'local') + '\n' +
+      'steps  : ' + d.steps.join(' → ') + '\n' +
+      'AILSA  : ' + d.ailsaHex;
+    refreshNodes();
+  } catch (e) {
+    ailsmStatusEl.textContent = '❌ ' + e;
+  }
+});
+ailsmPromptEl.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('ailsm-run').click(); });
 refreshNodes();
 refreshInfo();
 setInterval(refreshNodes, 3000);
@@ -219,8 +270,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (url.pathname === '/api/prompt' && req.method === 'POST') {
-    let body = '';
+  if (url.pathname === '/api/prompt' && req.method === 'POST') {    let body = '';
     req.on('data', (c) => { body += c; });
     req.on('end', async () => {
       try {
@@ -246,10 +296,75 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ─── AI OS API（Phase 1.2）─────────────────────────────────────────
+  if (url.pathname === '/api/device-tree') {
+    const tree = aios.booted.deviceTree.describe();
+    sendJson(200, {
+      tree,
+      nodes: aios.client.listNodes(),
+      learner: aios.learner.all(),
+    });
+    return;
+  }
+
+  if (url.pathname === '/api/ailsm' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', async () => {
+      try {
+        const { text, deviceId } = JSON.parse(body);
+        if (!text) { sendJson(400, { error: 'text required' }); return; }
+        const ex = await aiosExecute(aios, String(text), deviceId ? String(deviceId) : undefined);
+        sendJson(200, {
+          text: String(text),
+          result: ex.result,
+          driverId: ex.driverId,
+          deviceId: ex.deviceId,
+          ms: ex.ms,
+          learned: ex.learned,
+          ailsaHex: toHex(encodeProgram(ex.compile.instructions)),
+          steps: ex.trace.steps.map((s) => s.kind),
+          learner: aios.learner.all(),
+        });
+      } catch (e) {
+        sendJson(400, { error: String(e) });
+      }
+    });
+    return;
+  }
+
+  if (url.pathname === '/api/relay' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', async () => {
+      try {
+        const { steps, deviceId } = JSON.parse(body);
+        if (!Array.isArray(steps) || steps.length === 0) { sendJson(400, { error: 'steps required' }); return; }
+        const relay = await aiosRelay(aios, steps, deviceId ? String(deviceId) : undefined);
+        sendJson(200, {
+          final: relay.final,
+          hops: relay.hops.map((h) => ({
+            index: h.index,
+            expert: h.expert,
+            ok: h.ok,
+            ms: h.ms,
+            driverId: h.driverId,
+            input: h.input.slice(0, 80),
+            output: String(h.output ?? '').slice(0, 80),
+            ailsaHex: h.ailsaHex.slice(0, 80),
+          })),
+          ailsaMessages: relay.ailsaMessages,
+        });
+      } catch (e) {
+        sendJson(400, { error: String(e) });
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'text/plain' });
   res.end('not found');
 });
-
 server.listen(WEB_PORT, () => {
   console.log('═'.repeat(60));
   console.log('  ArcAsha Web Console');

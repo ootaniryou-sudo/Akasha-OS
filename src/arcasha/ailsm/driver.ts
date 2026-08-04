@@ -43,9 +43,10 @@ export interface ExpertDriver {
   readonly abiVersion: AbiVersion;
   readonly capability: CapabilityAbi;
   supports(opcode: number): boolean;
-  invoke(req: DriverRequest): DriverResponse;
+  /** Mock は同期 / 実LLMは非同期。呼び出し側は await を兼ねる */
+  invoke(req: DriverRequest): DriverResponse | Promise<DriverResponse>;
   /** Long Context ABI: ContextRef を受け取り、供給されたページだけを処理する */
-  invokeContext?(req: ContextDriverRequest): DriverResponse;
+  invokeContext?(req: ContextDriverRequest): DriverResponse | Promise<DriverResponse>;
 }
 
 export class MockExpertDriver implements ExpertDriver {
@@ -146,6 +147,13 @@ export class MockExpertDriver implements ExpertDriver {
     if (this.id === 'search') {
       if (instr.opcode === Opcode.SEARCH || instr.opcode === SearchOpcode.QUERY || instr.opcode === Task.SEARCH) {
         return { trace: `SEARCH(${s})`, result: '[doc1, doc2, doc3]' };
+      }
+      return null;
+    }
+
+    if (this.id === 'planning' || this.id === 'reasoning') {
+      if (instr.opcode === Task.SUMMARIZE || instr.opcode === 0x0a) {
+        return { trace: `PLAN(${s})`, result: `plan: ${s.slice(0, 24)}` };
       }
       return null;
     }

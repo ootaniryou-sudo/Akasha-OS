@@ -5,10 +5,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.20** |
+| Status | **Draft v0.21** |
 | Date | 2026-08-05 |
 | Owner | ArcAsha Core Team |
-| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様） |
+| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系） |
 
 ---
 
@@ -500,6 +500,8 @@ v0.19（Phase 0.22）では **AI Memory Hierarchy を完成**。① Context Chun
 
 v0.20（Phase 0.23）では **計測器（Observability）** を追加。「OS を増やすより計測器を増やす」— Compiler/Optimizer/Runtime/Memory に加えて **aiperf**（Context Fault Rate / TLB Hit Rate / Memory Tier / CALL統計 / Expert利用率）、**AI Trace**（Chrome Trace 互換の Runtime/Scheduler Timeline）、**AI Profiler**（Hot Expert / Hot Context / Hot Pages / Fault Hotspot）、**AI Benchmark**（Long Context 比較: Token削減率 77.1% / Speedup 3.53x）を実装（`AI_OBSERVABILITY.md`）。これで ArcAsha は「設計・実行・計測・評価まで一貫した AI システム基盤」になる。
 
+v0.21（Phase 1 実行系）では **設計から実動へ**。① **実LLM Driver**（Mock → Qwen2.5: `RemoteDriver` + `ModelClient`、非同期化で互換維持）② **Multi-expert AILSA Relay**（Planner→Math→Search→Reasoning→Planner を AILSA だけで通信、5ホップ全 ok）③ **Hub = AI OS 本体**（`demo-web.ts` を init に: `/api/ailsm` / `/api/relay` / `/api/device-tree`、ODAR 学習を実測）④ **Device Tree 実働**（接続実機を自動登録、`routeCall`）⑤ **分散 Context**（ページをデバイスへ配置、分散 Fault）⑥ **Capability オンライン学習**（`CapabilityLearner`: EMA で Static Scheduler → Learning Scheduler、Capability SSA を in-place 更新）（`AI_RUNTIME_PHASE1.md`）。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -790,6 +792,12 @@ Case2（AILSA）:
 | **0.21** | ✅ **Execution Context / Context Switch / Demand Paging / Context Fault / Prefetcher** | `execution.ts`, `demand-paging.ts`（save/restore / contextFault / prefetch） | 完了（思考途中の保存・復元 / Fault ロード / 先読み を確認） |
 | **0.22** | ✅ **AI Memory Hierarchy**（Chunk/Span 階層 / Cursor/Attention / Reasoning Stack / Context TLB / Hot-Warm-Cold Tier） | `chunk.ts`, `context-tlb.ts`, `tier.ts` + `execution.ts`（Frame） | 完了（Equation スパン分類 / TLB hit / branch merge / Tier 昇格 を確認） |
 | **0.23** | ✅ **Observability**（aiperf / AI Trace / AI Profiler / AI Benchmark） | `perf.ts`, `trace.ts`, `profiler.ts`, `benchmark.ts`, `observability.ts` | 完了（Token削減 77.1% / Speedup 3.53x / Chrome Trace 互換 を確認） |
+| **1.0** | ✅ **実LLM Driver**（Mock → Qwen2.5 / Phi / Gemma） | `model-client.ts`, `remote-driver.ts`（RemoteDriver + 非同期化） | 完了（Mock 検証 / ABI 交渉 / Long Context ABI 対応） |
+| **1.1** | ✅ **Multi-expert AILSA Relay**（Planner→Math→Search→Reasoning→Planner） | `relay.ts`（runRelay: Expert→Expert を AILSA で通信） | 完了（5ホップ全 ok / 値伝播 / 生CALL連鎖） |
+| **1.2** | ✅ **Hub = AI OS 本体** | `aios.ts`（initAiOs）+ `demo-web.ts`（/api/ailsm・/relay・/device-tree） | 完了（math/search 委譲 + ODAR 学習を API で実測） |
+| **1.3** | ✅ **Device Tree 実働**（Mac / iPhone / iPad へ CALL） | `device-router.ts`（registerHubDevices / routeCall） | 完了（実機自動登録 / 決定論ルーティング） |
+| **1.4** | ✅ **分散 Context**（ページをデバイスへ配置） | `device-router.ts`（assignPageDevice / distributedFault） | 完了（Page→デバイス / 分散 Fault） |
+| **2** | ✅ **Capability オンライン学習（ODAR 完成）** | `learning.ts`（CapabilityLearner: EMA / score / pick / updateCapabilitySsa） | 完了（Static → Learning Scheduler / SSA in-place 更新） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |

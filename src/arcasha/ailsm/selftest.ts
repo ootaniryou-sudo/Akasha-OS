@@ -40,6 +40,13 @@ import { AiTrace, buildRuntimeTrace, buildSchedulerTrace, renderTimeline } from 
 import { AiProfiler } from './profiler.js';
 import { defaultQuestions, pageKindOfIndex, runLongContextBenchmark, synthesizeContext } from './benchmark.js';
 import { runObservabilityDemo } from './observability.js';
+import { MockModelClient } from './model-client.js';
+import { RemoteDriver } from './remote-driver.js';
+import { runRelay } from './relay.js';
+import { registerHubDevices, routeCall, assignPageDevice, pageDevice, distributedFault } from './device-router.js';
+import { CapabilityLearner, updateCapabilitySsa } from './learning.js';
+import { initAiOs, aiosExecute, aiosRelay } from './aios.js';
+import { AilsmBuilder } from './ailsm.js';
 
 let failed = 0;
 
@@ -65,6 +72,8 @@ function expectThrow(name: string, fn: () => unknown): void {
 console.log('═'.repeat(60));
 console.log('  AILSM Phase 0.5 — Self Test');
 console.log('═'.repeat(60));
+
+async function main(): Promise<void> {
 
 // [1] 方程式を解く
 console.log('\n[1] 方程式');
@@ -377,16 +386,16 @@ check('DeviceTree describe に gpu/battery 情報', dtree.describe().includes('p
 // [23] Local Expert Runtime（1台のPCで2 Expert が AILSA で通信）
 console.log('\n[23] Local Expert Runtime');
 const booted = boot();
-check('Driver 3種登録（math/search/reasoning）', booted.drivers.size === 3);
-const ex1 = runtimeExecute('x^2を積分して', booted);
+check('Driver 4種登録（math/search/planning/reasoning）', booted.drivers.size === 4);
+const ex1 = await runtimeExecute('x^2を積分して', booted);
 check('積分 → math Driver へ委譲', ex1.driverId === 'math', String(ex1.driverId));
 check('Driver 結果が返る', typeof ex1.result === 'string' && (ex1.result as string).includes('∫'));
 check('結果が Kernel 経由で Memory 保存', ex1.finalGraph.nodes.some((n) => n.kind === 'memory' && n.attrs.key === 'result'));
 check('プロセス finished', ex1.finalGraph.nodes.some((n) => n.kind === 'process' && n.attrs.state === 'finished'));
-const ex2 = runtimeExecute('Webで記事を検索して', booted);
+const ex2 = await runtimeExecute('Webで記事を検索して', booted);
 check('検索 → search Driver へ委譲', ex2.driverId === 'search', String(ex2.driverId));
 check('search 結果 [doc1..]', ex2.result === '[doc1, doc2, doc3]', String(ex2.result));
-const ex3 = runtimeExecute('2と3を足して', booted);
+const ex3 = await runtimeExecute('2と3を足して', booted);
 check('ローカル解決は Driver 不要（result=5）', ex3.driverId === null && ex3.result === null);
 
 // [24] Context SSA（長文・PDF・コードを表すノード）
@@ -597,6 +606,85 @@ check('Reasoning Stack: branchA/branchB を merge', mh.frameLabels.join(',') ===
 check('Memory Tier: HOT/WARM/COLD が揃う', mh.tiers.hot === 1 && mh.tiers.warm === 1 && mh.tiers.cold >= 1);
 check('Cursor/Attention で途中再開可能', mh.cursor === 391 && mh.attention.includes('Equation#5') && mh.currentChunk !== null && mh.currentSpan !== null);
 
+// [44] Remote Driver（実LLM: MockModelClient で検証）
+console.log('\n[44] Remote Driver（実LLM接続）');
+const rmc = new MockModelClient({ 'x^2を積分して': '∫x² dx = x³/3 + C' });
+const rd44 = new RemoteDriver('remote:mock-qwen-1.5b', 'Qwen@mock', rmc, { deviceId: 'mock-qwen-1.5b' });
+const rdRes = await rd44.invoke({ program: [{ opcode: MathOpcode.INTEGRAL, slots: [{ slot: Slot.INPUT, value: 'x^2を積分して' }] }], abiVersion: ABI_VERSION_1_0 });
+check('RemoteDriver が実LLM相当で応答', rdRes.ok && rdRes.result === '∫x² dx = x³/3 + C');
+check('RemoteDriver が使用デバイスを記録', rd44.lastNode?.nodeId === 'mock-qwen-1.5b');
+const rdAbi = await rd44.invoke({ program: [], abiVersion: { major: 1, minor: 1 } });
+check('RemoteDriver ABI 不整合 → UNSUPPORTED_ABI', !rdAbi.ok && rdAbi.error?.code === 2002);
+
+// [45] Multi-expert AILSA Relay（Expert→Expert 通信）
+console.log('\n[45] AILSA Relay');
+const booted45 = boot();
+const relay45 = await runRelay(booted45, [
+  { expert: 'planning', input: '本を要約して' },
+  { expert: 'math', input: 'x^2-4=0を解いて' },
+  { expert: 'search', input: 'Webで記事を検索して' },
+  { expert: 'reasoning', input: '結論をまとめて' },
+  { expert: 'planning', input: '本を要約して' },
+]);
+check('Relay が 5 ホップ（Planner→Math→Search→Reasoning→Planner）', relay45.hops.length === 5);
+check('各ホップが AILSA プログラム（hex）を保持', relay45.hops.every((h) => h.ailsaHex.length > 0));
+check('AILSA メッセージ一覧', relay45.ailsaMessages.length === 5 && relay45.ailsaMessages[1].includes('CALL math'));
+const relay45b = await runRelay(booted45, [
+  { expert: 'math', input: 'x^2-4=0を解いて' },
+  { expert: 'search', input: '' },
+]);
+check('Expert→Expert で値が伝播（solution(...) が次の INPUT へ）', relay45b.hops[1].input === 'solution(x^2-4=0)', relay45b.hops[1].input);
+check('連鎖ホップは生の AILSA CALL として送られる', relay45b.hops[1].ailsaHex.startsWith('30'), relay45b.hops[1].ailsaHex.slice(0, 4));
+
+// [46] Device Router（Mac / iPhone / iPad へルーティング）
+console.log('\n[46] Device Router');
+const dt46 = new DeviceTree();
+dt46.registerNode({ id: 'local-pc', arch: 'arm64', cpu: 'Apple Silicon', ramMB: 16384, language: 'ja', cost: 0.1 });
+registerHubDevices(dt46, [{ nodeId: 'node-ios-iphone15', modelId: 'Qwen/Qwen2.5-1.5B-Instruct', paramsM: 1540 }]);
+check('実ノードが DeviceTree に登録', dt46.node('node-ios-iphone15') !== undefined);
+check('routeCall が Mac/ローカルを優先', routeCall(dt46) === 'local-pc');
+check('routeCall が優先指定を尊重', routeCall(dt46, 'node-ios-iphone15') === 'node-ios-iphone15');
+const dr46 = createContext({ nodes: [], edges: [] }, 'dist', '0123456789abcdef', 8);
+const pageA46 = pagesOf(dr46.graph, dr46.contextId)[0].id;
+const g46 = assignPageDevice(dr46.graph, pageA46, 'node-ios-iphone15');
+check('ページをデバイスへ配置（分散Context）', pageDevice(g46, pageA46) === 'node-ios-iphone15');
+
+// [47] 分散 Context Fault（デバイスからページ取得）
+console.log('\n[47] 分散 Context Fault');
+const client47 = new MockModelClient({});
+const df47 = await distributedFault(client47, 'node-ios-iphone15', 'ページ本文: x^2+2x+1=0');
+check('分散 Fault が実デバイスから取得', df47.fromDevice === 'node-ios-iphone15' && df47.text.includes('mock') && df47.ms >= 0);
+
+// [48] Capability オンライン学習（ODAR 完成）
+console.log('\n[48] Capability オンライン学習');
+const learner48 = new CapabilityLearner();
+learner48.observe('math', { accuracy: 0.9, latencyMs: 20, cost: 0.2 });
+const c48 = learner48.get('math');
+check('EMA で能力値を更新（latency が 100→20 方向へ）', c48.samples === 1 && c48.accuracy > 0.5 && c48.latencyMs < 100);
+learner48.observe('math', { accuracy: 0.5, latencyMs: 100, cost: 0.8 });
+check('2回目の観測で学習が進む', learner48.get('math').samples === 2 && learner48.get('math').accuracy < c48.accuracy);
+learner48.observe('search', { accuracy: 0.3, latencyMs: 200, cost: 0.9 });
+check('Learning Scheduler が学習値で math を選ぶ', learner48.pick(['math', 'search']) === 'math');
+const b48 = new AilsmBuilder();
+const task48 = b48.addNode('task', 'solve', 'unknown', {});
+const g48 = b48.graph();
+const upd48 = updateCapabilitySsa(g48, task48, 'math', { accuracy: 0.9, latencyMs: 25, cost: 0.2 });
+check('Capability SSA に学習値を反映', upd48.graph.nodes.some((n) => n.kind === 'capability' && n.attrs.expert === 'math' && n.attrs.accuracy === 0.9));
+const upd48b = updateCapabilitySsa(upd48.graph, task48, 'math', { accuracy: 0.8, latencyMs: 30, cost: 0.3 });
+check('Capability ノードを in-place 更新（重複しない）', upd48b.graph.nodes.filter((n) => n.kind === 'capability').length === 1 && upd48b.graph.nodes.some((n) => n.attrs.learned === true));
+
+// [49] AI OS Init（Hub = AI OS 本体）
+console.log('\n[49] AI OS Init');
+const aios49 = initAiOs();
+check('AI OS 起動（mock デバイス 2 台 + RemoteDriver）', aios49.remoteDrivers.size === 2 && aios49.booted.deviceTree.list().length >= 3);
+const aex49 = await aiosExecute(aios49, '2と3を足して');
+check('ローカル解決はドライバ不要（デバイスは割当済み）', aex49.driverId === null && aex49.result === null && aex49.deviceId !== null);
+const aex49b = await aiosExecute(aios49, 'x^2を積分して');
+check('CALL → 実デバイス（RemoteDriver）へ委譲', aex49b.driverId?.includes('remote:') === true && aex49b.deviceId !== null && aex49b.result !== null);
+check('ODAR が実実行の観測を学習', aios49.learner.get(String(aex49b.driverId)).samples >= 1);
+const rel49 = await aiosRelay(aios49, [{ expert: 'math', input: 'x^2-4=0を解いて' }, { expert: 'math', input: '' }]);
+check('AI OS でリレー実行', rel49.hops.length === 2 && rel49.hops[1].input === 'solution(x^2-4=0)');
+
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');
 const perf39 = new AiPerf();
@@ -680,3 +768,6 @@ if (failed === 0) {
   process.exitCode = 1;
 }
 console.log('═'.repeat(60));
+}
+
+main();
