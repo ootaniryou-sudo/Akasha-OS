@@ -12,10 +12,13 @@
  */
 import http from 'node:http';
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { ExpertHub } from './experts/registry.js';
 import { initAiOs, aiosExecute, aiosRelay, syncAiOs } from './ailsm/aios.js';
 import { toHex } from './ailsm/compiler.js';
 import { encodeProgram } from './ailsa/encoder.js';
+import { runComparisonBenchmark } from './ailsm/comparison.js';
+import { runScalingExperiment, renderScaling } from './ailsm/experiment.js';
 
 let WS_PORT = Number(process.env.PORT ?? 8080);
 let WEB_PORT = Number(process.env.WEB_PORT ?? 4173);
@@ -35,6 +38,45 @@ const aios = initAiOs({
   generate: async (nodeId, prompt, maxTokens = 64) =>
     hub.generate(nodeId, String(prompt), Number(maxTokens) || 64),
 });
+
+// ─── AI OS Monitor（Phase 2.1）────────────────────────────────────────
+const recentExecs: {
+  text: string;
+  driverId: string | null;
+  deviceId: string | null;
+  ms: number;
+  result: string | number | null;
+  steps: string[];
+  ailsaHex: string;
+  ok: boolean;
+}[] = [];
+
+function pushRecent(ex: {
+  text: string;
+  driverId: string | null;
+  deviceId: string | null;
+  ms: number;
+  result: string | number | null;
+  steps: string[];
+  ailsaHex: string;
+  ok: boolean;
+}): void {
+  recentExecs.unshift(ex);
+  if (recentExecs.length > 20) recentExecs.pop();
+}
+
+let monitorCache: { scaling: string; comparison: string } | null = null;
+function monitorData(): { scaling: string; comparison: string } {
+  if (!monitorCache) {
+    const scaling = runScalingExperiment([100, 500, 1000]);
+    const cmp = runComparisonBenchmark();
+    monitorCache = {
+      scaling: renderScaling(scaling),
+      comparison: cmp.table,
+    };
+  }
+  return monitorCache;
+}
 
 // ─── ダッシュボード HTML ────────────────────────────────────────────────
 const html = `<!DOCTYPE html>
@@ -83,7 +125,7 @@ const html = `<!DOCTYPE html>
 <body>
 <div class="wrap">
   <h1>Aka<span>sha</span> Web Console</h1>
-  <div class="sub">マスター (Mac) から マルチノード推論を操作 — iPad / iPhone の Metal で実行</div>
+  <div class="sub">マスター (Mac) から マルチノード推論を操作 — iPad / iPhone の Metal で実行 · <a href="/monitor" style="color:var(--go)">AI OS Monitor ↗</a></div>
 
   <div class="card">
     <h2>接続ノード</h2>
@@ -251,6 +293,17 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (url.pathname === '/monitor' || url.pathname === '/monitor.html') {
+    try {
+      const m = readFileSync(new URL('../../public/aios-monitor.html', import.meta.url), 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(m);
+    } catch {
+      sendJson(404, { error: 'monitor not found' });
+    }
+    return;
+  }
+
   if (url.pathname === '/api/nodes') {
     sendJson(200, { nodes: hub.experts.map((e) => ({ nodeId: e.nodeId, modelId: e.modelId, paramsM: e.paramsM })) });
     return;
@@ -296,6 +349,19 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ─── AI OS Monitor API（Phase 2.1）────────────────────────────────
+  if (url.pathname === '/api/monitor') {
+    syncAiOs(aios);
+    sendJson(200, {
+      devices: aios.client.listNodes(),
+      learner: aios.learner.all(),
+      recent: recentExecs,
+      scaling: monitorData().scaling,
+      comparison: monitorData().comparison,
+    });
+    return;
+  }
+
   // ─── AI OS API（Phase 1.2）─────────────────────────────────────────
   if (url.pathname === '/api/device-tree') {
     syncAiOs(aios); // 接続済み実機を DeviceTree / RemoteDriver へ遅延登録
@@ -316,6 +382,16 @@ const server = http.createServer((req, res) => {
         const { text, deviceId } = JSON.parse(body);
         if (!text) { sendJson(400, { error: 'text required' }); return; }
         const ex = await aiosExecute(aios, String(text), deviceId ? String(deviceId) : undefined);
+        pushRecent({
+          text: String(text),
+          driverId: ex.driverId,
+          deviceId: ex.deviceId,
+          ms: ex.ms,
+          result: ex.result,
+          steps: ex.trace.steps.map((s) => s.kind),
+          ailsaHex: toHex(encodeProgram(ex.compile.instructions)),
+          ok: ex.driverResponse?.ok ?? false,
+        });
         sendJson(200, {
           text: String(text),
           result: ex.result,

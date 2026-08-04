@@ -57,8 +57,14 @@ export async function runRelay(
     let program: Instruction[];
     let ailsaHex: string;
     if (step.input !== '') {
-      // 明示入力: コンパイルして AILSA プログラム化
-      program = compile(input).instructions;
+      // 明示入力: コンパイルして AILSA プログラム化（コンパイル不能は生 CALL へ = Stage-2 委譲）
+      try {
+        program = compile(input).instructions;
+      } catch {
+        program = [
+          { opcode: Opcode.CALL, slots: [{ slot: Slot.EXPERT, value: step.expert }, { slot: Slot.INPUT, value: input }] },
+        ];
+      }
       ailsaHex = toHex(encodeProgram(program));
     } else {
       // 連鎖: 前ホップの出力をそのまま INPUT に載せた CALL（再コンパイルしない）

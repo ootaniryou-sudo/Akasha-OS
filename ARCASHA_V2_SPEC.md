@@ -5,10 +5,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.21** |
+| Status | **Draft v0.22** |
 | Date | 2026-08-05 |
 | Owner | ArcAsha Core Team |
-| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系） |
+| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価） |
 
 ---
 
@@ -502,6 +502,8 @@ v0.20（Phase 0.23）では **計測器（Observability）** を追加。「OS �
 
 v0.21（Phase 1 実行系）では **設計から実動へ**。① **実LLM Driver**（Mock → Qwen2.5: `RemoteDriver` + `ModelClient`、非同期化で互換維持）② **Multi-expert AILSA Relay**（Planner→Math→Search→Reasoning→Planner を AILSA だけで通信、5ホップ全 ok）③ **Hub = AI OS 本体**（`demo-web.ts` を init に: `/api/ailsm` / `/api/relay` / `/api/device-tree`、ODAR 学習を実測）④ **Device Tree 実働**（接続実機を自動登録、`routeCall`）⑤ **分散 Context**（ページをデバイスへ配置、分散 Fault）⑥ **Capability オンライン学習**（`CapabilityLearner`: EMA で Static Scheduler → Learning Scheduler、Capability SSA を in-place 更新）（`AI_RUNTIME_PHASE1.md`）。
 
+v0.22（評価フェーズ）では **「巨大化」ではなく「優れていることを証明する」**。① **方式比較**（`comparison.ts`: RAG / KV Cache / MoE / Agent / MCP / Long Context と比較 — 全読方式の 4 倍以上高速、RAG より高精度 0.90 vs 0.85）② **Fault スケーリング実験**（`experiment.ts`: 100→5000 ページで Token削減 77% / Speedup 3.5x が完全安定 = スケールする設計）③ **AI OS Monitor**（`public/aios-monitor.html`: top/htop/perf/systemd-analyze 全部入りのリアルタイム可視化 + `/api/monitor`）④ **ODAR マルチシグナル学習**（success / battery / gpu を EMA で学習）⑤ **専門 Expert 10 種**（math/search/programming/vision/planning/translate/summarizer/retriever/reasoning/memory、10 Expert リレー全ホップ成功）（`AI_EVALUATION.md`）。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -798,6 +800,10 @@ Case2（AILSA）:
 | **1.3** | ✅ **Device Tree 実働**（Mac / iPhone / iPad へ CALL） | `device-router.ts`（registerHubDevices / routeCall） | 完了（実機自動登録 / 決定論ルーティング） |
 | **1.4** | ✅ **分散 Context**（ページをデバイスへ配置） | `device-router.ts`（assignPageDevice / distributedFault） | 完了（Page→デバイス / 分散 Fault） |
 | **2** | ✅ **Capability オンライン学習（ODAR 完成）** | `learning.ts`（CapabilityLearner: EMA / score / pick / updateCapabilitySsa） | 完了（Static → Learning Scheduler / SSA in-place 更新） |
+| **2.0** | ✅ **評価**（方式比較 + Fault スケーリング実験） | `comparison.ts`, `experiment.ts` | 完了（全読の 4 倍以上高速 / 77% 削減が 5000p まで安定） |
+| **2.1** | ✅ **AI OS Monitor**（リアルタイム可視化） | `public/aios-monitor.html` + `/api/monitor` | 完了（Live Pipeline / Device / ODAR / ベンチ表） |
+| **2.2** | ✅ **ODAR マルチシグナル学習**（success/battery/gpu） | `learning.ts`（EMA 拡張 / score 改良） | 完了（残量・GPU を学習してルーティング） |
+| **3.0** | ✅ **専門 Expert 10 種** | `driver.ts` / `expert-runtime.ts` | 完了（10 Expert リレー全ホップ成功） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |

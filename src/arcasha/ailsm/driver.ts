@@ -158,6 +158,19 @@ export class MockExpertDriver implements ExpertDriver {
       return null;
     }
 
+    // 専門 Expert（Phase 3.0: 10 種）— 決定論の canned 応答
+    const CANNED: Record<string, (t: string) => string> = {
+      programming: (t) => `code: function solve() { /* ${t} */ }`,
+      vision: (t) => `vision: [${t}] を解析 → 物体 3 件 / テキスト 1 件`,
+      translate: (t) => `translate: "${t}" → English: ${t.replace(/\s+/g, ' ')}`,
+      summarizer: (t) => `summary: ${t.slice(0, 16)}...（${t.length}字）`,
+      retriever: (t) => `retrieve: [doc-${t.length}] を取得`,
+      memory: (t) => `memory: "${t.slice(0, 14)}" を保存しました`,
+    };
+    if (CANNED[this.id]) {
+      return { trace: `${this.id.toUpperCase()}(${s})`, result: CANNED[this.id](s) };
+    }
+
     return null;
   }
 }

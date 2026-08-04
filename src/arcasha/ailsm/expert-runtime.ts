@@ -43,10 +43,14 @@ export function boot(): BootResult {
   });
 
   const drivers = new Map<string, ExpertDriver>();
-  drivers.set('math', new MockExpertDriver('math', 'Math Expert'));
-  drivers.set('search', new MockExpertDriver('search', 'Search Expert'));
-  drivers.set('planning', new MockExpertDriver('planning', 'Planning Expert'));
-  drivers.set('reasoning', new MockExpertDriver('reasoning', 'Reasoning Expert'));
+  // Phase 3.0: 専門 Expert 10 種
+  const EXPERT_10 = [
+    'math', 'search', 'programming', 'vision', 'planning',
+    'translate', 'summarizer', 'retriever', 'reasoning', 'memory',
+  ];
+  for (const id of EXPERT_10) {
+    drivers.set(id, new MockExpertDriver(id, `${id} Expert`));
+  }
 
   return { deviceTree, drivers, kernel: new AIKernel() };
 }

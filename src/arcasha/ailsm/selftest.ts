@@ -47,6 +47,8 @@ import { registerHubDevices, routeCall, assignPageDevice, pageDevice, distribute
 import { CapabilityLearner, updateCapabilitySsa } from './learning.js';
 import { initAiOs, aiosExecute, aiosRelay } from './aios.js';
 import { AilsmBuilder } from './ailsm.js';
+import { runComparisonBenchmark } from './comparison.js';
+import { runScalingExperiment, renderScaling } from './experiment.js';
 
 let failed = 0;
 
@@ -386,7 +388,7 @@ check('DeviceTree describe に gpu/battery 情報', dtree.describe().includes('p
 // [23] Local Expert Runtime（1台のPCで2 Expert が AILSA で通信）
 console.log('\n[23] Local Expert Runtime');
 const booted = boot();
-check('Driver 4種登録（math/search/planning/reasoning）', booted.drivers.size === 4);
+check('Driver 10種登録（専門Expert）', booted.drivers.size === 10);
 const ex1 = await runtimeExecute('x^2を積分して', booted);
 check('積分 → math Driver へ委譲', ex1.driverId === 'math', String(ex1.driverId));
 check('Driver 結果が返る', typeof ex1.result === 'string' && (ex1.result as string).includes('∫'));
@@ -692,6 +694,65 @@ lateClient.addNode({ nodeId: 'node-ios-iphone15', modelId: 'Qwen/Qwen2.5-1.5B-In
 const aexLate = await aiosExecute(aiosLate, 'x^2を積分して');
 check('起動後に接続した実機へ遅延委譲', aexLate.driverId === 'remote:node-ios-iphone15' && aexLate.deviceId === 'node-ios-iphone15', String(aexLate.driverId));
 check('DeviceTree に遅延登録', aiosLate.booted.deviceTree.node('node-ios-iphone15') !== undefined);
+
+// [50] 専門 Expert 10 種（Phase 3.0）
+console.log('\n[50] Expert 10 種');
+const booted50 = boot();
+check('10 種の専門 Expert が登録', booted50.drivers.size === 10);
+const prog50 = await booted50.drivers.get('programming')!.invoke({ program: [{ opcode: MathOpcode.EQ, slots: [{ slot: Slot.INPUT, value: 'sort array' }] }], abiVersion: ABI_VERSION_1_0 });
+check('programming Expert が応答', prog50.ok && String(prog50.result).includes('code'));
+const tr50 = await booted50.drivers.get('translate')!.invoke({ program: [{ opcode: MathOpcode.EQ, slots: [{ slot: Slot.INPUT, value: 'こんにちは' }] }], abiVersion: ABI_VERSION_1_0 });
+check('translate Expert が応答', tr50.ok && String(tr50.result).includes('translate'));
+const mem50 = await booted50.drivers.get('memory')!.invoke({ program: [{ opcode: MathOpcode.EQ, slots: [{ slot: Slot.INPUT, value: '覚えておいて' }] }], abiVersion: ABI_VERSION_1_0 });
+check('memory Expert が応答', mem50.ok && String(mem50.result).includes('保存'));
+
+// [51] 方式比較ベンチマーク（論文 Table）
+console.log('\n[51] 方式比較');
+const cmp51 = runComparisonBenchmark();
+check('比較表に 7 行（6 方式 + ArcAsha）', cmp51.rows.length === 7);
+const arc51 = cmp51.rows.find((r) => r.method.includes('Ours'))!;
+const qwen51 = cmp51.rows.find((r) => r.method.includes('Long Context'))!;
+const rag51 = cmp51.rows.find((r) => r.method.includes('RAG'))!;
+check('ArcAsha の読むトークン < Qwen 全読', arc51.readTokens < qwen51.readTokens, `${arc51.readTokens} < ${qwen51.readTokens}`);
+check('ArcAsha の Latency < Qwen Long Context', arc51.latencyMs < qwen51.latencyMs, `${arc51.latencyMs} < ${qwen51.latencyMs}`);
+check('ArcAsha は RAG より高精度', arc51.accuracy > rag51.accuracy, `${arc51.accuracy} > ${rag51.accuracy}`);
+check('比較表が Markdown で描画', cmp51.table.includes('| 方式 |') && cmp51.table.includes('ArcAsha AVM'));
+
+// [52] Fault スケーリング実験（100 / 500 / 1000 ページ）
+console.log('\n[52] Fault スケーリング');
+const scale52 = runScalingExperiment([100, 500, 1000]);
+check('3 レベルで実験', scale52.length === 3);
+check('全レベルで Token 削減 > 50%', scale52.every((r) => r.tokenReduction > 50));
+check('全レベルで Speedup > 1', scale52.every((r) => r.speedup > 1));
+check('ページ増加で Fault 率が収束（≤60%）', scale52.every((r) => r.faultRate <= 60));
+check('スケーリング表が描画', renderScaling(scale52).includes('| Pages |'));
+
+// [53] ODAR マルチシグナル学習（success / battery / gpu）
+console.log('\n[53] ODAR マルチシグナル');
+const learner53 = new CapabilityLearner();
+learner53.observe('math', { accuracy: 0.9, latencyMs: 20, cost: 0.2, success: true, battery: 0.8, gpu: 0.9 });
+const c53 = learner53.get('math');
+check('success/battery/gpu を EMA 学習', c53.successRate > 0.5 && c53.avgBattery > 0.5 && c53.avgGpu > 0.5);
+learner53.observe('math', { accuracy: 0.9, latencyMs: 20, cost: 0.2, success: true, battery: 0.9, gpu: 0.2 });
+check('2回目で学習が進む', learner53.get('math').samples === 2 && learner53.get('math').avgGpu < c53.avgGpu);
+const l53x = new CapabilityLearner();
+l53x.observe('a', { accuracy: 0.9, latencyMs: 30, cost: 0.2, success: true, battery: 0.9 });
+l53x.observe('b', { accuracy: 0.9, latencyMs: 30, cost: 0.2, success: true, battery: 0.3 });
+check('残量が多い Expert を学習で選ぶ', l53x.score('a') > l53x.score('b'));
+
+// [54] 10 Expert リレー（Planner→Search→Math→Reasoning→Programming→Translate→Planner）
+console.log('\n[54] 10 Expert リレー');
+const relay54 = await runRelay(booted50, [
+  { expert: 'planning', input: '本を要約して' },
+  { expert: 'search', input: 'Webで記事を検索して' },
+  { expert: 'math', input: 'x^2-4=0を解いて' },
+  { expert: 'reasoning', input: '結論をまとめて' },
+  { expert: 'programming', input: 'sort array' },
+  { expert: 'translate', input: 'こんにちは' },
+  { expert: 'planning', input: '本を要約して' },
+]);
+check('7 ホップがすべて成功', relay54.hops.length === 7 && relay54.hops.every((h) => h.ok));
+check('AILSA メッセージが各ホップに', relay54.ailsaMessages.length === 7 && relay54.ailsaMessages[4].includes('CALL programming'));
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

@@ -18,6 +18,9 @@ export interface CapabilityObservation {
   accuracy: number; // 0-1（正解率・成功確率）
   latencyMs: number;
   cost: number;
+  success?: boolean; // 実行成功（1.0 / 0.0）
+  battery?: number; // 0-1（デバイス残量）
+  gpu?: number; // 0-1（GPU 使用率）
 }
 
 export interface LearnedCapability {
@@ -26,9 +29,15 @@ export interface LearnedCapability {
   latencyMs: number;
   cost: number;
   samples: number;
+  successRate: number; // 成功率（EMA）
+  avgBattery: number; // 平均残量
+  avgGpu: number; // 平均 GPU 使用率
 }
 
-const DEFAULT_CAP: Omit<LearnedCapability, 'expert'> = { accuracy: 0.5, latencyMs: 100, cost: 0.5, samples: 0 };
+const DEFAULT_CAP: Omit<LearnedCapability, 'expert'> = {
+  accuracy: 0.5, latencyMs: 100, cost: 0.5, samples: 0,
+  successRate: 0.5, avgBattery: 0.5, avgGpu: 0.5,
+};
 
 export class CapabilityLearner {
   private readonly caps = new Map<string, LearnedCapability>();
@@ -38,7 +47,7 @@ export class CapabilityLearner {
     this.alpha = alpha;
   }
 
-  /** 実実行の観測で能力値を更新（EMA） */
+  /** 実実行の観測で能力値を更新（EMA — success/battery/gpu も学習） */
   observe(expert: string, obs: CapabilityObservation): LearnedCapability {
     const prev = this.caps.get(expert) ?? { expert, ...DEFAULT_CAP };
     const w = this.alpha;
@@ -48,6 +57,9 @@ export class CapabilityLearner {
       latencyMs: prev.latencyMs * (1 - w) + obs.latencyMs * w,
       cost: prev.cost * (1 - w) + obs.cost * w,
       samples: prev.samples + 1,
+      successRate: prev.successRate * (1 - w) + (obs.success === undefined ? prev.successRate : (obs.success ? 1 : 0)) * w,
+      avgBattery: prev.avgBattery * (1 - w) + (obs.battery === undefined ? prev.avgBattery : obs.battery) * w,
+      avgGpu: prev.avgGpu * (1 - w) + (obs.gpu === undefined ? prev.avgGpu : obs.gpu) * w,
     };
     this.caps.set(expert, next);
     return next;
@@ -61,10 +73,17 @@ export class CapabilityLearner {
     return [...this.caps.values()];
   }
 
-  /** スコア: 精度が高く・速く・安いほど良い（Latency/Cost は正規化） */
+  /**
+   * スコア: 精度が高く・速く・安く・成功し・残量が多く・GPU が空いているほど良い。
+   * 「今日は iPad の方が速い」「この Expert は最近失敗が多い」を学習で反映。
+   */
   score(expert: string): number {
     const c = this.get(expert);
-    return c.accuracy / (c.latencyMs / 100 + c.cost + 0.1);
+    const latencyPenalty = c.latencyMs / 100;
+    const successBoost = c.successRate;
+    const batteryBoost = 0.5 + c.avgBattery * 0.5;
+    const gpuBoost = 0.5 + (1 - c.avgGpu) * 0.5;
+    return (c.accuracy * successBoost * batteryBoost * gpuBoost) / (latencyPenalty + c.cost + 0.1);
   }
 
   /** Learning Scheduler: 学習済み Capability から最良 Expert を選ぶ（決定論） */

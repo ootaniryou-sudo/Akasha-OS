@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ArcAsha — AI OS Monitor</title>
+<style>
+  :root { --bg:#0b0f14; --card:#131a22; --ink:#e6f1ea; --mute:#5e7488; --go:#2fce7a; --busy:#e0b84a; --bad:#e05a4f; --line:#1e2833; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--ink); font-family:"IBM Plex Mono","SF Mono",ui-monospace,monospace; font-size:13px; min-height:100vh; }
+  .wrap { max-width:960px; margin:0 auto; padding:24px 16px 60px; }
+  h1 { font-size:24px; font-weight:800; letter-spacing:.04em; }
+  h1 span { color:var(--go); }
+  .sub { color:var(--mute); font-size:11px; margin-top:4px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-top:14px; }
+  .card h2 { font-size:12px; color:var(--mute); text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th, td { text-align:left; padding:4px 8px; border-bottom:1px solid #1a232e; }
+  th { color:var(--mute); font-weight:600; }
+  .bar { height:6px; border-radius:3px; background:#0e141b; overflow:hidden; min-width:60px; }
+  .bar > div { height:100%; border-radius:3px; }
+  .go { color:var(--go); } .busy { color:var(--busy); } .bad { color:var(--bad); } .mute { color:var(--mute); }
+  /* pipeline */
+  .pipe { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:8px; }
+  .stage { background:#0e141b; border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-size:11px; color:var(--mute); opacity:.35; transition:all .25s; }
+  .stage.on { opacity:1; border-color:var(--go); color:var(--ink); box-shadow:0 0 10px rgba(47,206,122,.25); }
+  .stage.dev { border-color:var(--busy); color:var(--ink); }
+  .arrow { color:var(--mute); }
+  .node { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid #1a232e; }
+  .node:last-child { border-bottom:none; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--go); flex:none; }
+  .dot.off { background:#24313f; }
+  .id { font-weight:700; }
+  .meta { color:var(--mute); font-size:11px; margin-left:auto; }
+  pre { white-space:pre-wrap; background:#0e141b; border:1px solid var(--line); border-radius:8px; padding:10px; font-size:11px; line-height:1.5; margin-top:8px; }
+  #status { color:var(--mute); font-size:11px; margin-top:8px; min-height:14px; }
+  .row { display:flex; justify-content:space-between; align-items:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Arc<span>Asha</span> AI OS Monitor</h1>
+  <div class="sub">top / htop / perf / systemd-analyze 全部入り — Task → Compiler → AILSM → Kernel → CALL → iPhone → RETURN → Memory</div>
+
+  <div class="card">
+    <div class="row"><h2 style="margin:0">Live Pipeline</h2><span id="status" style="margin:0">waiting…</span></div>
+    <div class="pipe" id="pipe"></div>
+    <div id="last-exe" style="margin-top:8px;font-size:11px;color:var(--mute)"></div>
+  </div>
+
+  <div class="card">
+    <h2>Device Tree</h2>
+    <div id="devices"><div class="mute">waiting…</div></div>
+  </div>
+
+  <div class="card">
+    <h2>ODAR Capability Learner</h2>
+    <div id="learner"><div class="mute">waiting…</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Recent Executions</h2>
+    <div id="recent"><div class="mute">waiting…</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Benchmark</h2>
+    <pre id="bench">loading…</pre>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const STAGES = ['input','compile','process','thread','belief','capability','schedule','call','wait'];
+const STAGE_LABEL = { input:'Input', compile:'Compiler', process:'Process', thread:'Thread', belief:'Belief', capability:'Capability', schedule:'Scheduler', call:'CALL', wait:'RETURN' };
+
+function renderPipe(steps) {
+  const pipe = $('pipe');
+  const active = new Set(steps ?? []);
+  pipe.innerHTML = STAGES.map((s, i) =>
+    `<span class="stage ${active.has(s) ? 'on' : ''}">${STAGE_LABEL[s] ?? s}</span>` +
+    (i < STAGES.length - 1 ? '<span class="arrow">→</span>' : '')
+  ).join('');
+}
+
+function renderDevices(nodes) {
+  const el = $('devices');
+  if (!nodes.length) { el.innerHTML = '<div class="mute">no device connected</div>'; return; }
+  el.innerHTML = nodes.map(n => {
+    const role = n.nodeId.includes('ipad') ? 'iPad' : n.nodeId.includes('iphone') ? 'iPhone' : 'Mac';
+    return '<div class="node"><span class="dot"></span><span class="id">' + n.nodeId +
+      '</span><span class="meta">' + role + ' · ' + n.modelId + ' · ' + n.paramsM + 'M</span></div>';
+  }).join('');
+}
+
+function renderLearner(learner) {
+  const el = $('learner');
+  if (!learner.length) { el.innerHTML = '<div class="mute">no observations yet</div>'; return; }
+  const rows = learner.map(c => {
+    const score = (c.accuracy * 100).toFixed(0);
+    const lat = c.latencyMs.toFixed(0) + 'ms';
+    const succ = (c.successRate * 100).toFixed(0) + '%';
+    return '<div class="node"><span class="dot"></span><span class="id">' + c.expert + '</span>' +
+      '<div class="bar" style="flex:1;max-width:160px"><div style="width:' + score + '%;background:var(--go)"></div></div>' +
+      '<span class="meta">acc ' + score + '% · ' + lat + ' · 成功 ' + succ + ' · n=' + c.samples + '</span></div>';
+  }).join('');
+  el.innerHTML = rows;
+}
+
+function renderRecent(recent) {
+  const el = $('recent');
+  if (!recent.length) { el.innerHTML = '<div class="mute">no executions yet</div>'; return; }
+  const rows = recent.slice(0, 10).map(r =>
+    '<div class="node"><span class="dot ' + (r.driverId ? '' : 'off') + '"></span>' +
+    '<span class="id">' + r.text.slice(0, 30) + '</span>' +
+    '<span class="meta">' + (r.driverId ?? 'local') + ' → ' + (r.deviceId ?? 'local') + ' · ' + r.ms + 'ms</span></div>'
+  ).join('');
+  el.innerHTML = rows;
+}
+
+async function tick() {
+  try {
+    const r = await fetch('/api/monitor');
+    const d = await r.json();
+    renderPipe(d.recent && d.recent[0] ? d.recent[0].steps : []);
+    renderDevices(d.devices);
+    renderLearner(d.learner);
+    renderRecent(d.recent);
+    $('bench').textContent =
+      '■ Fault スケーリング実験\n' + (d.scaling ?? '') +
+      '\n\n■ 方式比較（context=1M tokens）\n' + (d.comparison ?? '');
+    const last = d.recent && d.recent[0];
+    $('last-exe').textContent = last
+      ? ('last: "' + last.text + '" → ' + (last.driverId ?? 'local') + ' @ ' + (last.deviceId ?? 'local') + ' (' + last.ms + 'ms) · AILSA ' + last.ailsaHex.slice(0, 50) + '…')
+      : 'まだ実行履歴がありません。コンソールの「AI OS — AILSA 実行」でタスクを実行すると流れがアニメーションします。';
+    $('status').textContent = 'updated ' + new Date().toLocaleTimeString();
+  } catch (e) {
+    $('status').textContent = '❌ ' + e;
+  }
+}
+renderPipe([]);
+tick();
+setInterval(tick, 2000);
+</script>
+</body>
+</html>

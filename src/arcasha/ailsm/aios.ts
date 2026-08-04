@@ -89,10 +89,14 @@ export async function aiosExecute(aios: AiOs, text: string, deviceId?: string): 
   const resolver = (expert: string): ExpertDriver | undefined => driverFor(aios, target, expert);
   const ex = await execute(text, booted, resolver);
   if (ex.driverId && ex.driverResponse) {
+    const dev = target ? booted.deviceTree.node(target) : undefined;
     aios.learner.observe(ex.driverId, {
       accuracy: ex.driverResponse.ok ? 0.9 : 0.1,
       latencyMs: Math.max(1, ex.ms),
       cost: 0.1,
+      success: ex.driverResponse.ok,
+      battery: dev?.battery !== undefined ? dev.battery / 100 : undefined,
+      gpu: dev?.features?.gpuUsage !== undefined ? Number(dev.features.gpuUsage) : undefined,
     });
   }
   return { ...ex, deviceId: target ?? null, learned: ex.driverId !== null };
