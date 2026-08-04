@@ -8,7 +8,9 @@ import { Slot, Task } from '../ailsa/vocab.js';
 import { MathOpcode } from '../ailsa/dialect.js';
 import { compile, compileAndRun, describeGraph, toHex } from './compiler.js';
 import { execute } from './executor.js';
-import { toAsciiTree, toDot, toMermaid } from './visualizer.js';
+import { run } from './runtime.js';
+import { believe, plan, reflect, remember } from './state.js';
+import { toAsciiTree, toDot, toMermaid, toStateDiagram } from './visualizer.js';
 
 let failed = 0;
 
@@ -150,6 +152,39 @@ check('積分は Expert 委譲（needsExpert）', e4.needsExpert === true && e4.
 
 const cr = compileAndRun('7と6を掛けて');
 check('compileAndRun で 7×6=42', cr.execution.resolved && cr.execution.value === 42);
+
+// [12] AI State SSA（Memory / Belief / Plan / Reflection）
+console.log('\n[12] AI State SSA');
+const gbase = compile('x^2を積分して').optimized.graph;
+const taskId0 = gbase.nodes.find((n) => n.kind === 'task')?.id ?? 0;
+
+const mem = remember(gbase, taskId0, 'result', 5);
+check('Memory# ノード追加', mem.graph.nodes.some((n) => n.kind === 'memory' && n.attrs.key === 'result' && n.attrs.value === 5));
+const bel = believe(mem.graph, taskId0, 'math', 0.82);
+check('Belief# ノード追加（confidence=0.82）', bel.graph.nodes.some((n) => n.kind === 'belief' && n.attrs.confidence === 0.82 && n.attrs.expert === 'math'));
+const pln = plan(bel.graph, taskId0, ['DECOMPOSE', 'CALL math']);
+check('Plan# ノード追加', pln.graph.nodes.some((n) => n.kind === 'plan'));
+const refl = reflect(pln.graph, taskId0, 'precision', 'switch backend');
+check('Reflection# ノード追加', refl.graph.nodes.some((n) => n.kind === 'reflection' && n.attrs.cause === 'precision'));
+
+// Runtime: ローカル解決 → Memory SSA
+const rt1 = run('2と3を足して');
+check('runtime: ローカル解決 → Memory SSA', rt1.graph.nodes.some((n) => n.kind === 'memory'));
+check('runtime: resolvedValue=5', rt1.resolvedValue === 5);
+check('runtime: needsExpert=false', rt1.needsExpert === false);
+
+// Runtime: Expert委譲 → Belief SSA → CALL
+const rt2 = run('x^2を積分して');
+check('runtime: 積分 → Belief SSA（expert=math）', rt2.graph.nodes.some((n) => n.kind === 'belief' && n.attrs.expert === 'math'));
+check('runtime: needsExpert=true', rt2.needsExpert === true);
+check('runtime: CALL step 記録', rt2.steps.some((s) => s.kind === 'call'));
+
+// 状態遷移図
+const sd = toStateDiagram(rt2.steps);
+check('stateDiagram-v2 出力', sd.includes('stateDiagram-v2'));
+check('stateDiagram に Belief', sd.includes('Belief:'));
+console.log('  --- State Diagram ---');
+console.log(sd.split('\n').map((l) => `  ${l}`).join('\n'));
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {

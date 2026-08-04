@@ -16,7 +16,14 @@ function typeText(t: AilsmTypeRef): string {
 }
 
 function nodeIdOf(n: AilsmNode): string {
-  const prefix = n.kind === 'task' ? 'T' : n.kind === 'object' ? 'O' : 'V';
+  const prefix =
+    n.kind === 'task' ? 'T'
+    : n.kind === 'object' ? 'O'
+    : n.kind === 'value' ? 'V'
+    : n.kind === 'memory' ? 'M'
+    : n.kind === 'belief' ? 'B'
+    : n.kind === 'plan' ? 'P'
+    : 'R'; // reflection
   return `${prefix}${n.id}`;
 }
 
@@ -52,7 +59,11 @@ export function toMermaid(g: AilsmGraph): string {
     const id = nodeIdOf(n);
     if (n.kind === 'task') lines.push(`  ${id}["${label}"]`);
     else if (n.kind === 'object') lines.push(`  ${id}(["${label}"])`);
-    else lines.push(`  ${id}{"${label}"}`);
+    else if (n.kind === 'value') lines.push(`  ${id}{"${label}"}`);
+    else if (n.kind === 'memory') lines.push(`  ${id}[("${label}")]`); // シリンダー
+    else if (n.kind === 'belief') lines.push(`  ${id}/"${label}"/`); // 平行四辺形
+    else if (n.kind === 'plan') lines.push(`  ${id}[["${label}"]]`); // サブルーチン
+    else lines.push(`  ${id}{{"${label}"}}`); // 六角形（reflection）
   }
   const idByNode = new Map(g.nodes.map((n) => [n.id, nodeIdOf(n)]));
   for (const e of g.edges) {
@@ -65,7 +76,15 @@ export function toMermaid(g: AilsmGraph): string {
 
 /** Graphviz DOT ソース */
 export function toDot(g: AilsmGraph): string {
-  const shape: Record<string, string> = { task: 'box', object: 'ellipse', value: 'diamond' };
+  const shape: Record<string, string> = {
+    task: 'box',
+    object: 'ellipse',
+    value: 'diamond',
+    memory: 'cylinder',
+    belief: 'note',
+    plan: 'box3d',
+    reflection: 'component',
+  };
   const lines = ['digraph AILSM {', '  node [fontname="Helvetica"];'];
   for (const n of g.nodes) {
     const label = nodeLabel(n).replace(/"/g, "'").split(' ').join('\\n');
@@ -102,4 +121,28 @@ export function toAsciiTree(g: AilsmGraph): string {
   const children = g.edges.filter((e) => e.from === task.id);
   children.forEach((e, i) => renderSubtree(g, e.to, '', i === children.length - 1, e.rel, out));
   return out.join('\n');
+}
+
+/** 状態遷移図の入力（Runtime の RuntimeStep と構造互換） */
+export interface StateStepLike {
+  kind: string;
+  label: string;
+}
+
+/** 実行トレース → Mermaid stateDiagram（状態遷移の可視化） */
+export function toStateDiagram(steps: StateStepLike[]): string {
+  if (steps.length === 0) return 'stateDiagram-v2\n  [*] --> [*]';
+  const lines = ['stateDiagram-v2'];
+  const ids: string[] = [];
+  steps.forEach((s, i) => {
+    const id = `S${i}`;
+    ids.push(id);
+    lines.push(`  ${id} : ${s.label.replace(/"/g, "'")}`);
+  });
+  lines.push(`  [*] --> ${ids[0]}`);
+  for (let i = 0; i < ids.length - 1; i++) {
+    lines.push(`  ${ids[i]} --> ${ids[i + 1]}`);
+  }
+  lines.push(`  ${ids[ids.length - 1]} --> [*]`);
+  return lines.join('\n');
 }

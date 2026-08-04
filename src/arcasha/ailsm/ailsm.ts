@@ -8,7 +8,14 @@
 
 import type { AilsmTypeRef, NodeConstraints } from './types.js';
 
-export type NodeKind = 'task' | 'object' | 'value';
+export type NodeKind =
+  | 'task'
+  | 'object'
+  | 'value'
+  | 'memory'
+  | 'belief'
+  | 'plan'
+  | 'reflection';
 
 export interface AilsmNode {
   id: number;
@@ -30,7 +37,15 @@ export interface AilsmGraph {
   edges: AilsmEdge[];
 }
 
-const KIND_LABEL: Record<NodeKind, string> = { task: 'Task', object: 'Object', value: 'Value' };
+const KIND_LABEL: Record<NodeKind, string> = {
+  task: 'Task',
+  object: 'Object',
+  value: 'Value',
+  memory: 'Memory',
+  belief: 'Belief',
+  plan: 'Plan',
+  reflection: 'Reflection',
+};
 
 export function nodeKindLabel(kind: NodeKind): string {
   return KIND_LABEL[kind];

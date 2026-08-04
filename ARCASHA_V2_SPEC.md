@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.10** |
+| Status | **Draft v0.11** |
 | Date | 2026-08-04 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様） |
@@ -480,6 +480,8 @@ CALL Math  Batch=3
 
 **全サブシステムは同じAILSMグラフを見る（共有IR）**。SSA化により依存関係が全て見える（`Task#1 → Math#2 → Equation#5 → Result#9`）ため、Planner / Tree Search / Reflection / Memory / Verifier / ODAR は全て同じAILSMを読み書きする。これはCPUで「**全員が同じメモリを見る**」のに等しい。従来のように各コンポーネントが自然言語を個別に解釈する（「たぶんこういう意味」）曖昧さが消える。
 
+さらに AILSM は **AI State IR** である — Task / Plan / Belief / Memory / Reflection / Result など**AIの内部状態全体をSSAノードとして管理する実行可能IR**（Phase 0.9）。LLVM IRがCPU状態しか持たないのに対し、AILSMはAIの状態全体を持つ。**AIの思考が全て可視化できる**。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -754,6 +756,7 @@ Case2（AILSA）:
 | **0.6** | ✅ **AILSM ABI 安定化**（Pass Manager / Typed AILSM拡張 / 定数畳み込み / Golden Test） | `src/arcasha/ailsm/`（optimizer.ts Pass化, types.ts Union/Optional/制約, capability.ts, golden.ts） | 完了（`npm run ailsm:golden` 30ケース全合格） |
 | **0.7** | ✅ **AILSM Visualizer**（見えるIR: Mermaid / Graphviz DOT / ASCIIツリー） | `src/arcasha/ailsm/`（visualizer.ts, visualize.ts）+ `public/ailsm-viewer.html` | 完了（`npm run ailsm:visualize "…"` / ブラウザ描画確認済み） |
 | **0.8** | ✅ **AILSM Executor**（IRをLLM無しで実行 — ExpertはCPU） | `src/arcasha/ailsm/executor.ts`（組み込み演算/Resultノード/resolved/needsExpert）+ `compileAndRun` | 完了（`2+3=5` / `20÷4=5` / `√9=3` / 積分はExpert委譲 を確認） |
+| **0.9** | ✅ **AI State SSA**（Memory / Belief / Plan / Reflection を SSA ノード化） | `src/arcasha/ailsm/state.ts`（remember/believe/plan/reflect）+ `runtime.ts`（run: 状態遷移トレース）+ `toStateDiagram` | 完了（ローカル解決→Memory / Expert委譲→Belief→CALL を確認） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |

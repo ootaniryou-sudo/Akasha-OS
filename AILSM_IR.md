@@ -21,6 +21,7 @@ AILSMは、小型AI同士（および Planner / Memory / Verifier / Reflection /
 2. **共有IR** — 全サブシステムが同じAILSMグラフを読み書きする（CPUの共有メモリに相当）
 3. **型付き** — 各ノードは型を持つ。コンパイル時型エラー・静的IR検査・実行前矛盾排除が可能
 4. **正準化** — 同一意味は同一ノード（Circle / 円 / circle / 円形 → 同一ノード）
+5. **AI State IR** — AILSMは意味表現ではなく、**AIの内部状態全体をSSAとして管理する実行可能IR**。Task / Plan / Belief / Memory / Reflection / Result 全てをノードとして保持し、AIの思考が可視化できる
 
 ## 3. ノード
 
@@ -29,6 +30,10 @@ AILSMは、小型AI同士（および Planner / Memory / Verifier / Reflection /
 | **Task** | `Task#N` | `Task#1 : solve`（domain, intent, actions を attrs に保持） |
 | **Object** | `Object#N` | `Object#2 : circle` / `Object#3 : equation {expr}` |
 | **Value** | `Value#N` | `Value#4 : number {radius=5}` / `Value#5 : result {value=5}` |
+| **Memory** | `Memory#N` | `Memory#4 : number {key=result, value=5}`（長期記憶） |
+| **Belief** | `Belief#N` | `Belief#5 : unknown {expert=math, confidence=0.82}`（ODAR） |
+| **Plan** | `Plan#N` | `Plan#6 : string {steps=[DECOMPOSE, CALL math]}` |
+| **Reflection** | `Reflection#N` | `Reflection#7 : string {cause=precision, fix=...}` |
 
 各ノード: `{ id, kind, label, type, attrs, constraints? }`
 
@@ -39,6 +44,10 @@ AILSMは、小型AI同士（および Planner / Memory / Verifier / Reflection /
 | `uses` | タスクがオブジェクト/値を参照 |
 | `input` | タスクへの入力テキスト |
 | `produces` | 実行結果の生成（Executor が追加） |
+| `stores` | タスクが記憶に値を保存（Memory SSA） |
+| `informs` | Belief がタスクに確信度を提供（ODAR） |
+| `plans` | タスクが実行計画を持つ（Plan SSA） |
+| `reflects` | タスクが自己修正を持つ（Reflection SSA） |
 
 ## 5. 型システム（Typed AILSM）
 
