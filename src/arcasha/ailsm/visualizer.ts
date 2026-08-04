@@ -33,6 +33,9 @@ function nodeIdOf(n: AilsmNode): string {
     : n.kind === 'slice' ? 'Sl'
     : n.kind === 'cache' ? 'Ca'
     : n.kind === 'execution' ? 'Ex'
+    : n.kind === 'chunk' ? 'Ch'
+    : n.kind === 'span' ? 'Sp'
+    : n.kind === 'frame' ? 'Fr'
     : 'Ns'; // namespace
   return `${prefix}${n.id}`;
 }
@@ -83,6 +86,9 @@ export function toMermaid(g: AilsmGraph): string {
     else if (n.kind === 'slice') lines.push(`  ${id}/"${label}"/`); // 平行四辺形（スライス）
     else if (n.kind === 'cache') lines.push(`  ${id}[("${label}")]`); // シリンダー（キャッシュ）
     else if (n.kind === 'execution') lines.push(`  ${id}("${label}")`); // 円（プロセスコンテキスト）
+    else if (n.kind === 'chunk') lines.push(`  ${id}["${label}"]`); // 箱（チャンク）
+    else if (n.kind === 'span') lines.push(`  ${id}[["${label}"]]`); // サブルーチン（スパン）
+    else if (n.kind === 'frame') lines.push(`  ${id}/"${label}"/`); // 平行四辺形（推論フレーム）
     else lines.push(`  ${id}(["${label}"])`); // スタジアム（namespace）
   }
   const idByNode = new Map(g.nodes.map((n) => [n.id, nodeIdOf(n)]));
@@ -114,6 +120,9 @@ export function toDot(g: AilsmGraph): string {
     slice: 'note',
     cache: 'cylinder',
     execution: 'box3d',
+    chunk: 'box',
+    span: 'note',
+    frame: 'component',
   };
   const lines = ['digraph AILSM {', '  node [fontname="Helvetica"];'];
   for (const n of g.nodes) {

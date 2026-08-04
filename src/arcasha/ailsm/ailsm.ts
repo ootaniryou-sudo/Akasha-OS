@@ -25,7 +25,10 @@ export type NodeKind =
   | 'page'
   | 'slice'
   | 'cache'
-  | 'execution';
+  | 'execution'
+  | 'chunk'
+  | 'span'
+  | 'frame';
 
 export interface AilsmNode {
   id: number;
@@ -65,6 +68,9 @@ const KIND_LABEL: Record<NodeKind, string> = {
   slice: 'Slice',
   cache: 'Cache',
   execution: 'Execution',
+  chunk: 'Chunk',
+  span: 'Span',
+  frame: 'Frame',
 };
 
 export function nodeKindLabel(kind: NodeKind): string {

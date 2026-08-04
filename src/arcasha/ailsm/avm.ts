@@ -22,9 +22,13 @@ import { cacheArtifact, getCached } from './cache.js';
 import type { CacheKind } from './cache.js';
 import { buildContextArgument } from './abi.js';
 import type { ContextRef } from './abi.js';
-import { createExecutionContext, contextSwitch, commitMemory, updateExecution, executionOf } from './execution.js';
+import { createExecutionContext, contextSwitch, commitMemory, updateExecution, executionOf, pushFrame, mergeFrames } from './execution.js';
 import type { ExecutionContext } from './execution.js';
 import { contextFault, prefetch } from './demand-paging.js';
+import { subdivideContext } from './chunk.js';
+import { ContextTlb, translateSpan } from './context-tlb.js';
+import { TierManager } from './tier.js';
+import type { TierCounts } from './tier.js';
 
 export interface SliceLoad {
   contextId: number;
@@ -333,5 +337,121 @@ export function runExecutionDemo(): ExecutionDemoResult {
     switches,
     prefetched: prefetchedTotal,
     finalHypothesis: executionOf(g, plannerId)!.hypothesis,
+  };
+}
+
+export interface MemoryHierarchyDemoResult {
+  graph: AilsmGraph;
+  contextId: number;
+  chunkCount: number;
+  spanCount: number;
+  equationSpanCount: number;
+  tlbFirst: boolean; // 初回翻訳はミス（走査してキャッシュ）
+  tlbSecond: boolean; // 2回目はヒット（Fault しない）
+  tlbHitRate: number;
+  frameLabels: string[];
+  mergedHypothesis: string;
+  tiers: TierCounts;
+  cursor: number;
+  attention: string[];
+  currentChunk: number | null;
+  currentSpan: number | null;
+}
+
+/**
+ * AI Memory Hierarchy デモ（Phase 0.22）:
+ * Chunk/Span 階層 → Cursor/Attention（途中再開）→ Reasoning Stack（branch A/B → merge）
+ * → Context TLB（2回目は Fault しない）→ Hot/Warm/Cold Tier。
+ */
+export function runMemoryHierarchyDemo(): MemoryHierarchyDemoResult {
+  const text = [
+    'これはメモリ階層の研究ノートである。まず概要を説明する。次にページングの概念を導入する。',
+    '式1: x^2+2x+1=0 を考える。式2: ∫x dx=(1/2)x^2+C を確認する。式3: d/dx(x^3)=3x^2 を計算する。',
+    'ここで推論Aと推論Bを同時進行させる。最後にマージする。',
+    'まとめ: AI OS は必要ページだけを読む。これはメモリ階層として一貫している。',
+  ].join('\n\n');
+
+  let g = createContext({ nodes: [], edges: [] }, 'MH研究ノート', text, DEFAULT_PAGE_SIZE).graph;
+  const context = contextOf(g, 1);
+  if (!context) throw new Error('AVM: コンテキスト初期化に失敗');
+  const contextId = context.id;
+
+  // 1. Chunk / Span 階層（ページより細かい単位）
+  const sub = subdivideContext(g, contextId);
+  g = sub.graph;
+  const chunkCount = sub.chunkIds.length;
+  const spanCount = sub.spanIds.length;
+  const equationSpanCount = g.nodes.filter((n) => n.kind === 'span' && n.attrs.kind === 'equation').length;
+
+  // 2. Execution Context（math）
+  const ex = createExecutionContext(g, contextId, 'proc1', 'math');
+  g = ex.graph;
+  const execId = ex.exec.id;
+
+  // 3. Context TLB: Equation スパンの翻訳（初回 miss → 2回目 hit）
+  const tlb = new ContextTlb();
+  const pages = pagesOf(g, contextId);
+  const eqPage = pages.find((p) =>
+    g.nodes.some((n) => n.kind === 'span' && n.attrs.page === p.id && n.attrs.kind === 'equation'),
+  );
+  let tlbFirst = false;
+  let tlbSecond = false;
+  if (eqPage) {
+    const t1 = translateSpan(tlb, g, contextId, eqPage.id, 'equation');
+    tlbFirst = !t1.hit && t1.spanIds.length > 0;
+    const t2 = translateSpan(tlb, g, contextId, eqPage.id, 'equation');
+    tlbSecond = t2.hit;
+  }
+
+  // 4. Memory Tier: touch で HOT/WARM、未アクセスは COLD
+  const tier = new TierManager();
+  if (pages[0]) {
+    tier.touch(pages[0].id);
+    tier.touch(pages[0].id);
+    tier.touch(pages[0].id); // 3回 → HOT
+  }
+  if (pages[1]) tier.touch(pages[1].id); // 1回 → WARM
+  const tracked = tier.counts();
+  const tiers: TierCounts = {
+    hot: tracked.hot,
+    warm: tracked.warm,
+    cold: pages.length - (tracked.hot + tracked.warm), // 未アクセス = COLD
+  };
+
+  // 5. Reasoning Stack: branch A / branch B → merge
+  const fA = pushFrame(g, execId, 'branchA', 'x=2 の可能性');
+  g = fA.graph;
+  const fB = pushFrame(g, execId, 'branchB', 'x=-1 の可能性');
+  g = fB.graph;
+  const merged = mergeFrames(g, execId, 'x=-1 が正しい');
+  g = merged.graph;
+  const mergedHypothesis = executionOf(g, execId)!.hypothesis;
+
+  // 6. Cursor / Attention: 途中再開ポイント
+  const resumed = updateExecution(g, execId, {
+    currentChunk: 1,
+    currentSpan: 2,
+    cursor: 391,
+    attention: ['Equation#5', 'Page#17'],
+  });
+  g = resumed.graph;
+  const finalExec = executionOf(g, execId)!;
+
+  return {
+    graph: g,
+    contextId,
+    chunkCount,
+    spanCount,
+    equationSpanCount,
+    tlbFirst,
+    tlbSecond,
+    tlbHitRate: tlb.hitRate(),
+    frameLabels: [fA.frame.label, fB.frame.label],
+    mergedHypothesis,
+    tiers,
+    cursor: finalExec.cursor,
+    attention: finalExec.attention,
+    currentChunk: finalExec.currentChunk,
+    currentSpan: finalExec.currentSpan,
   };
 }

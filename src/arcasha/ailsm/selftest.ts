@@ -29,9 +29,12 @@ import { createContext, contextOf, pagesOf, splitContext } from './context.js';
 import { loadPage as loadContextPage } from './context.js';
 import { hasEquation, selectPages } from './slice.js';
 import { cacheArtifact, getCached } from './cache.js';
-import { requestSlice, runAvmDemo, storeContext, cacheResult, runExecutionDemo } from './avm.js';
-import { createExecutionContext, contextSwitch, saveExecutionContext, restoreExecutionContext, updateExecution, executionOf, commitMemory } from './execution.js';
+import { requestSlice, runAvmDemo, storeContext, cacheResult, runExecutionDemo, runMemoryHierarchyDemo } from './avm.js';
+import { createExecutionContext, contextSwitch, saveExecutionContext, restoreExecutionContext, updateExecution, executionOf, commitMemory, pushFrame, popFrame, mergeFrames, frameOf } from './execution.js';
 import { contextFault, prefetch, isResident } from './demand-paging.js';
+import { splitChunks, splitSpans, spanKindOf, subdivideContext, spansOfKind } from './chunk.js';
+import { ContextTlb, translateSpan } from './context-tlb.js';
+import { TierManager } from './tier.js';
 
 let failed = 0;
 
@@ -512,6 +515,82 @@ const eqPage33 = pagesOf(edemo.graph, edemo.contextId).find((p) => hasEquation(p
 check('デモ: math は数式ページを resident に持つ', eqPage33 !== undefined && edemo.math.residentPages.includes(eqPage33.id));
 const mem33 = commitMemory(edemo.graph, edemo.planner.id, 'note', 'done');
 check('commitMemory で execution stores memory', mem33.graph.edges.some((e) => e.rel === 'stores' && e.from === edemo.planner.id));
+
+// [34] Context Chunk / Span 階層（ページより細かい単位）
+console.log('\n[34] Chunk / Span 階層');
+const chunks34 = splitChunks('段落1。\n段落2。\n段落3。');
+check('splitChunks で段落分割', chunks34.length === 3 && chunks34[0].includes('段落1'));
+const spans34 = splitSpans('一文目。二文目。三文目。');
+check('splitSpans で文分割', spans34.length === 3 && spans34[1].includes('二文目'));
+check('spanKindOf で数式を判定', spanKindOf('x^2+2x+1=0 を解く') === 'equation');
+const sub34 = subdivideContext(createContext({ nodes: [], edges: [] }, 'doc', '一行目。x^2+2x+1=0 を解く。\n二行目。', 40).graph, 1);
+check('subdivide で Chunk/Span ノード生成', sub34.chunkIds.length >= 1 && sub34.spanIds.length >= 2);
+check('span に kind 分類（equation）', sub34.graph.nodes.some((n) => n.kind === 'span' && n.attrs.kind === 'equation'));
+check('page contains chunk contains span', sub34.graph.edges.some((e) => e.rel === 'contains'));
+
+// [35] Execution Cursor / Attention（途中再開可能）
+console.log('\n[35] Execution Cursor / Attention');
+const c35 = createContext({ nodes: [], edges: [] }, 'c', '0123456789', 8);
+const ex35 = createExecutionContext(c35.graph, c35.contextId, 'proc1', 'math');
+const up35 = updateExecution(ex35.graph, ex35.exec.id, {
+  currentPage: 2,
+  currentChunk: 1,
+  currentSpan: 3,
+  cursor: 391,
+  attention: ['Equation#5', 'Page#17'],
+});
+check('Cursor / Chunk / Span を設定', up35.exec.cursor === 391 && up35.exec.currentChunk === 1 && up35.exec.currentSpan === 3);
+check('Attention を保持', up35.exec.attention.length === 2 && up35.exec.attention[0] === 'Equation#5');
+const search35 = createExecutionContext(up35.graph, c35.contextId, 'proc1', 'search');
+const sw35 = contextSwitch(search35.graph, ex35.exec.id, search35.exec.id);
+const back35 = contextSwitch(sw35.graph, search35.exec.id, ex35.exec.id);
+check('Switch 後も Cursor を復元（途中から再開）', executionOf(back35.graph, ex35.exec.id)?.cursor === 391 && executionOf(back35.graph, ex35.exec.id)?.currentChunk === 1);
+
+// [36] Reasoning Stack / Execution Frames（複数推論の同時進行）
+console.log('\n[36] Reasoning Stack');
+const ex36 = createExecutionContext(c35.graph, c35.contextId, 'proc1', 'reasoning');
+const fa = pushFrame(ex36.graph, ex36.exec.id, 'branchA', 'x=2 の可能性');
+const fb = pushFrame(fa.graph, ex36.exec.id, 'branchB', 'x=-1 の可能性');
+check('branchA / branchB を push', executionOf(fb.graph, ex36.exec.id)?.stack.length === 2);
+check('Frame ノードが生成される', fb.graph.nodes.filter((n) => n.kind === 'frame').length === 2);
+const popped = popFrame(fb.graph, ex36.exec.id);
+check('popFrame で最上位を除去', executionOf(popped.graph, ex36.exec.id)?.stack.length === 1 && frameOf(popped.graph, fb.frame.id)?.state === 'popped');
+const pushedAgain = pushFrame(popped.graph, ex36.exec.id, 'branchB2', 'x=-1 の可能性');
+const merged36 = mergeFrames(pushedAgain.graph, ex36.exec.id, 'x=-1 が正しい');
+check('mergeFrames で仮説統合・スタッククリア', executionOf(merged36.graph, ex36.exec.id)?.hypothesis === 'x=-1 が正しい' && executionOf(merged36.graph, ex36.exec.id)?.stack.length === 0);
+check('merge 後フレームは merged', merged36.graph.nodes.filter((n) => n.kind === 'frame' && n.attrs.state === 'merged').length >= 2);
+
+// [37] Context TLB（Context Translation Cache — 2回目は Fault しない）
+console.log('\n[37] Context TLB');
+const t37 = createContext({ nodes: [], edges: [] }, 'tlb', 'text\nx^2+2x+1=0 を解く。\ntext2', 40);
+const sub37 = subdivideContext(t37.graph, t37.contextId);
+const page37 = pagesOf(sub37.graph, t37.contextId)[0];
+const tlb37 = new ContextTlb();
+const tr1 = translateSpan(tlb37, sub37.graph, t37.contextId, page37.id, 'equation');
+check('初回翻訳はミス（走査してキャッシュ）', tr1.hit === false && tr1.spanIds.length >= 1);
+const tr2 = translateSpan(tlb37, sub37.graph, t37.contextId, page37.id, 'equation');
+check('2回目はヒット（Fault しない）', tr2.hit === true);
+check('TLB ヒット率', tlb37.hitRate() >= 0.5);
+check('spansOfKind が equation だけ返す', spansOfKind(sub37.graph, page37.id, 'equation').every((s) => s.kind === 'equation'));
+
+// [38] Hot / Warm / Cold Tier + Memory Hierarchy デモ
+console.log('\n[38] Memory Tier / Memory Hierarchy デモ');
+const tier38 = new TierManager();
+check('未アクセスは COLD', tier38.tierOf(1) === 'cold');
+tier38.touch(1);
+check('1回アクセスで WARM', tier38.tierOf(1) === 'warm');
+tier38.touch(1);
+tier38.touch(1);
+check('3回アクセスで HOT', tier38.tierOf(1) === 'hot');
+tier38.touch(2);
+check('evictCold が未アクセスを返す', tier38.evictCold().length === 0 && tier38.untrackedPages([1, 2, 3]).includes(3));
+const mh = runMemoryHierarchyDemo();
+check('Chunk/Span 階層が生成される', mh.chunkCount >= 4 && mh.spanCount > mh.chunkCount);
+check('Equation スパンが分類される', mh.equationSpanCount >= 3);
+check('TLB: 初回 miss → 2回目 hit', mh.tlbFirst === true && mh.tlbSecond === true && mh.tlbHitRate >= 0.5);
+check('Reasoning Stack: branchA/branchB を merge', mh.frameLabels.join(',') === 'branchA,branchB' && mh.mergedHypothesis === 'x=-1 が正しい');
+check('Memory Tier: HOT/WARM/COLD が揃う', mh.tiers.hot === 1 && mh.tiers.warm === 1 && mh.tiers.cold >= 1);
+check('Cursor/Attention で途中再開可能', mh.cursor === 391 && mh.attention.includes('Equation#5') && mh.currentChunk !== null && mh.currentSpan !== null);
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {

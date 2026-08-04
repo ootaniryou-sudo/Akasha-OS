@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.18** |
+| Status | **Draft v0.19** |
 | Date | 2026-08-05 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様） |
@@ -496,6 +496,8 @@ v0.17（Phase 0.20）では **AI Virtual Memory（AVM）**（`AI_VIRTUAL_MEMORY.
 
 v0.18（Phase 0.21）では **Execution Context / Context Switch / Demand Paging / Context Fault / Prefetcher** を追加。Expert の「思考途中」（current page / hypothesis / vars / call stack / resident set）を Execution Context に保存し、Expert 切り替え時に **save()/restore()（CPU のコンテキストスイッチ）** を行う。ページは事前指定ではなく **Context Fault（= OS の Page Fault）** で必要になった時だけ Kernel がロードし、Prefetcher が隣接ページを先読みする。ロングコンテキストは「100万Token読む」ではなく「**Execution Context を維持しながら必要ページだけ読む**」。AILSM_IR は v1.2。
 
+v0.19（Phase 0.22）では **AI Memory Hierarchy を完成**。① Context Chunk/Span 階層（ページより細かい単位 = Cache Line/Register 相当）② Execution Cursor/Attention（途中再開可能）③ Reasoning Stack / Execution Frames（branch A/B を同時進行 → merge）④ Context TLB（Context Translation Cache — 2回目は Fault しない）⑤ Hot/Warm/Cold Memory Tier。これで ArcAsha は単なる「LLM フレームワーク」ではなく、**AI 向けコンパイラ・OS・メモリ管理・実行基盤** を含むアーキテクチャとして整理できる。AILSM_IR は v1.3。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -784,6 +786,7 @@ Case2（AILSA）:
 | **1（最小）** | ✅ **Local Expert Runtime**（1台PCで複数ExpertがAILSAで通信） | `expert-runtime.ts`（boot/execute: CALL→Driver→RETURN→Kernel(Memory)） | 完了（積分→math / 検索→search を確認） |
 | **0.20** | ✅ **AI Virtual Memory（AVM）**（Context SSA / Page / Slice / Cache / Long Context ABI） | `context.ts`, `slice.ts`, `cache.ts`, `avm.ts` + `abi.ts`（ContextRef） | 完了（math=49% / search=33% だけを供給 / キャッシュ hit を確認） |
 | **0.21** | ✅ **Execution Context / Context Switch / Demand Paging / Context Fault / Prefetcher** | `execution.ts`, `demand-paging.ts`（save/restore / contextFault / prefetch） | 完了（思考途中の保存・復元 / Fault ロード / 先読み を確認） |
+| **0.22** | ✅ **AI Memory Hierarchy**（Chunk/Span 階層 / Cursor/Attention / Reasoning Stack / Context TLB / Hot-Warm-Cold Tier） | `chunk.ts`, `context-tlb.ts`, `tier.ts` + `execution.ts`（Frame） | 完了（Equation スパン分類 / TLB hit / branch merge / Tier 昇格 を確認） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |

@@ -4,10 +4,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v0.2（Phase 0.20 AVM + Phase 0.21 Execution Context 実装済み）** |
+| Status | **Spec v0.3（Phase 0.20 AVM + 0.21 Execution Context + 0.22 Memory Hierarchy 実装済み）** |
 | Date | 2026-08-05 |
-| 実装 | `src/arcasha/ailsm/context.ts`, `slice.ts`, `cache.ts`, `avm.ts`, `execution.ts`, `demand-paging.ts` |
-| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.2）, `AI_ABI.md`（Long Context ABI）, `AILSA_RUNTIME.md` |
+| 実装 | `src/arcasha/ailsm/context.ts`, `slice.ts`, `cache.ts`, `avm.ts`, `execution.ts`, `demand-paging.ts`, `chunk.ts`, `context-tlb.ts`, `tier.ts` |
+| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.3）, `AI_ABI.md`（Long Context ABI）, `AILSA_RUNTIME.md` |
 
 ---
 
@@ -143,3 +143,65 @@ planning: Page1 を読む（fault）→ 仮説 A
 ```
 
 ロングコンテキスト = 「100万Token読む」ではなく **「Execution Context を維持しながら必要ページだけ読む」**。
+
+---
+
+## 7. AI Memory Hierarchy（Phase 0.22）
+
+AVM を「長いコンテキストを扱う機能」から **AI 向けの完全なメモリ階層** へ完成させる 5 層。
+
+### 7.1 Context Chunk / Span 階層
+
+```
+Document → Page → Chunk（段落）→ Span（文 / 数式）
+```
+
+CPU の「SSD → Page → Cache Line → Register」に対応。Math Expert は「Page 321-323 全部」ではなく **Equation スパンだけ** を読む。Span は kind（equation / code / query / text）で分類される。
+
+### 7.2 Execution Cursor / Attention（途中再開可能）
+
+```
+Current Page = 53 / Current Chunk = 7 / Current Span = 3 / Cursor = token 391 / Attention = Equation#5
+```
+
+Context Switch しても Cursor と Attention が復元される → **途中から再開できる**（ChatGPT でも難しい部分）。
+
+### 7.3 Reasoning Stack / Execution Frames（複数推論の同時進行）
+
+```
+Execution Context
+  ├─ Frame1（branchA: x=2 の可能性）
+  ├─ Frame2（branchB: x=-1 の可能性）
+  └─ mergeFrames → 「x=-1 が正しい」
+```
+
+if → branch A / branch B を両方進め、最後に Reflection → merge。SSA との相性が良い。
+
+### 7.4 Context TLB（Context Translation Cache）
+
+CPU の TLB（Page Fault のあとの高速変換キャッシュ）に相当。
+
+```
+Math → ContextID 52 → Page17 → Equation# をキャッシュ
+2回目 → Fault しない（走査なしで直接アクセス）
+```
+
+### 7.5 Hot / Warm / Cold Memory Tier
+
+アクセス頻度ベースのキャッシュ階層。
+
+| Tier | 条件 | 扱い |
+|------|------|------|
+| HOT | 3回以上アクセス | resident 維持 |
+| WARM | 1回以上アクセス | resident 維持候補 |
+| COLD | 未アクセス | 必要になったら Demand Paging |
+
+### 7.6 デモ結果（`runMemoryHierarchyDemo`）
+
+- Chunk/Span 階層生成、Equation スパン分類
+- Context TLB: 初回 miss → 2回目 hit（Fault しない）
+- Reasoning Stack: branchA/branchB → merge
+- Memory Tier: HOT / WARM / COLD が揃う
+- Cursor=391 / Attention=Equation#5 で途中再開可能
+
+これで ArcAsha は **AI 向けコンパイラ・OS・メモリ管理・実行基盤** を含む一貫したアーキテクチャになる。

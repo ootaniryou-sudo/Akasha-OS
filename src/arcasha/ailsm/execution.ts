@@ -25,11 +25,25 @@ export interface ExecutionContext {
   expert: string; // 現在の専門
   state: ExecutionState;
   currentPage: number | null;
+  currentChunk: number | null; // ページ内のチャンク（途中再開用）
+  currentSpan: number | null; // チャンク内のスパン（途中再開用）
+  cursor: number; // トークン位置（Cursor — 途中から再開できる）
+  attention: string[]; // 注目ノード（Equation#5 等 — Attention）
   hypothesis: string; // 現在の仮説（思考途中）
   vars: string[]; // 一時変数
   callStack: string[]; // Expert 呼び出し履歴
   activeExperts: string[];
   residentPages: number[]; // ロード済みページ（resident set）
+  stack: number[]; // Reasoning Stack（推論フレーム ID 列）
+}
+
+export type FrameState = 'active' | 'suspended' | 'merged' | 'popped';
+
+export interface ReasoningFrame {
+  id: number;
+  label: string; // 'branchA' | 'branchB' 等
+  hypothesis: string;
+  state: FrameState;
 }
 
 export interface ExecutionResult {
@@ -48,6 +62,8 @@ function toExec(g: AilsmGraph, id: number): ExecutionContext | undefined {
   const n = g.nodes.find((x) => x.id === id && x.kind === 'execution');
   if (!n) return undefined;
   const cp = n.attrs.currentPage;
+  const cc = n.attrs.currentChunk;
+  const cs = n.attrs.currentSpan;
   return {
     id: n.id,
     contextId: typeof n.attrs.contextId === 'number' ? n.attrs.contextId : Number(n.attrs.contextId ?? 0),
@@ -55,12 +71,48 @@ function toExec(g: AilsmGraph, id: number): ExecutionContext | undefined {
     expert: String(n.attrs.expert ?? ''),
     state: (n.attrs.state as ExecutionState) ?? 'created',
     currentPage: cp === undefined || cp === 0 ? null : Number(cp),
+    currentChunk: cc === undefined || cc === 0 ? null : Number(cc),
+    currentSpan: cs === undefined || cs === 0 ? null : Number(cs),
+    cursor: Number(n.attrs.cursor ?? 0),
+    attention: (n.attrs.attention as string[] | undefined) ?? [],
     hypothesis: String(n.attrs.hypothesis ?? ''),
     vars: (n.attrs.vars as string[] | undefined) ?? [],
     callStack: (n.attrs.callStack as string[] | undefined) ?? [],
     activeExperts: (n.attrs.activeExperts as string[] | undefined) ?? [],
     residentPages: ((n.attrs.residentPages as string[] | undefined) ?? []).map(Number),
+    stack: ((n.attrs.stack as string[] | undefined) ?? []).map(Number),
   };
+}
+
+function toFrame(g: AilsmGraph, id: number): ReasoningFrame | undefined {
+  const n = g.nodes.find((x) => x.id === id && x.kind === 'frame');
+  if (!n) return undefined;
+  return {
+    id: n.id,
+    label: String(n.attrs.label ?? ''),
+    hypothesis: String(n.attrs.hypothesis ?? ''),
+    state: ((n.attrs.state as FrameState) ?? 'active') as FrameState,
+  };
+}
+
+/** 複数ノードを in-place で属性更新したグラフを返す（ID は不変） */
+function rebuildWithOverrides(
+  g: AilsmGraph,
+  overrides: Map<number, Record<string, string | number | boolean | string[]>>,
+): AilsmGraph {
+  const b = new AilsmBuilder();
+  const remap = new Map<number, number>();
+  for (const n of g.nodes) {
+    const ov = overrides.get(n.id);
+    const id = b.addNode(n.kind, n.label, n.type, ov ? { ...n.attrs, ...ov } : n.attrs, n.constraints);
+    remap.set(n.id, id);
+  }
+  for (const e of g.edges) {
+    const from = remap.get(e.from);
+    const to = remap.get(e.to);
+    if (from !== undefined && to !== undefined && from !== to) b.connect(from, to, e.rel);
+  }
+  return b.graph();
 }
 
 function rebuild(g: AilsmGraph, fn: (b: AilsmBuilder, remap: Map<number, number>) => void): AilsmGraph {
@@ -94,11 +146,16 @@ export function createExecutionContext(
       expert,
       state: 'created',
       currentPage: 0,
+      currentChunk: 0,
+      currentSpan: 0,
+      cursor: 0,
+      attention: [],
       hypothesis: '',
       vars: [],
       callStack: [],
       activeExperts: [expert],
       residentPages: [],
+      stack: [],
     });
     const ctx = remap.get(contextId);
     if (ctx !== undefined && ctx !== createdId) b.connect(ctx, createdId, 'contains');
@@ -129,11 +186,16 @@ export function updateExecution(
         expert: merged.expert,
         state: merged.state,
         currentPage: merged.currentPage ?? 0,
+        currentChunk: merged.currentChunk ?? 0,
+        currentSpan: merged.currentSpan ?? 0,
+        cursor: merged.cursor,
+        attention: merged.attention,
         hypothesis: merged.hypothesis,
         vars: merged.vars,
         callStack: merged.callStack,
         activeExperts: merged.activeExperts,
         residentPages: merged.residentPages.map(String),
+        stack: merged.stack.map(String),
       }, n.constraints);
       remap.set(n.id, id);
     } else {
@@ -196,4 +258,71 @@ export function commitMemory(
     if (ex !== undefined && ex !== memoryId) b.connect(ex, memoryId, 'stores');
   });
   return { graph, memoryId };
+}
+
+/**
+ * Reasoning Stack（Phase 0.22）— 複数の推論（branch A / branch B）を同時進行させる
+ *
+ *   Execution Context
+ *     ├─ Frame1（branchA）
+ *     ├─ Frame2（branchB）
+ *     └─ ...
+ *
+ * if → branch A / branch B を両方進め、最後に Reflection → merge する。
+ */
+
+/** 推論フレームを push（execution `contains` frame + stack に追加） */
+export function pushFrame(
+  g: AilsmGraph,
+  execId: number,
+  label: string,
+  hypothesis: string,
+): { graph: AilsmGraph; frame: ReasoningFrame } {
+  const cur = toExec(g, execId);
+  if (!cur) throw new Error(`Execution#${execId} がありません`);
+  let frameId = 0;
+  const g1 = rebuild(g, (b, remap) => {
+    frameId = b.addNode('frame', label, 'unknown', { exec: execId, label, hypothesis, state: 'active' });
+    const ex = remap.get(execId);
+    if (ex !== undefined && ex !== frameId) b.connect(ex, frameId, 'contains');
+  });
+  const g2 = updateExecution(g1, execId, { stack: [...cur.stack, frameId] });
+  return { graph: g2.graph, frame: toFrame(g2.graph, frameId)! };
+}
+
+/** 最上位フレームを pop（state=popped + stack から除去） */
+export function popFrame(
+  g: AilsmGraph,
+  execId: number,
+): { graph: AilsmGraph; frame: ReasoningFrame | undefined } {
+  const cur = toExec(g, execId);
+  if (!cur) throw new Error(`Execution#${execId} がありません`);
+  if (cur.stack.length === 0) return { graph: g, frame: undefined };
+  const topId = cur.stack[cur.stack.length - 1];
+  const rest = cur.stack.slice(0, -1);
+  const frame = toFrame(g, topId);
+  const overrides = new Map<number, Record<string, string | number | boolean | string[]>>();
+  overrides.set(execId, { stack: rest.map(String) });
+  if (frame) overrides.set(topId, { state: 'popped' });
+  return { graph: rebuildWithOverrides(g, overrides), frame: frame ? { ...frame, state: 'popped' } : undefined };
+}
+
+/** スタック上の全フレームを merge（state=merged + stack クリア + 仮説統合） */
+export function mergeFrames(
+  g: AilsmGraph,
+  execId: number,
+  mergedHypothesis: string,
+): { graph: AilsmGraph; merged: number[] } {
+  const cur = toExec(g, execId);
+  if (!cur) throw new Error(`Execution#${execId} がありません`);
+  const merged = [...cur.stack];
+  const overrides = new Map<number, Record<string, string | number | boolean | string[]>>();
+  overrides.set(execId, { hypothesis: mergedHypothesis, stack: [] });
+  for (const id of merged) overrides.set(id, { state: 'merged' });
+  return { graph: rebuildWithOverrides(g, overrides), merged };
+}
+
+/** フレームを参照 */
+export function frameOf(g: AilsmGraph, frameId: number): ReasoningFrame | undefined {
+  return toFrame(g, frameId);
 }

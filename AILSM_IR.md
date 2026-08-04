@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.2（凍結 + MINOR 追加: Context/Page/Slice/Cache/Execution）** |
+| Status | **Spec v1.3（凍結 + MINOR 追加: Context/Page/Slice/Cache/Execution/Chunk/Span/Frame）** |
 | Date | 2026-08-05 |
 | 実装 | `src/arcasha/ailsm/ailsm.ts`, `types.ts`, `visualizer.ts` |
 | 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSM_COMPILER.md`, `AILSA_RUNTIME.md`, `AI_ABI.md`, `AI_VIRTUAL_MEMORY.md` |
@@ -46,6 +46,9 @@ AILSMは単なるIRではなく、**AI Operating IR** — CPUだけでなく AI 
 | **Slice** | `Slice#N` | `Slice#50 : unknown {context=20, expert=math, pageCount=3, pageIds=[45,46,47]}`（Expert が読むページだけ） |
 | **Cache** | `Cache#N` | `Cache#51 : unknown {context=20, kind=equation, key=parsed, value=...}`（解析済み Context の再利用） |
 | **Execution** | `Execution#N` | `Execution#60 : unknown {context=20, owner=proc1, expert=math, state=running, currentPage=45, hypothesis='B: 数式も確認した', vars=[x=-1], residentPages=[45,46,47]}`（AI の思考途中 = プロセスコンテキスト） |
+| **Chunk** | `Chunk#N` | `Chunk#70 : string {page=45, index=2, text=...}`（ページ内の段落 — Cache Line 相当） |
+| **Span** | `Span#N` | `Span#75 : string {chunk=70, page=45, index=1, kind=equation, text='x^2+2x+1=0 を解く'}`（文 / 数式 — Register 相当） |
+| **Frame** | `Frame#N` | `Frame#80 : unknown {exec=60, label=branchA, hypothesis='x=2 の可能性', state=merged}`（Reasoning Stack の推論フレーム） |
 
 各ノード: `{ id, kind, label, type, attrs, constraints? }`
 
@@ -102,7 +105,7 @@ IR は後から変更すると Compiler / Executor / Runtime / Visualizer / Expe
 
 | 安定化対象 | 定義 |
 |-----------|------|
-| **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread / namespace / **context / page / slice / cache / execution** |
+| **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread / namespace / **context / page / slice / cache / execution / chunk / span / frame** |
 | **エッジカタログ** | uses / input / produces / stores / informs / plans / reflects / schedules / processes / threads / **contains** |
 | **型システム** | AilsmType + AilsmTypeRef（union / optional）+ NodeConstraints |
 | **状態遷移** | ローカル解決: Result→Memory / 委譲: Belief→Capability→Schedule→CALL |
