@@ -35,6 +35,11 @@ export class MockModelClient implements ModelClient {
     return [...this.nodes];
   }
 
+  /** 起動後にデバイスが接続された状況を再現（遅延同期テスト用） */
+  addNode(n: ModelNode): void {
+    if (!this.nodes.some((x) => x.nodeId === n.nodeId)) this.nodes.push(n);
+  }
+
   async generate(nodeId: string, prompt: string, maxTokens = 64): Promise<string> {
     this.calls.push({ nodeId, prompt, maxTokens });
     return this.texts[prompt] ?? `[mock ${nodeId}] ${prompt.slice(0, 40)}`;

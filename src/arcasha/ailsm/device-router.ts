@@ -22,9 +22,10 @@ export function deviceRoleOf(nodeId: string): DeviceRole {
   return 'other';
 }
 
-/** Hub に接続中の実ノードを DeviceTree へ登録（Phase 1.3） */
+/** Hub に接続中の実ノードを DeviceTree へ登録（Phase 1.3。既存ノードはスキップ） */
 export function registerHubDevices(deviceTree: DeviceTree, nodes: ModelNode[]): void {
   for (const n of nodes) {
+    if (deviceTree.node(n.nodeId)) continue; // 再接続時の重複を防ぐ
     const role = deviceRoleOf(n.nodeId);
     deviceTree.registerNode({
       id: n.nodeId,

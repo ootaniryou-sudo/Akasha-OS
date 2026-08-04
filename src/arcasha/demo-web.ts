@@ -13,7 +13,7 @@
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { ExpertHub } from './experts/registry.js';
-import { initAiOs, aiosExecute, aiosRelay } from './ailsm/aios.js';
+import { initAiOs, aiosExecute, aiosRelay, syncAiOs } from './ailsm/aios.js';
 import { toHex } from './ailsm/compiler.js';
 import { encodeProgram } from './ailsa/encoder.js';
 
@@ -298,6 +298,7 @@ const server = http.createServer((req, res) => {
 
   // ─── AI OS API（Phase 1.2）─────────────────────────────────────────
   if (url.pathname === '/api/device-tree') {
+    syncAiOs(aios); // 接続済み実機を DeviceTree / RemoteDriver へ遅延登録
     const tree = aios.booted.deviceTree.describe();
     sendJson(200, {
       tree,

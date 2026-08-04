@@ -684,6 +684,14 @@ check('CALL → 実デバイス（RemoteDriver）へ委譲', aex49b.driverId?.in
 check('ODAR が実実行の観測を学習', aios49.learner.get(String(aex49b.driverId)).samples >= 1);
 const rel49 = await aiosRelay(aios49, [{ expert: 'math', input: 'x^2-4=0を解いて' }, { expert: 'math', input: '' }]);
 check('AI OS でリレー実行', rel49.hops.length === 2 && rel49.hops[1].input === 'solution(x^2-4=0)');
+// 遅延同期: 起動後に実機が接続されても委譲できる（Hub 再起動シナリオ）
+const lateClient = new MockModelClient({}, []);
+const aiosLate = initAiOs(lateClient);
+check('起動時はデバイス 0 台（RemoteDriver なし）', aiosLate.remoteDrivers.size === 0);
+lateClient.addNode({ nodeId: 'node-ios-iphone15', modelId: 'Qwen/Qwen2.5-1.5B-Instruct', paramsM: 1540 });
+const aexLate = await aiosExecute(aiosLate, 'x^2を積分して');
+check('起動後に接続した実機へ遅延委譲', aexLate.driverId === 'remote:node-ios-iphone15' && aexLate.deviceId === 'node-ios-iphone15', String(aexLate.driverId));
+check('DeviceTree に遅延登録', aiosLate.booted.deviceTree.node('node-ios-iphone15') !== undefined);
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

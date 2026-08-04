@@ -22,6 +22,8 @@ import { runRelay } from './relay.js';
 import type { RelayResult, RelayStep } from './relay.js';
 import type { ExpertDriver } from './driver.js';
 
+const REMOTE_MAX_TOKENS = 64;
+
 export interface AiOs {
   booted: BootResult;
   client: ModelClient;
@@ -33,18 +35,41 @@ export interface AiOs {
 export function initAiOs(client?: ModelClient): AiOs {
   const c = client ?? new MockModelClient();
   const booted = boot();
-  const nodes = c.listNodes();
   const remoteDrivers = new Map<string, RemoteDriver>();
-  if (nodes.length > 0) {
-    registerHubDevices(booted.deviceTree, nodes);
-    for (const n of nodes) {
-      remoteDrivers.set(
+  const aios: AiOs = { booted, client: c, learner: new CapabilityLearner(), remoteDrivers };
+  syncAiOs(aios);
+  return aios;
+}
+
+/**
+ * 現在接続中の実デバイスを AI OS に同期する（遅延登録）。
+ * 起動後にデバイスが接続しても、呼び出し時に RemoteDriver + DeviceTree へ反映される。
+ */
+export function syncAiOs(aios: AiOs): void {
+  const nodes = aios.client.listNodes();
+  if (nodes.length === 0) return;
+  registerHubDevices(aios.booted.deviceTree, nodes);
+  for (const n of nodes) {
+    if (!aios.remoteDrivers.has(n.nodeId)) {
+      aios.remoteDrivers.set(
         n.nodeId,
-        new RemoteDriver(`remote:${n.nodeId}`, `Qwen@${n.nodeId}`, c, { deviceId: n.nodeId, maxTokens: 64 }),
+        new RemoteDriver(`remote:${n.nodeId}`, `Qwen@${n.nodeId}`, aios.client, {
+          deviceId: n.nodeId,
+          maxTokens: REMOTE_MAX_TOKENS,
+        }),
       );
     }
   }
-  return { booted, client: c, learner: new CapabilityLearner(), remoteDrivers };
+}
+
+/** deviceId に応じたドライバ（RemoteDriver を遅延生成して返す） */
+function driverFor(aios: AiOs, target: string | null, expert: string): ExpertDriver | undefined {
+  if (target) {
+    syncAiOs(aios);
+    const rd = aios.remoteDrivers.get(target);
+    if (rd) return rd;
+  }
+  return aios.booted.drivers.get(expert);
 }
 
 export interface AiosExecution extends ExpertExecution {
@@ -57,16 +82,11 @@ export interface AiosExecution extends ExpertExecution {
  * 実実行の観測（latency / 成功）を CapabilityLearner が学習する。
  */
 export async function aiosExecute(aios: AiOs, text: string, deviceId?: string): Promise<AiosExecution> {
-  const { booted, client, remoteDrivers } = aios;
+  syncAiOs(aios); // 現在接続中の実機を DeviceTree / RemoteDriver へ反映してからルーティング
+  const { booted, client } = aios;
   const nodes = client.listNodes();
   const target = deviceId ?? routeCall(booted.deviceTree, nodes.length > 0 ? nodes[0].nodeId : undefined);
-  const resolver = (expert: string): ExpertDriver | undefined => {
-    if (target) {
-      const rd = remoteDrivers.get(target);
-      if (rd) return rd;
-    }
-    return booted.drivers.get(expert);
-  };
+  const resolver = (expert: string): ExpertDriver | undefined => driverFor(aios, target, expert);
   const ex = await execute(text, booted, resolver);
   if (ex.driverId && ex.driverResponse) {
     aios.learner.observe(ex.driverId, {
@@ -80,15 +100,10 @@ export async function aiosExecute(aios: AiOs, text: string, deviceId?: string): 
 
 /** 複数 Expert を AILSA でリレー（実デバイスへ委譲可能） */
 export async function aiosRelay(aios: AiOs, steps: RelayStep[], deviceId?: string): Promise<RelayResult> {
-  const { booted, remoteDrivers } = aios;
+  syncAiOs(aios); // 現在接続中の実機を反映
+  const { booted } = aios;
   const target = deviceId ?? routeCall(booted.deviceTree);
-  const resolver = (expert: string): ExpertDriver | undefined => {
-    if (target) {
-      const rd = remoteDrivers.get(target);
-      if (rd) return rd;
-    }
-    return booted.drivers.get(expert);
-  };
+  const resolver = (expert: string): ExpertDriver | undefined => driverFor(aios, target, expert);
   return runRelay(booted, steps, resolver);
 }
 
