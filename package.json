@@ -17,7 +17,8 @@
     "sim:failover": "npm run build && AKASHA_DEMO_FAILOVER=1 node dist/sim/demo.js",
     "demo:hub": "tsx src/arcasha/demo-hub.ts",
     "demo:web": "tsx src/arcasha/demo-web.ts",
-    "demo:mock-node": "tsx src/arcasha/demo-mock-node.ts"
+    "demo:mock-node": "tsx src/arcasha/demo-mock-node.ts",
+    "ailsa:selftest": "tsx src/arcasha/ailsa/selftest.ts"
   },
   "engines": {
     "node": ">=20.0.0"

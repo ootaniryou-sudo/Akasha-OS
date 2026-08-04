@@ -14,8 +14,8 @@ import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { ExpertHub } from './experts/registry.js';
 
-const WS_PORT = Number(process.env.PORT ?? 8080);
-const WEB_PORT = Number(process.env.WEB_PORT ?? 4173);
+let WS_PORT = Number(process.env.PORT ?? 8080);
+let WEB_PORT = Number(process.env.WEB_PORT ?? 4173);
 
 const args = process.argv.slice(2);
 for (let i = 0; i < args.length; i++) {
