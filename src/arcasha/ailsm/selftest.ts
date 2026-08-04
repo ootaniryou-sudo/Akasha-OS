@@ -35,6 +35,11 @@ import { contextFault, prefetch, isResident } from './demand-paging.js';
 import { splitChunks, splitSpans, spanKindOf, subdivideContext, spansOfKind } from './chunk.js';
 import { ContextTlb, translateSpan } from './context-tlb.js';
 import { TierManager } from './tier.js';
+import { AiPerf } from './perf.js';
+import { AiTrace, buildRuntimeTrace, buildSchedulerTrace, renderTimeline } from './trace.js';
+import { AiProfiler } from './profiler.js';
+import { defaultQuestions, pageKindOfIndex, runLongContextBenchmark, synthesizeContext } from './benchmark.js';
+import { runObservabilityDemo } from './observability.js';
 
 let failed = 0;
 
@@ -591,6 +596,81 @@ check('TLB: 初回 miss → 2回目 hit', mh.tlbFirst === true && mh.tlbSecond =
 check('Reasoning Stack: branchA/branchB を merge', mh.frameLabels.join(',') === 'branchA,branchB' && mh.mergedHypothesis === 'x=-1 が正しい');
 check('Memory Tier: HOT/WARM/COLD が揃う', mh.tiers.hot === 1 && mh.tiers.warm === 1 && mh.tiers.cold >= 1);
 check('Cursor/Attention で途中再開可能', mh.cursor === 391 && mh.attention.includes('Equation#5') && mh.currentChunk !== null && mh.currentSpan !== null);
+
+// [39] AI Performance Monitor（aiperf）
+console.log('\n[39] AI Perf Monitor');
+const perf39 = new AiPerf();
+const tlb39 = new ContextTlb();
+const tier39 = new TierManager();
+perf39.attach(tlb39, tier39);
+perf39.beginCall('math', 18);
+perf39.beginCall('search', 42);
+perf39.beginCall('math', 6);
+perf39.recordPageRequest(false);
+perf39.recordPageRequest(true);
+perf39.recordPageRequest(true);
+const snap39 = perf39.snapshot();
+check('CALL 統計（math 2回 / search 1回）', snap39.calls[0].expert === 'search' && snap39.calls.find((c) => c.expert === 'math')?.count === 2);
+check('Context Fault Rate', Math.abs(snap39.faultRate - 2 / 3) < 0.001);
+check('Expert 利用率（search が最大）', snap39.expertUtilization.search > snap39.expertUtilization.math);
+check('aiperf テキスト表示', perf39.render().includes('=== aiperf ===') && perf39.render().includes('TLB Hit Rate'));
+
+// [40] AI Trace（Chrome Trace 互換）
+console.log('\n[40] AI Trace');
+const tr40 = new AiTrace();
+tr40.complete('compile', 1000);
+tr40.complete('call:math', 18000);
+tr40.complete('reflect', 4000);
+const json40 = JSON.parse(tr40.toChromeTrace()) as { traceEvents: unknown[] };
+check('Chrome Trace 形式（traceEvents 配列）', Array.isArray(json40.traceEvents) && json40.traceEvents.length === 3);
+const ev40 = json40.traceEvents[1] as { name: string; ph: string; dur: number };
+check('complete イベント（X）に dur がある', ev40.ph === 'X' && ev40.dur === 18000 && ev40.name === 'call:math');
+const rt40 = run('2と3を足して');
+const runTrace40 = buildRuntimeTrace(rt40.steps);
+const sched40 = buildSchedulerTrace(rt40.events);
+check('Runtime/Scheduler Timeline が生成される', runTrace40.length === rt40.steps.length && sched40.length === rt40.events.length);
+check('Timeline テキスト表示', renderTimeline(runTrace40).includes('compile'));
+
+// [41] AI Profiler（Hot Expert / Hot Pages / Fault Hotspot）
+console.log('\n[41] AI Profiler');
+const prof41 = new AiProfiler();
+prof41.recordExpert('math', 80);
+prof41.recordExpert('search', 10);
+prof41.recordExpert('planning', 10);
+prof41.recordPageAccess(5, 1);
+prof41.recordPageAccess(5, 1);
+prof41.recordPageAccess(9, 1);
+prof41.recordFault(5);
+prof41.recordFault(5);
+const p41 = prof41.profile();
+check('Hot Expert = math（80%）', p41.hotExpert?.expert === 'math' && p41.hotExpert.share > 0.7);
+check('Hot Pages がアクセス順', p41.hotPages[0]?.pageId === 5 && p41.hotPages[0]?.accesses === 2);
+check('Fault Hotspot = Page5', p41.faultHotspots[0]?.pageId === 5 && p41.faultHotspots[0]?.faults === 2);
+check('profiler テキスト表示', prof41.render().includes('Hot Expert'));
+
+// [42] AI Benchmark（Long Context 比較: Qwen vs ArcAsha）
+console.log('\n[42] AI Benchmark');
+const syn42 = synthesizeContext('論文', 100, 64);
+check('合成 Context が 100 ページ', syn42.graph.nodes.filter((n) => n.kind === 'page').length === 100);
+check('ページ種別の決定論配置', pageKindOfIndex(0) === 'equation' && pageKindOfIndex(5) === 'search' && pageKindOfIndex(3) === 'summary');
+const bench42 = runLongContextBenchmark(defaultQuestions(), 200, 64);
+const t42 = bench42.totals;
+check('Token 削減率 > 70%', t42.tokenReduction > 0.7, `${(t42.tokenReduction * 100).toFixed(1)}%`);
+check('ページロード率 < 50%', t42.avgPageLoadRatio < 0.5, `${(t42.avgPageLoadRatio * 100).toFixed(1)}%`);
+check('Speedup > 1', t42.speedup > 1, `${t42.speedup.toFixed(2)}x`);
+check('TLB Hit Rate が計測される', t42.tlbHitRate > 0);
+check('Context Fault Rate が計測される', t42.totalFaultRate > 0 && t42.totalFaultRate <= 1);
+
+// [43] Observability 統合デモ
+console.log('\n[43] Observability 統合');
+const obs = runObservabilityDemo();
+check('Chrome Trace が有効な JSON', (() => { try { JSON.parse(obs.chromeTrace); return true; } catch { return false; } })());
+check('Timeline イベントが生成される', obs.traceEventCount > 0);
+check('aiperf に CALL 統計', obs.perf.calls.length > 0);
+check('profiler に Hot Expert', obs.profile.hotExpert !== null);
+check('ベンチ: Token 削減率 > 70%', obs.headline.tokenReduction > 0.7, `${(obs.headline.tokenReduction * 100).toFixed(1)}%`);
+check('ベンチ: Speedup > 1', obs.headline.speedup > 1, `${obs.headline.speedup.toFixed(2)}x`);
+check('ベンチ: Fault Rate / TLB Hit が揃う', obs.headline.faultRate >= 0 && obs.headline.tlbHitRate > 0);
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {
