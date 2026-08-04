@@ -186,6 +186,25 @@ check('stateDiagram に Belief', sd.includes('Belief:'));
 console.log('  --- State Diagram ---');
 console.log(sd.split('\n').map((l) => `  ${l}`).join('\n'));
 
+// [13] Scheduler / Capability SSA（ODAR = SSA）
+console.log('\n[13] Scheduler / Capability SSA');
+const rt3 = run('x^2を積分して');
+check(
+  'Capability# ノード（acc/latency/cost）',
+  rt3.graph.nodes.some((n) => n.kind === 'capability' && n.attrs.expert === 'math' && typeof n.attrs.accuracy === 'number'),
+);
+check(
+  'Schedule# ノード（priority/ETA）',
+  rt3.graph.nodes.some((n) => n.kind === 'schedule' && typeof n.attrs.priority === 'number' && typeof n.attrs.eta === 'number'),
+);
+check(
+  'トレース: Belief→Capability→Schedule→CALL',
+  rt3.steps.map((s) => s.kind).join(',') === 'input,compile,belief,capability,schedule,call',
+  rt3.steps.map((s) => s.kind).join(','),
+);
+const sd3 = toStateDiagram(rt3.steps);
+check('stateDiagram に Schedule', sd3.includes('Schedule:'));
+
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {
   console.log('  ✅ ALL PASS — AILSM Phase 0.5（Stage 1 決定論 + Stage 3 決定論Verifier）');

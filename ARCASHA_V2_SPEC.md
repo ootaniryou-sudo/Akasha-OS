@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.11** |
+| Status | **Draft v0.12** |
 | Date | 2026-08-04 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様） |
@@ -482,6 +482,8 @@ CALL Math  Batch=3
 
 さらに AILSM は **AI State IR** である — Task / Plan / Belief / Memory / Reflection / Result など**AIの内部状態全体をSSAノードとして管理する実行可能IR**（Phase 0.9）。LLVM IRがCPU状態しか持たないのに対し、AILSMはAIの状態全体を持つ。**AIの思考が全て可視化できる**。
 
+さらに v0.12 では **Capability / Schedule もSSAノード**化し、`Belief → Capability → Schedule → CALL` のルーティングも同一グラフ上で表現する（**ODAR = SSA**）。AILSMはCPUだけでなく AI 自身の思考・状態・学習・記憶・計画・信念を管理する **AI Operating IR**（AI OS の Kernel Object 相当）として再定義される。**仕様は v1.0 で凍結**（`AILSM_IR.md` §8）。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -736,9 +738,9 @@ Case2（AILSA）:
 1. **Paper 1: ODAR** — 分散環境での適応的ルーティング（誰に任せるか）
 2. **Paper 2: AILSA** — AI向け命令セットアーキテクチャ（ISA）
 3. **Paper 3: AILSM** — AI向け中間表現（IR）
-   - 候補タイトル: "Compiler-oriented Semantic IR for Distributed Expert Systems" / "Hierarchical Semantic IR"
-   - 論文化の中心は **SSA風ID付き意味グラフ**（正準化・Verifier容易性・最適化可能性）
-   - 発展: **共有IR**（全サブシステムが同一グラフを参照）と**型システム**（型安全性）
+   - 候補タイトル: "AILSM: A Stateful SSA Intermediate Representation for AI Systems" / "AI State IR: A Stateful SSA Representation for Distributed AI Runtime Systems"
+   - 論文化の中心は **状態を持つSSA（AI Operating IR）** — AIの思考・計画・記憶・信念を統一表現（正準化・Verifier容易性・最適化可能性）
+   - 発展: **共有IR**（全サブシステムが同一グラフを参照）・**型システム**（型安全性）・**ODAR=SSA**
 4. **Paper 4: Compiler** — 自然言語からAILSM/AILSAへの変換（3段階精度保証）
 5. **Paper 5: Native Expert** — AILSAネイティブ小型モデル
 6. **Paper 6: ArcAsha Architecture** — 全体アーキテクチャと分散実行基盤
@@ -757,6 +759,7 @@ Case2（AILSA）:
 | **0.7** | ✅ **AILSM Visualizer**（見えるIR: Mermaid / Graphviz DOT / ASCIIツリー） | `src/arcasha/ailsm/`（visualizer.ts, visualize.ts）+ `public/ailsm-viewer.html` | 完了（`npm run ailsm:visualize "…"` / ブラウザ描画確認済み） |
 | **0.8** | ✅ **AILSM Executor**（IRをLLM無しで実行 — ExpertはCPU） | `src/arcasha/ailsm/executor.ts`（組み込み演算/Resultノード/resolved/needsExpert）+ `compileAndRun` | 完了（`2+3=5` / `20÷4=5` / `√9=3` / 積分はExpert委譲 を確認） |
 | **0.9** | ✅ **AI State SSA**（Memory / Belief / Plan / Reflection を SSA ノード化） | `src/arcasha/ailsm/state.ts`（remember/believe/plan/reflect）+ `runtime.ts`（run: 状態遷移トレース）+ `toStateDiagram` | 完了（ローカル解決→Memory / Expert委譲→Belief→CALL を確認） |
+| **0.10** | ✅ **Scheduler / Capability SSA + AILSM仕様凍結 v1.0**（ODAR = SSA） | `state.ts`（capability/schedule）, `runtime.ts`（Belief→Capability→Schedule→CALL） | 完了（全ノード・エッジ・型・状態遷移・ABIを v1.0 で凍結） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |

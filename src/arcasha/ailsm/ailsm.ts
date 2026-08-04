@@ -15,7 +15,9 @@ export type NodeKind =
   | 'memory'
   | 'belief'
   | 'plan'
-  | 'reflection';
+  | 'reflection'
+  | 'capability'
+  | 'schedule';
 
 export interface AilsmNode {
   id: number;
@@ -45,6 +47,8 @@ const KIND_LABEL: Record<NodeKind, string> = {
   belief: 'Belief',
   plan: 'Plan',
   reflection: 'Reflection',
+  capability: 'Capability',
+  schedule: 'Schedule',
 };
 
 export function nodeKindLabel(kind: NodeKind): string {

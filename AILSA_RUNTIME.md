@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.0**（Executor / AI State SSA 実装済み / Expert Runtime・Reasoning Runtime は設計） |
+| Status | **Spec v1.0**（Executor / AI State SSA / Scheduler-Capability SSA 実装済み / Expert Runtime は設計） |
 | Date | 2026-08-04 |
 | 実装 | `src/arcasha/ailsm/executor.ts`（実装済み） |
 | 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSM_IR.md`, `AILSM_COMPILER.md` |
@@ -47,13 +47,15 @@ Memory / Belief / Plan / Reflection もすべて SSA ノードとして AILSM �
 Task#1
   ├─ Memory#4 stores(Value#3)          長期記憶
   ├─ Belief#5 informs(Task#1)          ODAR の確信度（expert, confidence）
-  ├─ Plan#6 plans(Task#1)              実行計画
+  ├─ Capability#8 informs(Task#1)      能力（accuracy/latency/cost）
+  ├─ Schedule#9 schedules(Task#1)      実行計画（node/priority/ETA）
+  ├─ Plan#6 plans(Task#1)              分解計画
   └─ Reflection#7 reflects(Task#1)     自己修正（cause, fix）
 ```
 
 - `run(text)`: コンパイル → 実行 → 状態遷移
   - ローカル解決 → `Result` → `Memory`（stores）
-  - Expert委譲 → `Belief`（informs）→ `CALL`（pending）
+  - Expert委譲 → `Belief` → `Capability` → `Schedule` → `CALL`（ODAR = SSA）
 - **State Visualizer**: `toStateDiagram(steps)` で `stateDiagram-v2` を出力（AIの思考を可視化）
 
 ## 3. Expert Runtime（設計 — Phase 1）
@@ -106,6 +108,7 @@ Natural Language
 |------|-------|------|
 | AILSM Executor | 0.8 | ✅ 実装済み（`executor.ts`） |
 | AI State SSA（Memory/Belief/Plan/Reflection） | 0.9 | ✅ 実装済み（`state.ts`, `runtime.ts`） |
+| Scheduler / Capability SSA（ODAR=SSA） | 0.10 | ✅ 実装済み（`state.ts`, `runtime.ts`） |
 | Expert Runtime（CALL/RETURN） | 1 | 未着手（実機デモで実装） |
 | Reasoning Runtime（PLAN/VERIFY/REFLECT） | 2 | 未着手 |
 | Expert間AILSA通信 | 1 | 未着手 |

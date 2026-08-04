@@ -11,13 +11,25 @@
  */
 
 import { compileAndRun } from './compiler.js';
-import { believe, remember } from './state.js';
+import { believe, capability, remember, schedule } from './state.js';
 import type { AilsmGraph } from './ailsm.js';
 
 export interface RuntimeStep {
-  kind: 'input' | 'compile' | 'resolve' | 'belief' | 'call' | 'result' | 'memory' | 'reflect';
+  kind:
+    | 'input' | 'compile' | 'resolve'
+    | 'belief' | 'capability' | 'schedule' | 'call'
+    | 'result' | 'memory' | 'reflect';
   label: string;
 }
+
+/** 静的エキスパート特性表（Phase 2 で ODAR の学習値に置き換える） */
+const EXPERT_META: Record<string, { accuracy: number; latencyMs: number; cost: number }> = {
+  math: { accuracy: 0.91, latencyMs: 24, cost: 0.4 },
+  code: { accuracy: 0.88, latencyMs: 30, cost: 0.5 },
+  search: { accuracy: 0.85, latencyMs: 18, cost: 0.3 },
+  reasoning: { accuracy: 0.93, latencyMs: 40, cost: 0.6 },
+  general: { accuracy: 0.8, latencyMs: 25, cost: 0.4 },
+};
 
 export interface RuntimeTrace {
   text: string;
@@ -47,12 +59,28 @@ export function run(text: string, level: 0 | 1 | 2 | 3 = 2): RuntimeTrace {
     return { text, graph, steps, needsExpert: false, resolvedValue: value };
   }
 
-  // Expert 委譲: Belief SSA → CALL（Phase 1 で実機へ）
+  // Expert 委譲: Belief → Capability → Schedule → CALL（全部 SSA、ODAR = SSA）
   if (execution.needsExpert && taskId !== undefined) {
     const expert = compiled.capability.expert;
     const confidence = Math.min(0.95, 0.5 + compiled.capability.confidence * 0.2);
+    const meta = EXPERT_META[expert] ?? EXPERT_META.general;
+
     graph = believe(graph, taskId, expert, confidence, `needs ${expert} expert`).graph;
     steps.push({ kind: 'belief', label: `Belief: expert=${expert}, conf=${confidence.toFixed(2)}` });
+
+    graph = capability(graph, taskId, expert, meta.accuracy, meta.latencyMs, meta.cost, 'IR').graph;
+    steps.push({
+      kind: 'capability',
+      label: `Capability: ${expert} acc=${meta.accuracy} lat=${meta.latencyMs}ms cost=${meta.cost}`,
+    });
+
+    const priority = Math.min(0.99, confidence + meta.accuracy * 0.05);
+    graph = schedule(graph, taskId, expert, priority, meta.latencyMs, meta.cost).graph;
+    steps.push({
+      kind: 'schedule',
+      label: `Schedule: node=${expert} priority=${priority.toFixed(2)} ETA=${meta.latencyMs}ms`,
+    });
+
     steps.push({ kind: 'call', label: `CALL ${expert} (pending — Phase 1 で実機委譲)` });
     return { text, graph, steps, needsExpert: true, resolvedValue: null };
   }

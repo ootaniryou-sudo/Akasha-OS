@@ -18,7 +18,7 @@ import { AilsmBuilder } from './ailsm.js';
 import type { AilsmGraph } from './ailsm.js';
 import type { AilsmType } from './types.js';
 
-export type StateKind = 'memory' | 'belief' | 'plan' | 'reflection';
+export type StateKind = 'memory' | 'belief' | 'plan' | 'reflection' | 'capability' | 'schedule';
 
 export interface StateAddResult {
   graph: AilsmGraph;
@@ -104,6 +104,47 @@ export function reflect(
     'string',
     { cause, ...(fix ? { fix } : {}) },
     'reflects',
+    taskId,
+  );
+}
+
+/** 能力: Capability#N {expert, accuracy, latency, cost, language}（ODAR の入力） */
+export function capability(
+  g: AilsmGraph,
+  taskId: number,
+  expert: string,
+  accuracy: number,
+  latency: number,
+  cost: number,
+  language = 'IR',
+): StateAddResult {
+  return withStateNode(
+    g,
+    'capability',
+    'capability',
+    'unknown',
+    { expert, accuracy, latency, cost, language },
+    'informs',
+    taskId,
+  );
+}
+
+/** 実行計画: Schedule#N {node, priority, eta, cost}（ODAR = SSA） */
+export function schedule(
+  g: AilsmGraph,
+  taskId: number,
+  node: string,
+  priority: number,
+  eta: number,
+  cost: number,
+): StateAddResult {
+  return withStateNode(
+    g,
+    'schedule',
+    'schedule',
+    'unknown',
+    { node, priority, eta, cost },
+    'schedules',
     taskId,
   );
 }
