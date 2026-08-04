@@ -114,10 +114,13 @@ function rebuildWithResult(g: AilsmGraph, resultValue: number | null): AilsmGrap
 export function execute(g: AilsmGraph): ExecutorResult {
   const task = g.nodes.find((n) => n.kind === 'task');
   const actions = (task?.attrs.actions as string[] | undefined) ?? [];
+  const intent = String(task?.attrs.intent ?? 'unknown');
+  const domain = String(task?.attrs.domain ?? 'unknown');
+  const hasConstant = g.nodes.some((n) => n.kind === 'value' && n.label === 'constant');
   const steps: string[] = [];
 
   let resolvedValue: number | null = null;
-  let resolved = false;
+  let builtinResolved = false;
 
   for (const action of actions) {
     const canon = action as CanonicalAction;
@@ -129,7 +132,7 @@ export function execute(g: AilsmGraph): ExecutorResult {
         try {
           resolvedValue = bin.op(a, b);
           steps.push(`${canon}(${a} ${bin.symbol} ${b}) = ${resolvedValue}`);
-          resolved = true;
+          builtinResolved = true;
           break;
         } catch (err) {
           steps.push(`${canon}: ${(err as Error).message}`);
@@ -145,7 +148,7 @@ export function execute(g: AilsmGraph): ExecutorResult {
         try {
           resolvedValue = un.op(a);
           steps.push(`${canon}(${un.symbol}${a}) = ${resolvedValue}`);
-          resolved = true;
+          builtinResolved = true;
           break;
         } catch (err) {
           steps.push(`${canon}: ${(err as Error).message}`);
@@ -155,8 +158,14 @@ export function execute(g: AilsmGraph): ExecutorResult {
     }
   }
 
+  // ローカル解決 = 組み込み演算 or コンパイル時の定数畳み込み
+  const resolved = builtinResolved || hasConstant;
+  // Expert 委譲が必要なタスク: 未解決 かつ（アクション / 専門意図 / 既知ドメイン）
+  const expertIntent =
+    intent === 'search' || intent === 'summarize' || intent === 'verify' || intent === 'code';
+  const needsExpert = !resolved && (actions.length > 0 || expertIntent || domain !== 'unknown');
+
   const after = rebuildWithResult(g, resolved ? resolvedValue : null);
-  const needsExpert = !resolved && actions.length > 0;
 
   return {
     before: g,

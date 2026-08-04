@@ -19,6 +19,11 @@ import { pickNext } from './scheduler.js';
 import type { ScheduledUnit } from './scheduler.js';
 import { AIKernel, isKernelNode } from './kernel.js';
 import { assignNamespace, canAccessMemory, createNamespace, loadPage, pageMemory } from './namespace.js';
+import { ABI_VERSION_1_0, supportsAbi } from './abi.js';
+import type { AbiArgument } from './abi.js';
+import { MockExpertDriver } from './driver.js';
+import { DeviceTree } from './device-tree.js';
+import { boot, execute as runtimeExecute } from './expert-runtime.js';
 import { toAsciiTree, toDot, toMermaid, toStateDiagram } from './visualizer.js';
 
 let failed = 0;
@@ -328,6 +333,46 @@ check('リンクで 2 セグメント', linked.segments.length === 2);
 check('シンボルテーブル（math=task0）', linked.segments[0].taskId === '0');
 check('CALL×2 + RETURN×2 でラップ', linked.instructions.filter((i) => i.opcode === Opcode.CALL).length === 2 && linked.instructions.filter((i) => i.opcode === Opcode.RETURN).length === 2);
 check('リンク後エンコード可能（検証込み）', linked.bytes.length > 0);
+
+// [20] AI ABI（引数/戻り値/エラー/バージョン交渉）
+console.log('\n[20] AI ABI');
+const arg: AbiArgument = { index: 0, type: 'float32', shape: [1], ownership: 'borrow', alignment: 4 };
+check('ABI 引数（float32/borrow/4byte）', arg.type === 'float32' && arg.ownership === 'borrow' && arg.alignment === 4);
+check('ABI バージョン整合（1.0 → 1.0）', supportsAbi(ABI_VERSION_1_0, ABI_VERSION_1_0) === true);
+check('ABI 不整合（kernel 1.0 → expert 1.1）', supportsAbi({ major: 1, minor: 0 }, { major: 1, minor: 1 }) === false);
+
+// [21] Expert Driver（Kernel → Driver → LLM）
+console.log('\n[21] Expert Driver');
+const mathDriver = new MockExpertDriver('math', 'Math Expert');
+const dResp = mathDriver.invoke({ program: [{ opcode: MathOpcode.EQ, slots: [{ slot: Slot.INPUT, value: '2+3' }] }], abiVersion: ABI_VERSION_1_0 });
+check('Math Driver: EQ(2+3)=5', dResp.ok && dResp.result === 5, String(dResp.result));
+const dErr = mathDriver.invoke({ program: [{ opcode: MathOpcode.EQ, slots: [{ slot: Slot.INPUT, value: '1/0' }] }], abiVersion: ABI_VERSION_1_0 });
+check('Math Driver: 0除算 → Error ABI', !dErr.ok && dErr.error?.code === 1001 && dErr.error?.retryable === true);
+const dAbi = mathDriver.invoke({ program: [], abiVersion: { major: 1, minor: 1 } });
+check('ABI 不一致 → UNSUPPORTED_ABI', !dAbi.ok && dAbi.error?.code === 2002);
+
+// [22] AI Device Tree
+console.log('\n[22] AI Device Tree');
+const dtree = new DeviceTree();
+dtree.registerNode({ id: 'pc1', arch: 'x86_64', cpu: 'M3', ramMB: 16384, language: 'ja', cost: 0.1 });
+dtree.registerNode({ id: 'iphone', arch: 'arm64', cpu: 'A18', ramMB: 8192, battery: 75, network: true, language: 'ja', cost: 0.05 });
+check('DeviceTree ノード登録', dtree.list().length === 2);
+check('DeviceTree describe に gpu/battery 情報', dtree.describe().includes('pc1') && dtree.describe().includes('battery=75%'));
+
+// [23] Local Expert Runtime（1台のPCで2 Expert が AILSA で通信）
+console.log('\n[23] Local Expert Runtime');
+const booted = boot();
+check('Driver 3種登録（math/search/reasoning）', booted.drivers.size === 3);
+const ex1 = runtimeExecute('x^2を積分して', booted);
+check('積分 → math Driver へ委譲', ex1.driverId === 'math', String(ex1.driverId));
+check('Driver 結果が返る', typeof ex1.result === 'string' && (ex1.result as string).includes('∫'));
+check('結果が Kernel 経由で Memory 保存', ex1.finalGraph.nodes.some((n) => n.kind === 'memory' && n.attrs.key === 'result'));
+check('プロセス finished', ex1.finalGraph.nodes.some((n) => n.kind === 'process' && n.attrs.state === 'finished'));
+const ex2 = runtimeExecute('Webで記事を検索して', booted);
+check('検索 → search Driver へ委譲', ex2.driverId === 'search', String(ex2.driverId));
+check('search 結果 [doc1..]', ex2.result === '[doc1, doc2, doc3]', String(ex2.result));
+const ex3 = runtimeExecute('2と3を足して', booted);
+check('ローカル解決は Driver 不要（result=5）', ex3.driverId === null && ex3.result === null);
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {

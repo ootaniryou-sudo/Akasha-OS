@@ -5,10 +5,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.15** |
+| Status | **Draft v0.16** |
 | Date | 2026-08-05 |
 | Owner | ArcAsha Core Team |
-| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様） |
+| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様） |
 
 ---
 
@@ -490,6 +490,8 @@ v0.14 では **AI System Call / Kernel API** を導入し、Expert（User Space�
 
 v0.15 では **Toolchain** として体系化する。AI Program（AILSM で直接プログラムを書く）/ AILSM Optimizer（命令レベル: DCE + CALL バッチ化）/ AI Linker（複数 Expert → Executable Task）を追加し、**AI のための GCC / LLVM / GNU Binutils** に相当する階層を提供する（`AI_TOOLCHAIN.md`）。研究の核は ODAR / AILSM / AILSA の3点。
 
+v0.16 では **AI ABI / Expert Driver / AI Device Tree**（`AI_ABI.md`）を追加し、AI Linux を完成させる。さらに **Phase 1 最小版（Local Expert Runtime）** を実装 — 1台のPC上で math / search / reasoning の Driver が AILSA で通信し、`CALL → Driver → RETURN → Kernel(Memory)` の一連が動作する。実機（iPad/iPhone）への委譲は同じ `ExpertDriver` インターフェースの実装で差し替え可能。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -772,6 +774,10 @@ Case2（AILSA）:
 | **0.14** | ✅ **AI Program**（AILSM で直接プログラムを書く） | `program.ts`（AiProgram DSL: plan/call/math/verify/reflect/returns + assemble/encode） | 完了（PLAN→CALL→VERIFY→REFLECT→RETURN を検証込みでエンコード） |
 | **0.15** | ✅ **AILSM Optimizer（命令レベル）** | `optimizer.ts`（optimizeInstructions: DCE + CALLバッチ化 + Latency/Cost統計） | 完了（CALL 3→1 / Latency・Cost削減 を確認） |
 | **0.16** | ✅ **AI Linker**（複数 Expert → Executable Task） | `linker.ts`（link: セグメント結合 + シンボルテーブル + 再検証） | 完了（Math+Search → 単一プログラム） |
+| **0.17** | ✅ **AI ABI**（引数/戻り値/エラー/バージョン交渉/Capability） | `abi.ts`（AbiArgument/AbiReturn/ErrorAbi/supportsAbi/CapabilityAbi） | 完了（float32/borrow / 0除算エラー / ABI不整合 を確認） |
+| **0.18** | ✅ **Expert Driver**（Kernel→Driver→LLM） | `driver.ts`（ExpertDriver インターフェース + MockExpertDriver） | 完了（EQ(2+3)=5 / 0除算→ErrorABI / ABI不一致） |
+| **0.19** | ✅ **AI Device Tree**（実行ノード情報） | `device-tree.ts`（DeviceInfo/registerNode/describe） | 完了（PC/スマホの GPU/Battery/WiFi を記述） |
+| **1（最小）** | ✅ **Local Expert Runtime**（1台PCで複数ExpertがAILSAで通信） | `expert-runtime.ts`（boot/execute: CALL→Driver→RETURN→Kernel(Memory)） | 完了（積分→math / 検索→search を確認） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |
