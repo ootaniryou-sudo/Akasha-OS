@@ -5,10 +5,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.2** |
+| Status | **Draft v0.3** |
 | Date | 2026-08-04 |
 | Owner | ArcAsha Core Team |
-| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名） |
+| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様） |
 
 ---
 
@@ -55,6 +55,17 @@ AILSAは「AI共通言語」ではなく、**AI専用中間表現（IR）**で�
 | 実行ユニット | 小型Expertモデル |
 
 つまり ArcAsha v2 は **「AIのコンパイラ」** である。LLVMが様々なCPUアーキテクチャを対象にするように、様々な小型AIを対象にした中間表現と最適化基盤を提供する。これが「AIオーケストレーション」から「**AIコンピュータアーキテクチャ**」への進化の本質。
+
+さらに **v2.1** では AILSA を「言語」ではなく**命令セット（ISA: Instruction Set Architecture）**として定義する。AI版RISC-Vとして、基本命令は少なく（CALL / RETURN / STORE / LOAD / FAIL / SUCCESS / PLAN / VERIFY ...）、その上に専門IR（Math IR / Code IR / Search IR）が載る。管理・バージョン・方言は **`AILSA_ISA.md`** に独立仕様として分離する。
+
+| コンピュータ | ArcAsha |
+|-------------|---------|
+| 命令セット（ISA） | **AILSA ISA** |
+| 高級IR（LLVM IR） | AILSM |
+| コンパイラ | Codec |
+| スケジューラ | ODAR |
+| 実行ユニット | Expert |
+| ベンダー仕様書 | **AILSA Registry** |
 
 ---
 
@@ -163,6 +174,8 @@ STORE        LOAD          SEARCH      MERGE
 #### Token ID 化（AI用アセンブリ言語）
 
 最終形は人間可読な名前ではなく**固定Token ID**。閉じた語彙の各トークンに一意のIDを割り当て、AILSAそのものを**AI用アセンブリ言語**にする。
+
+Token ID の割当は **AILSA Registry**（`AILSA_ISA.md` で仕様化）が唯一の権威を持つ。Registryは Heart of Wisdom（マスター）が管理し、バージョン付きで配布される。
 
 | 範囲 | カテゴリ | 例 |
 |------|---------|-----|
@@ -275,6 +288,40 @@ AILSA
 - スキーマ駆動の変換（フィールドマッピング）は**決定的**に
 - 生成するのは**内容だけ**（開いたスロットのみ）
 - ホップ数を最小化する（プランナーが最短経路を選ぶ）
+
+### 2.5 AILSA Registry（誰が管理するか）
+
+Token ID の割当は**一元管理**され、バージョン付きで配布される。
+
+- **権威**: Heart of Wisdom（マスター）が唯一の権威。`src/arcasha/ailsa/registry.json` に同梱
+- **形式**: `Version` + トークン（名前, ID, カテゴリ, 方言, 意味）
+- **変更ポリシー（不変則）**:
+  - 既存トークンのIDは**絶対に変更しない**（`TASK_SOLVE=0x04` が将来 `0x84` になる事故を防ぐ）
+  - 新トークンは予約領域の空きIDへ追加
+  - 廃止トークンはIDを再利用せず deprecated フラグで管理
+- **配布**: マスター同梱 + ノードへ配布可能（アプリ同梱でオフラインでも参照可）
+
+### 2.6 Dialect と Versioning
+
+AILSA全部を全Expertが覚える必要はない。LLVM のターゲット（x86/ARM/RISC-V）と同様に、**Dialect**（方言）で分割する。
+
+```
+AILSA（Base ISA）
+   ↓
+Math Dialect / Code Dialect / Search Dialect / Reasoning Dialect
+   ↓
+各Expert
+```
+
+- **Base ISA**: CALL / RETURN / STORE / LOAD / FAIL / SUCCESS / PLAN / VERIFY ... （全Expert必須）
+- **Dialect**: Math（EQ DERIVE LIMIT MATRIX）/ Code（FUNCTION CLASS PATCH BUILD）/ Search（QUERY FILTER RANK）...
+
+**Versioning**:
+- Registry は `MAJOR.MINOR`。MINOR=追加（後方互換）、MAJOR=原則禁止
+- `AILSA 1.0 → 1.1` のとき **Codecだけ更新**。Expert は自分の Dialect のバージョン（例: math/v1）のまま動き続ける
+- Expert が知るべきことは「Registry の Version」と「自分の Dialect」だけ
+
+詳細は `AILSA_ISA.md`（命令セット仕様書）を参照。
 
 ---
 
@@ -495,7 +542,7 @@ NL → AILSA → モデルA → AILSA → モデルB → NL   （AILSA）
 
 | Phase | 内容 | 成果物 | 既存資産の活用 |
 |-------|------|--------|---------------|
-| **0** | **AILSA Schema + Closed Vocabulary 定義**（Token ID 割当表） | `src/arcasha/ailsa/vocab.ts` | — |
+| **0** | **AILSA Registry v1.0 + Closed Vocabulary**（Token ID 割当表。`AILSA_ISA.md` 準拠） | `src/arcasha/ailsa/`（registry.json, vocab.ts） | — |
 | **0.5** | **AILSA Codec**（Encoder: NL→AILSM→Token / Decoder: Token→AILSM→NL） | `src/arcasha/ailsa/`（codec.ts, encoder.ts, decoder.ts） | 小型モデルでEncoder/Decoderをプロンプト実装 |
 | **1** | ハブでのAILSAリレー（2ノード間マルチホップ） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | AILSM Codec 本実装（意味グラフ ⇄ トークン） | `src/arcasha/ailsm/` | Translation Expert 相当をプロンプトで |
@@ -528,6 +575,9 @@ NL → AILSA → モデルA → AILSA → モデルB → NL   （AILSA）
 | **AILSA-M/C/R/S/V** | 各エキスパート専用のIR方言 |
 | **Codec** | AILSAとAILSM/自然言語を相互変換する双方向モジュール（Encoder + Decoder） |
 | **Token ID** | 閉じた語彙に割り当てた固定ID（0x04=TASK_SOLVE 等）。AILSAをアセンブリ言語化する |
+| **AILSA ISA** | AILSAを命令セットとして定義した仕様。AI版RISC-V（`AILSA_ISA.md`） |
+| **AILSA Registry** | Token ID割当の権威・バージョン管理（マスターが管理） |
+| **Dialect** | エキスパート固有の命令サブセット（Math/Code/Search/Reasoning） |
 | **Reasoning Unit** | 推論木のノード（Goal/Input/Output/Belief/Verifier/Children） |
 | **Belief** | タスク達成確信度 [0,1]。分解・ルーティング・検証の判断基準 |
 | **ODAR** | Observation-Driven Adaptive Routing。Expert選択アルゴリズム |
