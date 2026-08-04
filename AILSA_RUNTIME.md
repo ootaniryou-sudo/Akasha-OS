@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.0**（Executor / AI State SSA / Scheduler-Capability SSA 実装済み / Expert Runtime は設計） |
+| Status | **Spec v1.0**（Executor / AI State SSA / Scheduler-Capability SSA / AI Process 実装済み / Expert Runtime は設計） |
 | Date | 2026-08-04 |
 | 実装 | `src/arcasha/ailsm/executor.ts`（実装済み） |
 | 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSM_IR.md`, `AILSM_COMPILER.md` |
@@ -58,6 +58,22 @@ Task#1
   - Expert委譲 → `Belief` → `Capability` → `Schedule` → `CALL`（ODAR = SSA）
 - **State Visualizer**: `toStateDiagram(steps)` で `stateDiagram-v2` を出力（AIの思考を可視化）
 
+### 2.2 AI Process / Thread / Reasoning Scheduler（AI Kernel IR — Phase 0.11）
+
+```
+Task#1
+  └─ Process#10 processes(Task#1)   {state=running, owner=math, priority=0.82, memoryBytes=49152}
+       └─ Thread#11 threads(Process#10)  {label=solve, state=ready}
+```
+
+- **AIProcess**: ライフサイクル `created → ready → running → { waiting / finished / failed }`（不正遷移は例外）
+- **AIThread**: 親Processから生え、Taskに対応（複数タスクの同時進行）
+- **ReasoningScheduler**: `pickNext`（最高優先度・同点はID昇順）/ `pickRoundRobin`（公平性）— 100%決定論
+- **Runtime Events**: `SPAWN` `CALL` `RETURN` `YIELD` `WAIT` `RESUME` `PREEMPT` `TIMEOUT` `FAIL` `FINISH`
+- **Execution Trace**: `{seq, kind, processId, threadId, detail}` で全状態遷移を再現可能に記録
+
+これで AILSM は **AI Kernel IR**（AI OS の Kernel Object）になる。複数タスクを Process として同時進行できる。
+
 ## 3. Expert Runtime（設計 — Phase 1）
 
 **Expert = CPU**。CALL/RETURN で AILSA を処理する。
@@ -109,10 +125,27 @@ Natural Language
 | AILSM Executor | 0.8 | ✅ 実装済み（`executor.ts`） |
 | AI State SSA（Memory/Belief/Plan/Reflection） | 0.9 | ✅ 実装済み（`state.ts`, `runtime.ts`） |
 | Scheduler / Capability SSA（ODAR=SSA） | 0.10 | ✅ 実装済み（`state.ts`, `runtime.ts`） |
+| AI Process / Thread / Reasoning Scheduler | 0.11 | ✅ 実装済み（`state.ts`, `scheduler.ts`, `runtime.ts`） |
 | Expert Runtime（CALL/RETURN） | 1 | 未着手（実機デモで実装） |
 | Reasoning Runtime（PLAN/VERIFY/REFLECT） | 2 | 未着手 |
 | Expert間AILSA通信 | 1 | 未着手 |
 | 小型Expertの蒸留学習 | 4-5 | 未着手 |
+
+---
+
+## 7. AI Runtime Model v1.0（凍結）
+
+実機通信（Phase 1）の前に、**AI実行モデルを v1.0 で凍結**する。通信は単なる「実行バックエンドの一つ」として自然に組み込める。
+
+| モデル | 定義 |
+|--------|------|
+| **AIProcess** | ライフサイクル: `created → ready → running → { waiting / finished / failed }`。属性: owner / priority / memoryBytes |
+| **AIThread** | 親Processからの生成（`threads` エッジ）。Task との対応（label） |
+| **ReasoningScheduler** | `pickNext`（最高優先度・同点はID昇順）/ `pickRoundRobin`（公平性）。プリエンプションは running→ready |
+| **Runtime Events** | `SPAWN` `CALL` `RETURN` `YIELD` `WAIT` `RESUME` `PREEMPT` `TIMEOUT` `FAIL` `FINISH` |
+| **Execution Trace** | `{seq, kind, processId, threadId, detail}` の逐次記録。全ての状態遷移を再現可能 |
+
+**位置付け**: AILSM = **AI Kernel IR**（AI OS の Kernel Object）。Process / Thread / Scheduler を追加し、本当に **AI OS** になる。
 
 ---
 

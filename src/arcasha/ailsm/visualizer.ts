@@ -25,7 +25,9 @@ function nodeIdOf(n: AilsmNode): string {
     : n.kind === 'plan' ? 'P'
     : n.kind === 'reflection' ? 'R'
     : n.kind === 'capability' ? 'C'
-    : 'Sc'; // schedule
+    : n.kind === 'schedule' ? 'Sc'
+    : n.kind === 'process' ? 'Ps'
+    : 'Th'; // thread
   return `${prefix}${n.id}`;
 }
 
@@ -67,7 +69,9 @@ export function toMermaid(g: AilsmGraph): string {
     else if (n.kind === 'plan') lines.push(`  ${id}[["${label}"]]`); // サブルーチン
     else if (n.kind === 'reflection') lines.push(`  ${id}{{"${label}"}}`); // 六角形
     else if (n.kind === 'capability') lines.push(`  ${id}[/"${label}"/]`); // 平行四辺形（縦）
-    else lines.push(`  ${id}>"${label}"]`); // フラグ（schedule）
+    else if (n.kind === 'schedule') lines.push(`  ${id}>"${label}"]`); // フラグ
+    else if (n.kind === 'process') lines.push(`  ${id}((("${label}")))`); // 二重丸
+    else lines.push(`  ${id}(("${label}"))`); // 丸（thread）
   }
   const idByNode = new Map(g.nodes.map((n) => [n.id, nodeIdOf(n)]));
   for (const e of g.edges) {
@@ -90,6 +94,8 @@ export function toDot(g: AilsmGraph): string {
     reflection: 'component',
     capability: 'note',
     schedule: 'record',
+    process: 'doublecircle',
+    thread: 'ellipse',
   };
   const lines = ['digraph AILSM {', '  node [fontname="Helvetica"];'];
   for (const n of g.nodes) {

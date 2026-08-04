@@ -18,7 +18,29 @@ import { AilsmBuilder } from './ailsm.js';
 import type { AilsmGraph } from './ailsm.js';
 import type { AilsmType } from './types.js';
 
-export type StateKind = 'memory' | 'belief' | 'plan' | 'reflection' | 'capability' | 'schedule';
+export type StateKind =
+  | 'memory' | 'belief' | 'plan' | 'reflection' | 'capability' | 'schedule'
+  | 'process' | 'thread';
+
+export const PROCESS_STATES = ['created', 'ready', 'running', 'waiting', 'finished', 'failed'] as const;
+export type ProcessState = (typeof PROCESS_STATES)[number];
+
+const VALID_TRANSITIONS: Record<ProcessState, readonly ProcessState[]> = {
+  created: ['ready'],
+  ready: ['running', 'waiting', 'failed'],
+  running: ['ready', 'waiting', 'finished', 'failed'],
+  waiting: ['ready', 'failed'],
+  finished: [],
+  failed: [],
+};
+
+export function isProcessState(s: string): s is ProcessState {
+  return (PROCESS_STATES as readonly string[]).includes(s);
+}
+
+export function canTransition(from: ProcessState, to: ProcessState): boolean {
+  return VALID_TRANSITIONS[from].includes(to);
+}
 
 export interface StateAddResult {
   graph: AilsmGraph;
@@ -147,4 +169,63 @@ export function schedule(
     'schedules',
     taskId,
   );
+}
+
+/** AI Process: Process#N {state, owner, priority, memoryBytes}（AI OS のプロセス相当） */
+export function createProcess(
+  g: AilsmGraph,
+  taskId: number,
+  spec: { owner: string; priority: number; memoryBytes?: number },
+): StateAddResult {
+  const attrs: Record<string, string | number | boolean | string[]> = {
+    state: 'created',
+    owner: spec.owner,
+    priority: spec.priority,
+  };
+  if (spec.memoryBytes !== undefined) attrs.memoryBytes = spec.memoryBytes;
+  return withStateNode(g, 'process', 'process', 'unknown', attrs, 'processes', taskId);
+}
+
+/** AI Thread: Thread#N {label, state}（親 Process から生える） */
+export function spawnThread(
+  g: AilsmGraph,
+  processId: number,
+  label: string,
+): StateAddResult {
+  return withStateNode(g, 'thread', 'thread', 'unknown', { label, state: 'ready' }, 'threads', processId);
+}
+
+/** プロセスの状態遷移（不正遷移は例外 — 壊れない土台） */
+export function setProcessState(
+  g: AilsmGraph,
+  processId: number,
+  to: ProcessState,
+): StateAddResult {
+  const proc = g.nodes.find((n) => n.id === processId && n.kind === 'process');
+  if (!proc) throw new Error(`setProcessState: Process#${processId} が存在しない`);
+  const from: ProcessState = isProcessState(String(proc.attrs.state ?? 'created')) ? (String(proc.attrs.state) as ProcessState) : 'created';
+  if (!canTransition(from, to)) {
+    throw new Error(`不正なプロセス遷移: ${from} -> ${to}`);
+  }
+
+  const b = new AilsmBuilder();
+  const remap = new Map<number, number>();
+  let newId: number | undefined;
+  for (const n of g.nodes) {
+    if (n.id === processId) {
+      const id = b.addNode(n.kind, n.label, n.type, { ...n.attrs, state: to }, n.constraints);
+      remap.set(n.id, id);
+      newId = id;
+    } else {
+      const id = b.addNode(n.kind, n.label, n.type, n.attrs, n.constraints);
+      remap.set(n.id, id);
+    }
+  }
+  for (const e of g.edges) {
+    const from2 = remap.get(e.from);
+    const to2 = remap.get(e.to);
+    if (from2 !== undefined && to2 !== undefined && from2 !== to2) b.connect(from2, to2, e.rel);
+  }
+  if (newId === undefined) throw new Error('setProcessState: 内部エラー');
+  return { graph: b.graph(), id: newId };
 }

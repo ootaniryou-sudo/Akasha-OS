@@ -9,7 +9,9 @@ import { MathOpcode } from '../ailsa/dialect.js';
 import { compile, compileAndRun, describeGraph, toHex } from './compiler.js';
 import { execute } from './executor.js';
 import { run } from './runtime.js';
-import { believe, plan, reflect, remember } from './state.js';
+import { canTransition, believe, plan, reflect, remember } from './state.js';
+import { pickNext } from './scheduler.js';
+import type { ScheduledUnit } from './scheduler.js';
 import { toAsciiTree, toDot, toMermaid, toStateDiagram } from './visualizer.js';
 
 let failed = 0;
@@ -198,12 +200,37 @@ check(
   rt3.graph.nodes.some((n) => n.kind === 'schedule' && typeof n.attrs.priority === 'number' && typeof n.attrs.eta === 'number'),
 );
 check(
-  'トレース: Belief→Capability→Schedule→CALL',
-  rt3.steps.map((s) => s.kind).join(',') === 'input,compile,belief,capability,schedule,call',
+  'トレース: Process→Thread→Belief→Capability→Schedule→CALL→WAIT',
+  rt3.steps.map((s) => s.kind).join(',') === 'input,compile,process,thread,belief,capability,schedule,call,wait',
   rt3.steps.map((s) => s.kind).join(','),
 );
 const sd3 = toStateDiagram(rt3.steps);
 check('stateDiagram に Schedule', sd3.includes('Schedule:'));
+
+// [14] AI Process / Thread / Reasoning Scheduler（AI OS）
+console.log('\n[14] AI Process / Thread / Scheduler');
+const rt4 = run('x^2を積分して');
+check('Process# ノード（owner=math）', rt4.graph.nodes.some((n) => n.kind === 'process' && n.attrs.owner === 'math'));
+check('Thread# ノード', rt4.graph.nodes.some((n) => n.kind === 'thread'));
+check('CALL中は Process waiting', rt4.graph.nodes.some((n) => n.kind === 'process' && n.attrs.state === 'waiting'));
+check(
+  'Runtime Events: SPAWN/CALL/WAIT',
+  rt4.events.some((e) => e.kind === 'SPAWN') && rt4.events.some((e) => e.kind === 'CALL') && rt4.events.some((e) => e.kind === 'WAIT'),
+);
+
+const rt5 = run('2と3を足して');
+check('ローカル解決は Process finished', rt5.graph.nodes.some((n) => n.kind === 'process' && n.attrs.state === 'finished'));
+check('FINISH イベント', rt5.events.some((e) => e.kind === 'FINISH'));
+
+const units: ScheduledUnit[] = [
+  { processId: 1, priority: 0.4, owner: 'code', state: 'ready' },
+  { processId: 2, priority: 0.9, owner: 'math', state: 'ready' },
+  { processId: 3, priority: 0.9, owner: 'search', state: 'ready' },
+  { processId: 4, priority: 0.7, owner: 'code', state: 'waiting' },
+];
+check('pickNext: 最高優先度（同点は低ID）', pickNext(units)?.processId === 2);
+check('created→ready 遷移可', canTransition('created', 'ready'));
+check('finished→running 遷移不可', !canTransition('finished', 'running'));
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {
