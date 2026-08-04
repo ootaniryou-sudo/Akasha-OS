@@ -21,6 +21,7 @@ export enum Task {
   SEARCH = 0x07,
   PATCH = 0x08,
   TRANSLATE = 0x09,
+  SUMMARIZE = 0x0a,
 }
 
 /** ドメイン（0x10–0x1F） */

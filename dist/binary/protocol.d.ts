@@ -1,5 +1,7 @@
 /**
- * Akasha Wire Protocol — fixed-offset binary packet layout.
+ * Akasha Wire Protocol — Knowledge Edict (Binary Wire Protocol)
+ *
+ * ArcAsha Node 間で使用する共通バイナリプロトコル。
  *
  * ┌────────┬──────┬──────────────────────────────────────────────┐
  * │ Offset │ Size │ Field                                        │
@@ -13,13 +15,21 @@
  * │ 24     │ 4    │ CLUSTER_ID     u32 LE  semantic cluster      │
  * │ 28     │ 4    │ PAYLOAD_LEN    u32 LE  float32 byte length   │
  * │ 32     │ 8    │ TIMESTAMP_US   u64 LE  dispatch timestamp μs │
- * │ 40     │ 4    │ EXPECTED_MS    u32 LE  timeout hint (ms×1000)│
+ * │ 40     │ 4    │ EXPECTED_US    u32 LE  timeout / GPU budget μs│
  * │ 44     │ 4    │ SEQ            u32 LE  sequence / checksum   │
  * │ 48     │ N    │ PAYLOAD        Float32Array (zero-copy view) │
  * └────────┴──────┴──────────────────────────────────────────────┘
  *
  * Total header = 48 bytes. Payload starts at HEADER_SIZE and is
  * always a multiple of 4 (raw f32 activations for WebGPU upload).
+ *
+ * Bootstrap lifecycle:
+ *  - A socket MUST REGISTER (Cmd=0x01) before the master promotes it to
+ *    BENCHMARK. REGISTER for an unknown socket is rejected (FAIL_BAD_REGISTER).
+ *  - A nodeId may be owned by exactly one live socket; a duplicate REGISTER
+ *    evicts the prior owner (FAIL_DUP_REGISTER).
+ *  - On RESULT (Cmd=0x04), EXPECTED_US carries the edge-reported GPU kernel µs;
+ *    RTT is derived server-side from TIMESTAMP_US echo.
  */
 export declare const MAGIC = 1095455560;
 export declare const PROTOCOL_VERSION = 1;
@@ -34,7 +44,15 @@ export declare const enum Cmd {
     RESULT = 4,
     FAILOVER = 5,
     ACK = 6,
-    DEREGISTER = 7
+    DEREGISTER = 7,
+    /** Bootstrap: master → edge lightweight matmul probe */
+    BENCHMARK = 8,
+    /** Bootstrap: master → edge role + cluster appointment */
+    ASSIGN = 9,
+    /** Inference: inter-band activation relay (P2P or master-proxied) */
+    RELAY = 10,
+    /** Inference: tail band → master streaming token output */
+    TOKEN_OUT = 11
 }
 /** Packet flags (offset 6, u16 LE). */
 export declare const enum Flag {
@@ -49,7 +67,16 @@ export declare const enum ClusterId {
     MATH = 2,
     CODE = 3,
     LANGUAGE = 4,
+    /** High-APS nodes: LLM head / context-critical layers */
+    HEAD_LAYER = 10,
     SHADOW_POOL = 99
+}
+/** Bootstrap role appointment (carried in ASSIGN.seq). */
+export declare const enum NodeRole {
+    UNASSIGNED = 0,
+    CORE_ROUTER = 1,
+    ACTIVE_COMPUTE = 2,
+    SHADOW_BACKUP = 3
 }
 export interface PacketHeaderView {
     magic: number;
@@ -66,4 +93,34 @@ export interface PacketHeaderView {
 }
 export declare function nowUs(): bigint;
 export declare function clusterName(id: number): string;
+export declare function roleName(role: NodeRole): string;
+/**
+ * 36-byte extended datagram header for QUIC P2P relay.
+ *
+ * ┌────────┬──────┬──────────┬──────────────────────────────────────────────┐
+ * │ Offset │ Size │ Type     │ Field                                        │
+ * ├────────┼──────┼──────────┼──────────────────────────────────────────────┤
+ * │  0     │ 16   │ u128 LE  │ TX_ID        transaction id                   │
+ * │ 16     │  4   │ u32 LE   │ LAYER_ID     assigned layer index             │
+ * │ 20     │  8   │ u64 LE   │ SEQ          monotonic sequence number        │
+ * │ 28     │  4   │ u32 LE   │ PAYLOAD_LEN  Float32Array byte length         │
+ * │ 32     │  4   │ u32 LE   │ CHECKSUM     Fletcher32 over payload          │
+ * │ 36     │  N   │ f32[]    │ PAYLOAD      raw Float32Array                 │
+ * └────────┴──────┴──────────┴──────────────────────────────────────────────┘
+ */
+export declare const EX_HEADER_SIZE = 36;
+export interface ExtendedHeader {
+    txId: bigint;
+    layerId: number;
+    seq: number;
+    payloadLen: number;
+    checksum: number;
+}
+export declare function decodeExtendedHeader(buf: Uint8Array, offset?: number): ExtendedHeader;
+export declare function encodeExtendedHeader(hdr: ExtendedHeader, dst: Uint8Array, offset?: number): number;
+/**
+ * Fletcher-32 checksum (two 16-bit running sums mod 65535).
+ * Fast, detects all single-bit errors. O(N), zero allocation.
+ */
+export declare function fletcher32(data: Uint8Array, offset?: number, length?: number): number;
 //# sourceMappingURL=protocol.d.ts.map

@@ -30,9 +30,9 @@ export function createTxPool(size) {
     }, Math.min(256, size), size);
 }
 /**
- * Sliding-window dynamic fault tolerance.
+ * fault-tolerance.ts — Shadow of Wisdom (Shadow Execution) + Divine Safeguard (Fault Protection)
  *
- * Monitors in-flight txs every tick (default 100μs via setImmediate/hrtime loop).
+ * 同一計算を Primary Node と Shadow Node（Guardian Terminal）に同時送信し、
  * If now > start + (EWMA + margin), immediately fan-out the same binary tensor
  * to a shadow node — non-blocking, primary result wins (first RESULT completes).
  */
@@ -202,5 +202,35 @@ function includesInsensitive(hay, needle) {
         return true;
     }
     return false;
+}
+// ─── Dynamic router (plugin-aware) ──────────────────────────────────────────
+/**
+ * Create a semantic router that consults the plugin registry first,
+ * then falls back to the static `routeCluster` heuristics.
+ *
+ * Usage:
+ * ```ts
+ * const registry = new PluginRegistry();
+ * await registry.install(myMathPlugin);
+ * const router = createDynamicRouter(registry);
+ * const clusterId = router("solve 2x + 5 = 15"); // → math plugin cluster
+ * ```
+ *
+ * @param registry — PluginRegistry instance (optional; if omitted, behaves
+ *                   identically to the static `routeCluster`).
+ * @returns A `(prompt: string) => number` function suitable for use in
+ *          the router worker's dispatch path.
+ */
+export function createDynamicRouter(registry) {
+    if (!registry)
+        return routeCluster;
+    return (prompt) => {
+        // Try plugin registry first
+        const pluginCluster = registry.route(prompt, -1);
+        if (pluginCluster !== -1)
+            return pluginCluster;
+        // Fall back to static routing
+        return routeCluster(prompt);
+    };
 }
 //# sourceMappingURL=fault-tolerance.js.map

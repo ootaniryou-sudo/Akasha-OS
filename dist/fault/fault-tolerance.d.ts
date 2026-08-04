@@ -23,9 +23,9 @@ export declare const TX_FAILED = 2;
 export declare const TX_FAILOVER = 3;
 export declare function createTxPool(size: number): ObjectPool<InferenceTx>;
 /**
- * Sliding-window dynamic fault tolerance.
+ * fault-tolerance.ts — Shadow of Wisdom (Shadow Execution) + Divine Safeguard (Fault Protection)
  *
- * Monitors in-flight txs every tick (default 100μs via setImmediate/hrtime loop).
+ * 同一計算を Primary Node と Shadow Node（Guardian Terminal）に同時送信し、
  * If now > start + (EWMA + margin), immediately fan-out the same binary tensor
  * to a shadow node — non-blocking, primary result wins (first RESULT completes).
  */
@@ -66,4 +66,24 @@ export declare class FaultToleranceEngine {
  * intermediate strings beyond the original prompt buffer view.
  */
 export declare function routeCluster(prompt: string): number;
+/**
+ * Create a semantic router that consults the plugin registry first,
+ * then falls back to the static `routeCluster` heuristics.
+ *
+ * Usage:
+ * ```ts
+ * const registry = new PluginRegistry();
+ * await registry.install(myMathPlugin);
+ * const router = createDynamicRouter(registry);
+ * const clusterId = router("solve 2x + 5 = 15"); // → math plugin cluster
+ * ```
+ *
+ * @param registry — PluginRegistry instance (optional; if omitted, behaves
+ *                   identically to the static `routeCluster`).
+ * @returns A `(prompt: string) => number` function suitable for use in
+ *          the router worker's dispatch path.
+ */
+export declare function createDynamicRouter(registry?: {
+    route: (prompt: string, fallback: number) => number;
+} | null): (prompt: string) => number;
 //# sourceMappingURL=fault-tolerance.d.ts.map

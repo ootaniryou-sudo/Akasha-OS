@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "AILSA ISA Registry — ArcAsha Inter Language for Small AI models. 唯一の権威 (Heart of Wisdom 管理)。TypeScript / Python / Rust 全てここを参照する。",
   "dialects": ["base", "math", "code", "search", "reasoning"],
   "instructions": [
@@ -9,6 +9,7 @@
     { "name": "TASK_SEARCH", "opcode": 7, "category": "task", "dialect": "base", "description": "検索タスク" },
     { "name": "TASK_PATCH", "opcode": 8, "category": "task", "dialect": "base", "description": "修正タスク" },
     { "name": "TASK_TRANSLATE", "opcode": 9, "category": "task", "dialect": "base", "description": "翻訳タスク" },
+    { "name": "TASK_SUMMARIZE", "opcode": 10, "category": "task", "dialect": "base", "description": "要約タスク" },
 
     { "name": "DOMAIN_MATH", "opcode": 18, "category": "domain", "dialect": "base", "description": "ドメイン: 数学" },
     { "name": "DOMAIN_CODE", "opcode": 19, "category": "domain", "dialect": "base", "description": "ドメイン: コード" },
@@ -53,6 +54,12 @@
     { "name": "LIMIT", "opcode": 67, "category": "math", "dialect": "math", "description": "極限" },
     { "name": "MATRIX", "opcode": 68, "category": "math", "dialect": "math", "description": "行列" },
     { "name": "INTEGRAL", "opcode": 69, "category": "math", "dialect": "math", "description": "積分" },
+    { "name": "ADD", "opcode": 70, "category": "math", "dialect": "math", "description": "加算" },
+    { "name": "SUBTRACT", "opcode": 71, "category": "math", "dialect": "math", "description": "減算" },
+    { "name": "MULTIPLY", "opcode": 72, "category": "math", "dialect": "math", "description": "乗算" },
+    { "name": "DIVIDE", "opcode": 73, "category": "math", "dialect": "math", "description": "除算" },
+    { "name": "SQRT", "opcode": 74, "category": "math", "dialect": "math", "description": "平方根" },
+    { "name": "SQUARE", "opcode": 75, "category": "math", "dialect": "math", "description": "二乗" },
 
     { "name": "FUNCTION", "opcode": 81, "category": "code", "dialect": "code", "description": "関数" },
     { "name": "CLASS", "opcode": 82, "category": "code", "dialect": "code", "description": "クラス" },

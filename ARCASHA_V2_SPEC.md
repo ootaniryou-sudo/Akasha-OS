@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.6** |
+| Status | **Draft v0.7** |
 | Date | 2026-08-04 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様） |
@@ -213,7 +213,7 @@ STORE        LOAD          SEARCH      MERGE
 
 | 方言 | 対象 | トークン例 |
 |------|------|-----------|
-| **AILSA-M** | Math Expert | `ADD` `MATRIX` `LIMIT` `DERIVATIVE` `INTEGRAL` `EQUATION` |
+| **AILSA-M** | Math Expert | `EQ` `DERIVE` `LIMIT` `MATRIX` `INTEGRAL` `ADD` `SUBTRACT` `MULTIPLY` `DIVIDE` `SQRT` `SQUARE` |
 | **AILSA-C** | Coding Expert | `FUNCTION` `CLASS` `PATCH` `TEST` `REF` `BUG` |
 | **AILSA-R** | Reasoning Expert | `CAUSE` `GOAL` `PLAN` `VERIFY` |
 | **AILSA-S** | Search Expert | `QUERY` `RANK` `EXTRACT` |
@@ -228,11 +228,11 @@ Token ID の割当は **AILSA Registry**（`AILSA_ISA.md` で仕様化）が唯�
 
 | 範囲 | カテゴリ | 例 |
 |------|---------|-----|
-| `0x01–0x0F` | タスク動詞 | `TASK_SOLVE=0x04` `TASK_VERIFY=0x05` `TASK_PLAN=0x06` `TASK_SEARCH` `TASK_PATCH` `TASK_TRANSLATE` |
+| `0x01–0x0F` | タスク動詞 | `TASK_SOLVE=0x04` `TASK_VERIFY=0x05` `TASK_PLAN=0x06` `TASK_SEARCH` `TASK_PATCH` `TASK_TRANSLATE` `TASK_SUMMARIZE=0x0A` |
 | `0x10–0x1F` | ドメイン | `DOMAIN_MATH=0x12` `DOMAIN_CODE` `DOMAIN_SEARCH` |
 | `0x20–0x2F` | スロット（フィールド） | `SLOT_GOAL` `SLOT_INPUT` `SLOT_OUTPUT` `SLOT_CONF` `SLOT_NEXT` `SLOT_CONSTRAINT` |
 | `0x30–0x3F` | 制御 | `CALL` `RETURN` `FAIL` `PASS` `MERGE` `PARALLEL` |
-| `0x40–0x4F` | AILSA-M（Math） | `EQ` `DERIVE` `LIMIT` `MATRIX` `INTEGRAL` |
+| `0x40–0x4F` | AILSA-M（Math） | `EQ` `DERIVE` `LIMIT` `MATRIX` `INTEGRAL` `ADD` `SUBTRACT` `MULTIPLY` `DIVIDE` `SQRT` `SQUARE` |
 | `0x50–0x5F` | AILSA-C（Code） | `FUNCTION` `CLASS` `PATCH` `BUILD` `TEST` |
 | `0x60–0x6F` | AILSA-S（Search） | `QUERY` `FILTER` `RANK` `EXTRACT` |
 | `0x70–0x7F` | AILSA-R（Reasoning） | `CAUSE` `PLAN` `VERIFY` |
@@ -745,7 +745,7 @@ Case2（AILSA）:
 | Phase | 内容 | 成果物 | 既存資産の活用 |
 |-------|------|--------|---------------|
 | **0** | ✅ **AILSA ISA 土台**（Registry v1.0 / Codec / Validator / Dialect） | `src/arcasha/ailsa/`（registry.json, vocab.ts, codec.ts, ...） | 完了（`npm run ailsa:selftest` 全合格） |
-| **0.5** | **AILSM Compiler**（Lexer→Parser→Normalizer→Semantic Analyzer→Optimizer→AILSA Generator、3段階精度保証） | `src/arcasha/ailsm/`（ailsm.ts, types.ts, lexer.ts, parser.ts, normalizer.ts, semantic.ts, optimizer.ts, verifier.ts） | Phase 0 の Validator を再利用 |
+| **0.5** | ✅ **AILSM Compiler**（Lexer→Parser→Normalizer→Semantic Analyzer→Optimizer→AILSA Generator、3段階精度保証） | `src/arcasha/ailsm/`（ailsm.ts, types.ts, lexer.ts, parser.ts, normalizer.ts, semantic.ts, optimizer.ts, generator.ts, verifier.ts, compiler.ts）+ Registry **v1.1.0**（`TASK_SUMMARIZE` / `ADD`〜`SQUARE`） | 完了（`npm run ailsm:selftest` 全合格）。Stage 2（LLM残差）は委譲点を実装済み |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |

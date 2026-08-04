@@ -76,20 +76,24 @@ flowchart TB
 ### 3.2 Registry形式
 
 ```
-AILSA Registry v1.0
+AILSA Registry v1.1.0
 
 0x04  TASK_SOLVE    [base]    タスク: 求解
 0x05  TASK_VERIFY   [base]    タスク: 検証
 0x06  TASK_PLAN     [base]    タスク: 計画
+0x0A  TASK_SUMMARIZE [base]   タスク: 要約 （v1.1.0 追加）
 0x12  DOMAIN_MATH   [base]    ドメイン: 数学
 0x20  SLOT_GOAL     [base]    スロット: 目標
 0x30  CALL          [base]    命令: 呼び出し
 0x31  RETURN        [base]    命令: 結果返却
 0x41  EQ            [math]    数学: 方程式
 0x42  DERIVE        [math]    数学: 微分
+0x46  ADD           [math]    数学: 加算 （v1.1.0 追加）
 0x51  FUNCTION      [code]    コード: 関数
 0x61  QUERY         [search]  検索: 問い合わせ
 ```
+
+> v1.1.0 は後方互換な MINOR 更新（トークンの追加のみ、ID 不変則を遵守）。
 
 各エントリは（名前, ID, カテゴリ, 方言, 意味）を持つ。
 
@@ -175,6 +179,7 @@ AILSA Registry v1.0
 | `0x07` | `TASK_SEARCH` | 検索タスク |
 | `0x08` | `TASK_PATCH` | 修正タスク |
 | `0x09` | `TASK_TRANSLATE` | 翻訳タスク |
+| `0x0A` | `TASK_SUMMARIZE` | 要約タスク（v1.1.0） |
 
 > この一覧は **Registry v1.0** の一部。権威は常にRegistryであり、本仕様書はその抜粋である。
 
@@ -205,7 +210,7 @@ Math Dialect / Code Dialect / Search Dialect / Reasoning Dialect
 
 | Dialect | 命令 | 対象Expert |
 |---------|------|-----------|
-| **Math** | `EQ` `DERIVE` `LIMIT` `MATRIX` `INTEGRAL` | Math Expert |
+| **Math** | `EQ` `DERIVE` `LIMIT` `MATRIX` `INTEGRAL` `ADD` `SUBTRACT` `MULTIPLY` `DIVIDE` `SQRT` `SQUARE` | Math Expert |
 | **Code** | `FUNCTION` `CLASS` `PATCH` `BUILD` `TEST` | Coding Expert |
 | **Search** | `QUERY` `FILTER` `RANK` `EXTRACT` | Search Expert |
 | **Reasoning** | `CAUSE` `GOAL` `PLAN` `VERIFY` | Reasoning Expert |

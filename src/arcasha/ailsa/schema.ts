@@ -75,6 +75,7 @@ export const SCHEMAS: Record<number, InstructionSchema> = {
   [Task.SEARCH]: def(Task.SEARCH, [], TASK_OPTS),
   [Task.PATCH]: def(Task.PATCH, [], TASK_OPTS),
   [Task.TRANSLATE]: def(Task.TRANSLATE, [], TASK_OPTS),
+  [Task.SUMMARIZE]: def(Task.SUMMARIZE, [], TASK_OPTS),
 
   // --- ドメイン ---
   [Domain.MATH]: def(Domain.MATH, [], [Slot.GOAL, Slot.INPUT, Slot.CONTEXT]),
@@ -88,6 +89,12 @@ export const SCHEMAS: Record<number, InstructionSchema> = {
   [MathOpcode.LIMIT]: def(MathOpcode.LIMIT, [Slot.INPUT], DIALECT_OPTS),
   [MathOpcode.MATRIX]: def(MathOpcode.MATRIX, [Slot.INPUT], DIALECT_OPTS),
   [MathOpcode.INTEGRAL]: def(MathOpcode.INTEGRAL, [Slot.INPUT], DIALECT_OPTS),
+  [MathOpcode.ADD]: def(MathOpcode.ADD, [Slot.INPUT], DIALECT_OPTS),
+  [MathOpcode.SUBTRACT]: def(MathOpcode.SUBTRACT, [Slot.INPUT], DIALECT_OPTS),
+  [MathOpcode.MULTIPLY]: def(MathOpcode.MULTIPLY, [Slot.INPUT], DIALECT_OPTS),
+  [MathOpcode.DIVIDE]: def(MathOpcode.DIVIDE, [Slot.INPUT], DIALECT_OPTS),
+  [MathOpcode.SQRT]: def(MathOpcode.SQRT, [Slot.INPUT], DIALECT_OPTS),
+  [MathOpcode.SQUARE]: def(MathOpcode.SQUARE, [Slot.INPUT], DIALECT_OPTS),
 
   // --- 専門IR: Code ---
   [CodeOpcode.FUNCTION]: def(CodeOpcode.FUNCTION, [Slot.INPUT], DIALECT_OPTS),

@@ -15,6 +15,12 @@ export enum MathOpcode {
   LIMIT = 0x43,
   MATRIX = 0x44,
   INTEGRAL = 0x45,
+  ADD = 0x46,
+  SUBTRACT = 0x47,
+  MULTIPLY = 0x48,
+  DIVIDE = 0x49,
+  SQRT = 0x4a,
+  SQUARE = 0x4b,
 }
 
 export enum CodeOpcode {

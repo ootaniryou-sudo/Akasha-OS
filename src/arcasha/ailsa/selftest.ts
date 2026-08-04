@@ -40,7 +40,7 @@ console.log('═'.repeat(60));
 // ── 1. Registry ──
 console.log('\n[1] Registry');
 const reg = registry();
-check('バージョン 1.0.0', version() === '1.0.0', `got ${version()}`);
+check('バージョン 1.1.0', version() === '1.1.0', `got ${version()}`);
 check('命令数 >= 50', reg.instructions.length >= 50, `got ${reg.instructions.length}`);
 check('TASK_SOLVE=0x04', reg.instructions.some((e) => e.name === 'TASK_SOLVE' && e.opcode === 0x04));
 check('DOMAIN_MATH=0x12', reg.instructions.some((e) => e.name === 'DOMAIN_MATH' && e.opcode === 0x12));
