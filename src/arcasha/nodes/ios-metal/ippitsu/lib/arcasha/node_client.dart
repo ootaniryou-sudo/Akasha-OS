@@ -108,6 +108,15 @@ class ArcAshaNodeClient {
           'precision': 'q4_k_m',
           'model_id': MetalEngine.modelId,
           'capabilities': {'coding': 0.4, 'math': 0.4, 'general': 0.5},
+          // 内部設定 (Console側で確認できるようにする)
+          'settings': {
+            'n_ctx': 2048,
+            'n_batch': 512,
+            'n_threads': 4,
+            'gpu_layers': -1, // 全層 Metal にオフロード
+            'temperature': 0.0, // 決定論的生成
+            'flash_attn': 'disabled',
+          },
         },
       }));
       return true;

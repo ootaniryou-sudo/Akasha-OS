@@ -11,6 +11,7 @@
  *   npx tsx src/arcasha/demo-web.ts --port 8080 --web-port 4173
  */
 import http from 'node:http';
+import { spawn } from 'node:child_process';
 import { ExpertHub } from './experts/registry.js';
 
 const WS_PORT = Number(process.env.PORT ?? 8080);
@@ -80,6 +81,11 @@ const html = `<!DOCTYPE html>
   </div>
 
   <div class="card">
+    <h2>システム情報 (内部設定)</h2>
+    <div id="sysinfo"><div class="empty">—</div></div>
+  </div>
+
+  <div class="card">
     <h2>プロンプト送信</h2>
     <div class="input-row">
       <textarea id="prompt" placeholder="例: Explain in one sentence: what is a distributed expert system?"></textarea>
@@ -96,7 +102,30 @@ const html = `<!DOCTYPE html>
 <script>
 const $ = id => document.getElementById(id);
 const nodesEl = $('nodes'), resultsEl = $('results'), statusEl = $('status');
+const sysinfoEl = $('sysinfo');
 const promptEl = $('prompt'), tokensEl = $('tokens'), sendBtn = $('send');
+
+async function refreshInfo() {
+  try {
+    const r = await fetch('/api/info');
+    const d = await r.json();
+    if (!d.nodes || !d.nodes.length) {
+      sysinfoEl.innerHTML = '<div class="empty">ノード未接続</div>';
+      return;
+    }
+    sysinfoEl.innerHTML = d.nodes.map(n => {
+      const det = n.details || {};
+      const s = det.settings || {};
+      const caps = det.capabilities ? JSON.stringify(det.capabilities) : '-';
+      return '<div class="node" style="align-items:flex-start;flex-direction:column;padding:8px 0">' +
+        '<div><span class="id">' + esc(n.nodeId) + '</span> <span class="meta">' + esc(n.modelId) + ' · ' + n.paramsM + 'M</span></div>' +
+        '<div class="meta">platform: ' + esc(det.platform || '-') + ' / backend: ' + esc(det.backend || '-') + ' / precision: ' + esc(det.precision || '-') + ' / device: ' + esc(det.device || '-') + '</div>' +
+        '<div class="meta">settings: n_ctx=' + (s.n_ctx ?? '-') + ' n_batch=' + (s.n_batch ?? '-') + ' n_threads=' + (s.n_threads ?? '-') + ' gpu_layers=' + (s.gpu_layers ?? '-') + ' temperature=' + (s.temperature ?? '-') + '</div>' +
+        '<div class="meta">capabilities: ' + esc(caps) + '</div>' +
+        '</div>';
+    }).join('');
+  } catch (_) {}
+}
 
 async function refreshNodes() {
   try {
@@ -149,7 +178,9 @@ $('send').addEventListener('click', send);
 $('clear').addEventListener('click', () => { resultsEl.innerHTML = ''; statusEl.textContent = ''; });
 promptEl.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send(); });
 refreshNodes();
+refreshInfo();
 setInterval(refreshNodes, 3000);
+setInterval(refreshInfo, 3000);
 </script>
 </body>
 </html>`;
@@ -171,6 +202,20 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === '/api/nodes') {
     sendJson(200, { nodes: hub.experts.map((e) => ({ nodeId: e.nodeId, modelId: e.modelId, paramsM: e.paramsM })) });
+    return;
+  }
+
+  if (url.pathname === '/api/info') {
+    sendJson(200, {
+      wsPort: WS_PORT,
+      webPort: WEB_PORT,
+      nodes: hub.experts.map((e) => ({
+        nodeId: e.nodeId,
+        modelId: e.modelId,
+        paramsM: e.paramsM,
+        details: hub.nodeDetails.get(e.nodeId) ?? {},
+      })),
+    });
     return;
   }
 
@@ -211,6 +256,12 @@ server.listen(WEB_PORT, () => {
   console.log('═'.repeat(60));
   console.log(`  🟢 ExpertHub ws://0.0.0.0:${WS_PORT} (ノード接続用)`);
   console.log(`  🌐 Webダッシュボード: http://localhost:${WEB_PORT}`);
-  console.log(`  📱 端末: アプリを起動すれば自動接続されます`);
+  console.log(`  📱 端末: アプリを起動すれば自動接続されます (mDNS自動発見対応)`);
   console.log('');
+
+  // mDNS (Bonjour) でハブを広告 → 端末アプリが自動発見できるようにする
+  // macOS 標準の dns-sd を使用: dns-sd -R <Name> <Type> <Domain> <Port>
+  const adv = spawn('dns-sd', ['-R', 'ArcAsha Hub', '_arcasha._tcp', 'local', String(WS_PORT)], { stdio: 'ignore' });
+  adv.on('error', () => console.log('  ⚠️ dns-sd が使えないため mDNS 広告をスキップ'));
+  adv.on('exit', () => { /* 広告プロセス終了 (無視) */ });
 });

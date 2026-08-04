@@ -23,6 +23,33 @@ class MetalEngine {
     return res ?? {};
   }
 
+  /// Application Support 内のダウンロード済みモデル一覧を返す (サイズ降順)。
+  Future<List<Map<String, dynamic>>> listModels() async {
+    final dir = await getApplicationSupportDirectory();
+    final models = dir.listSync().whereType<File>()
+        .where((f) => f.path.endsWith('.gguf'))
+        .map((f) => <String, dynamic>{
+              'name': f.uri.pathSegments.last,
+              'size': f.lengthSync(),
+            })
+        .toList()
+      ..sort((a, b) => (b['size'] as int).compareTo(a['size'] as int));
+    return models;
+  }
+
+  /// 指定したダウンロード済みモデルファイルを削除する。
+  Future<bool> deleteModel(String filename) async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final file = File('${dir.path}/$filename');
+      if (await file.exists()) {
+        await file.delete();
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   /// アセットの GGUF を Application Support に展開してパスを返す。
   /// 1B モデル (約800MB) 対応:
   ///  - iOS では flutter_assets がアプリバンドル内の実ファイルなので、直接コピー

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:multicast_dns/multicast_dns.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'arcasha/metal_engine.dart';
@@ -51,7 +52,9 @@ class _NodeScreenState extends State<NodeScreen> {
   bool _loadingModel = false;
   bool _connecting = false;
   bool _autoStarting = false;
+  bool _isIpad = false;
   NodeSnapshot? _snap;
+  List<Map<String, dynamic>> _models = [];
 
   @override
   void initState() {
@@ -90,9 +93,41 @@ class _NodeScreenState extends State<NodeScreen> {
   Future<void> _initAutoNode() async {
     await _applyDeviceDefaults(); // 端末に応じたデフォルト (iPad/iPhone) を設定
     await _loadConfig();          // 保存済み設定があれば上書き
+    await _refreshModels();       // ダウンロード済みモデル一覧を読み込み
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _autoStart();
     });
+  }
+
+  // ── モデル管理 (ダウンロード済みモデルの一覧・削除) ────────────────────
+  String _formatBytes(int bytes) {
+    if (bytes >= 1 << 30) return '${(bytes / (1 << 30)).toStringAsFixed(2)} GB';
+    if (bytes >= 1 << 20) return '${(bytes / (1 << 20)).toStringAsFixed(1)} MB';
+    if (bytes >= 1 << 10) return '${(bytes / (1 << 10)).toStringAsFixed(0)} KB';
+    return '$bytes B';
+  }
+
+  Future<void> _refreshModels() async {
+    final models = await MetalEngine.instance.listModels();
+    if (mounted) setState(() => _models = models);
+  }
+
+  Future<void> _deleteModel(String name, int size) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('モデルを削除'),
+        content: Text('「$name」(${_formatBytes(size)}) を削除しますか？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('キャンセル')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('削除')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final deleted = await MetalEngine.instance.deleteModel(name);
+    _log(deleted ? '🗑️ $name を削除しました' : '❌ $name の削除に失敗しました');
+    await _refreshModels();
   }
 
   /// 端末 (iPad / iPhone) を自動判別して、ハブURLとノードIDのデフォルトを設定する。
@@ -101,7 +136,8 @@ class _NodeScreenState extends State<NodeScreen> {
     try {
       final info = await MetalEngine.deviceInfo();
       final model = (info['model'] as String? ?? '').toLowerCase();
-      if (model.contains('ipad')) {
+      _isIpad = model.contains('ipad');
+      if (_isIpad) {
         _hubCtrl.text = 'ws://169.254.238.70:8080'; // iPad (Mac en10)
         _nodeIdCtrl.text = 'node-ios-ipad';
       } else {
@@ -114,7 +150,45 @@ class _NodeScreenState extends State<NodeScreen> {
     }
   }
 
-  /// モデルロード → ハブ接続を自動実行。失敗しても手動操作は可能。
+  /// 端末に応じたハブURL候補 (USBリンクローカル + Wi-Fi経由)。
+  /// USBのリンクローカルIPは変わることがあるため、複数を順に試す。
+  List<String> _deviceDefaultUrls() {
+    if (_isIpad) {
+      return [
+        'ws://169.254.238.70:8080', // iPad (Mac en10)
+        'ws://192.168.0.17:8080', // Mac Wi-Fi LAN
+      ];
+    }
+    return [
+      'ws://169.254.172.114:8080', // iPhone (Mac en11 旧)
+      'ws://169.254.25.16:8080', // iPhone (Mac en11 新)
+      'ws://192.168.0.17:8080', // Mac Wi-Fi LAN
+    ];
+  }
+
+  /// mDNS (Bonjour) でハブを自動発見する。見つかった ws:// 候補を返す。
+  /// ハブ (demo-web) は dns-sd で _arcasha._tcp を広告している。
+  Future<List<String>> _discoverHubUrls() async {
+    final urls = <String>[];
+    try {
+      final client = MDnsClient();
+      await client.start();
+      await for (final ptr in client.lookup<PtrResourceRecord>(
+          ResourceRecordQuery.serverPointer('_arcasha._tcp.local'))) {
+        await for (final srv in client.lookup<SrvResourceRecord>(
+            ResourceRecordQuery.service(ptr.domainName))) {
+          await for (final a in client.lookup<IPAddressResourceRecord>(
+              ResourceRecordQuery.addressIPv4(srv.target))) {
+            urls.add('ws://${a.address.address}:${srv.port}');
+          }
+        }
+      }
+      client.stop();
+    } catch (_) {}
+    return urls;
+  }
+
+  /// モデルロード → ハブ接続を自動実行。接続URLは候補を順に試行する。
   Future<void> _autoStart() async {
     if (_autoStarting) return;
     _autoStarting = true;
@@ -122,8 +196,27 @@ class _NodeScreenState extends State<NodeScreen> {
     if (!_modelLoaded) {
       await _loadModel();
     }
-    if (_modelLoaded && !_connecting) {
-      await _connect();
+    if (_modelLoaded) {
+      final saved = _hubCtrl.text.trim();
+      final discovered = await _discoverHubUrls(); // mDNSでハブを探索
+      if (discovered.isNotEmpty) {
+        _log('🛰️ mDNSでハブ発見: ${discovered.join(', ')}');
+      }
+      final candidates = <String>{saved, ...discovered, ..._deviceDefaultUrls()}
+          .where((u) => u.isNotEmpty)
+          .toList();
+      var ok = false;
+      for (final url in candidates) {
+        if (_connecting) break;
+        _hubCtrl.text = url;
+        _log('🔗 接続試行: $url');
+        ok = await _connect();
+        if (ok) break;
+      }
+      if (!ok && !_connecting) {
+        _hubCtrl.text = saved;
+        _log('❌ 接続候補をすべて試しました（Wi-Fi / USB接続を確認してください）');
+      }
     }
     _autoStarting = false;
   }
@@ -161,18 +254,22 @@ class _NodeScreenState extends State<NodeScreen> {
     }
   }
 
-  Future<void> _connect() async {
+  Future<bool> _connect() async {
     if (_connecting) {
       await _node?.stop();
       setState(() => _connecting = false);
       _log('切断しました');
-      return;
+      return false;
     }
     if (!_modelLoaded) {
       _log('先にモデルをロードしてください');
-      return;
+      return false;
     }
     setState(() => _connecting = true);
+    if (_node != null) {
+      await _node?.stop(); // 前回の失敗クライアントを後始末
+      _node = null;
+    }
     final client = ArcAshaNodeClient(
       hubUrl: _hubCtrl.text.trim(),
       nodeId: _nodeIdCtrl.text.trim(),
@@ -188,6 +285,7 @@ class _NodeScreenState extends State<NodeScreen> {
     } else {
       await _saveConfig(); // 接続成功時に設定を保存（次回起動時の自動接続用）
     }
+    return ok;
   }
 
   Future<void> _selfTest() async {
@@ -322,6 +420,40 @@ class _NodeScreenState extends State<NodeScreen> {
               _stat('平均遅延', snap != null && snap.tasksServed > 0
                   ? '${(snap.totalMs / snap.tasksServed).round()}ms'
                   : '-'),
+            ]),
+          ),
+          const SizedBox(height: 12),
+
+          // ── モデル管理 ─────────────────────────────────────────
+          _card(
+            title: 'モデル管理 (ダウンロード済み)',
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (_models.isEmpty)
+                const Text('ダウンロード済みモデルはありません', style: TextStyle(color: Colors.grey)),
+              for (final m in _models)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${m['name']}  (${_formatBytes((m['size'] as int?) ?? 0)})',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                      tooltip: 'このモデルを削除',
+                      onPressed: () => _deleteModel(
+                        m['name'] as String,
+                        (m['size'] as int?) ?? 0,
+                      ),
+                    ),
+                  ],
+                ),
+              TextButton.icon(
+                onPressed: _refreshModels,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('一覧を更新'),
+              ),
             ]),
           ),
           if (snap?.lastError != null) ...[

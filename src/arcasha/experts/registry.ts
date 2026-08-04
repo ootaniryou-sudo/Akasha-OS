@@ -29,6 +29,8 @@ export function paramsOf(modelId: string): number {
 
 export class ExpertHub {
   readonly experts: ExpertInfo[] = [];
+  /** register 時に送られた生のノード情報 (platform/backend/precision/settings等) */
+  readonly nodeDetails = new Map<string, Record<string, any>>();
   private sockets = new Map<string, WebSocket>();
   private cache = new Map<string, EvalResult>();
   private genCache = new Map<string, string>();
@@ -53,6 +55,7 @@ export class ExpertHub {
           nodeId = msg.node.id;
           const modelId = msg.node.model_id || 'unknown';
           const params = paramsOf(modelId);
+          this.nodeDetails.set(nodeId, msg.node);
           this.experts.push({
             nodeId,
             modelId,
