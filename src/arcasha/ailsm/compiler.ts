@@ -23,6 +23,8 @@ import { verifyCompilation } from './verifier.js';
 import type { VerificationResult } from './verifier.js';
 import { inferCapability } from './capability.js';
 import type { CapabilityInference } from './capability.js';
+import { execute } from './executor.js';
+import type { ExecutorResult } from './executor.js';
 
 export class AilsmError extends Error {
   constructor(message: string) {
@@ -87,6 +89,16 @@ export function compile(text: string, level: OptimizationLevel = 2): CompileResu
 /** バイト列を16進表記へ（デバッグ用） */
 export function toHex(bytes: Uint8Array): string {
   return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join(' ');
+}
+
+/** コンパイル → 実行（組み込み演算をLLM無しで解決）。Expert委譲の要否を返す。 */
+export function compileAndRun(
+  text: string,
+  level: OptimizationLevel = 2,
+): { compile: CompileResult; execution: ExecutorResult } {
+  const result = compile(text, level);
+  const execution = execute(result.optimized.graph);
+  return { compile: result, execution };
 }
 
 export { describeGraph } from './ailsm.js';

@@ -47,6 +47,14 @@ export function parse(norm: NormalizedInput): AilsmBuilder {
     b.connect(taskId, id, 'uses');
   }
 
+  // 四則演算の入力値（アクションがある場合のみ数値ノード化）
+  if (norm.actions.length > 0) {
+    for (const num of norm.numbers) {
+      const id = b.addNode('value', 'number', 'number', { value: num });
+      b.connect(taskId, id, 'uses');
+    }
+  }
+
   for (const v of norm.variables) {
     const id = b.addNode('value', 'variable', 'unknown', { name: v });
     b.connect(taskId, id, 'uses');

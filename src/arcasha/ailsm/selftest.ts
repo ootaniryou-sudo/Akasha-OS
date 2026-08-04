@@ -6,7 +6,8 @@
 
 import { Slot, Task } from '../ailsa/vocab.js';
 import { MathOpcode } from '../ailsa/dialect.js';
-import { compile, describeGraph, toHex } from './compiler.js';
+import { compile, compileAndRun, describeGraph, toHex } from './compiler.js';
+import { execute } from './executor.js';
 import { toAsciiTree, toDot, toMermaid } from './visualizer.js';
 
 let failed = 0;
@@ -131,6 +132,24 @@ check('DOT に digraph 宣言', dot.includes('digraph AILSM'));
 check('ASCII ツリーに Object#2', tree.includes('Object#2'));
 console.log('  --- Mermaid ---');
 console.log(mm.split('\n').map((l) => `  ${l}`).join('\n'));
+
+// [11] AILSM Executor（IRをLLM無しで実行）
+console.log('\n[11] AILSM Executor');
+const e1 = execute(compile('2と3を足して').optimized.graph);
+check('ADD 解決 2+3=5', e1.resolved && e1.value === 5, String(e1.value));
+check('Result ノード追加', e1.after.nodes.some((n) => n.kind === 'value' && n.label === 'result' && n.attrs.value === 5));
+check('needsExpert=false', e1.needsExpert === false);
+check('ステップ記録', e1.steps.some((s) => s.includes('ACTION_ADD')));
+
+const e2 = execute(compile('20を4で割って').optimized.graph);
+check('DIVIDE 解決 20÷4=5', e2.resolved && e2.value === 5, String(e2.value));
+const e3 = execute(compile('9の平方根を求めて').optimized.graph);
+check('SQRT 解決 √9=3', e3.resolved && e3.value === 3, String(e3.value));
+const e4 = execute(compile('x^2を積分して').optimized.graph);
+check('積分は Expert 委譲（needsExpert）', e4.needsExpert === true && e4.resolved === false);
+
+const cr = compileAndRun('7と6を掛けて');
+check('compileAndRun で 7×6=42', cr.execution.resolved && cr.execution.value === 42);
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {
