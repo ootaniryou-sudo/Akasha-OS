@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.3** |
+| Status | **Draft v0.4** |
 | Date | 2026-08-04 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様） |
@@ -238,6 +238,36 @@ Decoder:  AILSA Token      → AILSM → Natural Language
 - **Decoder**（コンパイラのバックエンド）: AILSAトークン列を意味グラフへ戻し、自然言語へ復元する
 
 AILSMは「人間の質問を意味として理解した状態」を保持し、AILSAへ落とすときの**正規化された中間体**。メモリには自然言語ではなくAILSMを保存する（§6）。
+
+#### 精度保証：3段階 Codec（自然言語 ⇄ AILSM ⇄ AILSA）
+
+AILSA（命令セット）は100%決定論で設計できるが、**入口（自然言語→AILSM）と出口（AILSM→自然言語）だけは解釈が必要**。ここがArcAsha v2で最も研究価値のある部分であり、精度を決めるのはCodecである。
+
+```
+Stage1: Deterministic Parser（辞書・規則。100%決定論）
+Stage2: LLM残差（辞書で判定できない部分のみ。閉じた語彙に制約）
+Stage3: Verifier（往復照合で意味一致率を測定）
+```
+
+**Stage 1 — Deterministic Parser**
+- 「足し算」「平方根」「積分」等の閉じた語彙要素はLLMを使わず辞書/規則で変換（例: 足す/加える/たす → `ACTION_ADD`）
+- 同義語は正準ノードへ折り畳む（Circle / 円 / circle / 円形 → 同一ノード）
+- ここは100%決定論であり、golden testで完全に検証する
+
+**Stage 2 — LLM残差（制約付き生成）**
+- 辞書で判定できない部分だけをLLMへ投げる（例: 「この文章を要約して」→ `TASK_SUMMARIZE`）
+- **閉じた語彙だからこそ**、LLMの出力空間が小さく、Phase 0 の Validator で検証可能
+- 「生成→検証→修復」ループ: 不正なら再プロンプト
+
+**Stage 3 — Verifier（往復照合）**
+- 元の自然言語 → AILSM → 自然言語 へ戻し、意味一致率を測定
+- 測定法: BLEU（参考）/ BERTScore / Sentence Transformer 埋め込みコサイン / **AILSMグラフ一致率**
+- 例: 一致率 0.97 → 採用 / 0.55 → AILSM生成失敗として再エンコード
+- **優雅な縮退**: Verifierが閾値を下回ったら、AILSA中継を諦めてNL中継へフォールバック（意味を黙って壊さない）
+
+**AILSMグラフ比較の強み**: 文字列ではなく**意味ノード**で比較できる。自然言語へ戻した時に `Circle→円→circle→円形` が全て同一ノードになるため、言い換えに頑健。
+
+**Neural Codec（研究フェーズ）**: 将来的には NL⇄AILSM ペアで専用の小規模モデル（数千万〜数億パラメータ）を学習し、巨大LLMなしで「意味コンパイラ」を動かす。これは巨大モデルを必要としないArcAsha独自のCompiler研究になる。
 
 ### 2.3 Expert Message（通信内容の固定）
 
@@ -506,14 +536,29 @@ Reward       報酬（学習用）
 
 ### 6.2 セマンティックドリフト実験（最も説得力のある実験）
 
+同じタスクを2つの経路で実行し、意味の劣化を比較する。
+
 ```
-NL → モデルA → NL → モデルB → NL     （伝言ゲーム = ベースライン）
-vs
-NL → AILSA → モデルA → AILSA → モデルB → NL   （AILSA）
+Case1（ベースライン = 伝言ゲーム）:
+  日本語 → [モデルA] → 日本語 → [モデルB] → 日本語
+
+Case2（AILSA）:
+  日本語 → AILSM → AILSA → [モデルA] → AILSA → [モデルB] → AILSA → AILSM → 日本語
 ```
 
-- ホップ数ごとに**入力意味と出力意味の埋め込み類似度**を測定
-- AILSA側のドリフトが小さいことを示す
+**測定指標（ホップ数ごと）**:
+
+| 指標 | 測定法 |
+|------|--------|
+| Semantic Drift | 入力意味と出力意味の**埋め込みコサイン**（Sentence Transformer） |
+| 精度 | **Intent F1 / Slot F1**（正解AILSMアノテーションとの一致率） |
+| グラフ一致率 | 正解AILSMと生成AILSMのノード一致（正準ノードで比較） |
+| Latency | エンドツーエンド応答時間 |
+| Token数 | 消費トークン総数 |
+| Memory | ピークメモリ |
+
+- AILSA側が**ドリフト・Token数・Latencyで優位**であることを示す
+- タスクスイート（math / code / search / summary / reasoning）ごとに正解AILSMを用意
 - 既存の `experiments/EXP-XXXX` フレームワークにそのまま載せられる
 
 ### 6.3 関連研究（ポジショニング）
@@ -530,11 +575,16 @@ NL → AILSA → モデルA → AILSA → モデルB → NL   （AILSA）
 
 さらにAILSAは単なる通信形式ではなく、**AIコンパイラの中間表現**として位置づけられる。LLVMがCPUアーキテクチャの差異を吸収するように、AILSA/AILSMはモデル・バックエンド・精度の差異を吸収し、「**専門IRを処理する小型モデル群**」という新しい学習・推論パラダイムへ接続する。これが「AI共通言語」ではなく「**AI専用IR**」としての本質であり、論文の中心命題になる。
 
-### 6.4 論文3本立て（将来）
+### 6.4 論文構成（将来：独立テーマとしても成立）
 
-1. **Paper 1: ODAR** — Observation-Driven Adaptive Routing（誰に任せるか）
-2. **Paper 2: AILSA / AILSM** — Intermediate Language for Small AI models（何をどう伝えるか）
-3. **Paper 3: ArcAsha** — Belief-Driven Distributed AI Orchestration（統合）
+1. **Paper 1: ODAR** — 分散環境での適応的ルーティング（誰に任せるか）
+2. **Paper 2: AILSA** — AI向け命令セットアーキテクチャ（ISA）
+3. **Paper 3: AILSM** — AI向け中間表現（IR）
+4. **Paper 4: Compiler** — 自然言語からAILSM/AILSAへの変換（3段階精度保証）
+5. **Paper 5: Native Expert** — AILSAネイティブ小型モデル
+6. **Paper 6: ArcAsha Architecture** — 全体アーキテクチャと分散実行基盤
+
+研究テーマの位置づけは「分散AI」から「**AIのためのコンパイラ・命令セット・実行基盤（AI Computer Architecture）**」へ引き上げられる。
 
 ---
 
@@ -542,14 +592,16 @@ NL → AILSA → モデルA → AILSA → モデルB → NL   （AILSA）
 
 | Phase | 内容 | 成果物 | 既存資産の活用 |
 |-------|------|--------|---------------|
-| **0** | **AILSA Registry v1.0 + Closed Vocabulary**（Token ID 割当表。`AILSA_ISA.md` 準拠） | `src/arcasha/ailsa/`（registry.json, vocab.ts） | — |
-| **0.5** | **AILSA Codec**（Encoder: NL→AILSM→Token / Decoder: Token→AILSM→NL） | `src/arcasha/ailsa/`（codec.ts, encoder.ts, decoder.ts） | 小型モデルでEncoder/Decoderをプロンプト実装 |
-| **1** | ハブでのAILSAリレー（2ノード間マルチホップ） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
-| **2** | AILSM Codec 本実装（意味グラフ ⇄ トークン） | `src/arcasha/ailsm/` | Translation Expert 相当をプロンプトで |
-| **3** | Hierarchical Reasoning（Reasoning Unit + Tree Search） | `src/arcasha/reasoning/` | — |
-| **4** | Expert Calling（LinUCB + Shadow + Verifier） | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
-| **5** | Memory（AILSM保存 + Memory Expert） | `src/memory/` 拡張 | 既存 `src/memory/store.ts` |
-| **6** | Reflection ループ統合 | エンドツーエンド | — |
+| **0** | ✅ **AILSA ISA 土台**（Registry v1.0 / Codec / Validator / Dialect） | `src/arcasha/ailsa/`（registry.json, vocab.ts, codec.ts, ...） | 完了（`npm run ailsa:selftest` 全合格） |
+| **0.5** | **AILSM Compiler**（3段階精度保証: Deterministic Parser → LLM残差 → Verifier） | `src/arcasha/ailsm/`（ailsm.ts, parser.ts, encoder.ts, verifier.ts） | Phase 0 の Validator を再利用 |
+| **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
+| **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
+| **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |
+| **4** | **専門AILSAモデルの蒸留**（LLM生成ペアで小モデルを学習） | `training/` 拡張 | 既存 `training/finetune.py` |
+| **5** | **AILSAネイティブ小型モデル**（自然言語を一切知らない専門IRモデル） | 新規モデル | — |
+| **6** | **分散MoEクラスタ** | エンドツーエンド | — |
+
+> Hierarchical Reasoning / Memory / Reflection は Layer 2 の構成要素として、Phase 2 以降に随時統合する（優先は「有効性の証明」）。
 
 ---
 
