@@ -34,8 +34,8 @@ export interface NormalizedInput {
 export const ACTION_SYNONYMS: Record<CanonicalAction, readonly string[]> = {
   ACTION_ADD: ['足し算', '足す', '足して', '足してください', '加える', '加えて', 'たす', 'たし算', '加算', '合計', '和を求める', '和を求めよ'],
   ACTION_SUBTRACT: ['引き算', '引く', '引いて', '減算', '差を求める', '減らす'],
-  ACTION_MULTIPLY: ['掛け算', '掛ける', 'かける', '乗算', '積を求める', 'かけて'],
-  ACTION_DIVIDE: ['割り算', '割る', '除算', '商を求める'],
+  ACTION_MULTIPLY: ['掛け算', '掛ける', '掛けて', 'かける', 'かけて', '乗算', '積を求める'],
+  ACTION_DIVIDE: ['割り算', '割って', '割り', '割る', '除算', '商を求める'],
   ACTION_SQRT: ['平方根', 'ルート', '√'],
   ACTION_SQUARE: ['二乗', '平方'],
   ACTION_INTEGRAL: ['積分', 'インテグラル'],

@@ -6,7 +6,7 @@
  * （CPUで「全員が同じメモリを見る」のに等しい）。
  */
 
-import type { AilsmType } from './types.js';
+import type { AilsmTypeRef, NodeConstraints } from './types.js';
 
 export type NodeKind = 'task' | 'object' | 'value';
 
@@ -14,8 +14,9 @@ export interface AilsmNode {
   id: number;
   kind: NodeKind;
   label: string;
-  type: AilsmType;
+  type: AilsmTypeRef;
   attrs: Record<string, string | number | boolean | string[]>;
+  constraints?: NodeConstraints;
 }
 
 export interface AilsmEdge {
@@ -35,6 +36,11 @@ export function nodeKindLabel(kind: NodeKind): string {
   return KIND_LABEL[kind];
 }
 
+function formatTypeRef(t: Exclude<AilsmTypeRef, string>): string {
+  if (t.kind === 'union') return `union(${t.types.join('|')})`;
+  return `optional(${t.type})`;
+}
+
 export class AilsmBuilder {
   private readonly nodes = new Map<number, AilsmNode>();
   private readonly edges: AilsmEdge[] = [];
@@ -43,11 +49,12 @@ export class AilsmBuilder {
   addNode(
     kind: NodeKind,
     label: string,
-    type: AilsmType,
+    type: AilsmTypeRef,
     attrs: AilsmNode['attrs'] = {},
+    constraints?: NodeConstraints,
   ): number {
     const id = this.nextId++;
-    this.nodes.set(id, { id, kind, label, type, attrs });
+    this.nodes.set(id, { id, kind, label, type, attrs, constraints });
     return id;
   }
 
@@ -85,8 +92,10 @@ export function describeGraph(g: AilsmGraph): string {
     const attrText = Object.entries(n.attrs)
       .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
       .join(' ');
+    const typeText = typeof n.type === 'string' ? n.type : formatTypeRef(n.type);
+    const constrText = n.constraints ? ` ${JSON.stringify(n.constraints)}` : '';
     lines.push(
-      `${nodeKindLabel(n.kind)}#${n.id} : ${n.type}${attrText ? ` {${attrText}}` : ''}`,
+      `${nodeKindLabel(n.kind)}#${n.id} : ${typeText}${attrText ? ` {${attrText}}` : ''}${constrText}`,
     );
   }
   for (const e of g.edges) {

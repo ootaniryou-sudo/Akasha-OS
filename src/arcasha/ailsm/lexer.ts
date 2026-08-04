@@ -12,7 +12,6 @@ export interface Token {
   value: string;
 }
 
-const NUMBER_RE = /^\d+(?:\.\d+)?/;
 const ASCII_RUN_RE = /^[0-9a-zA-Z^+\-*/=().]+/;
 const JAPANESE_RUN_RE = /^[\u3040-\u30ff\u3400-\u9fff]+/;
 
@@ -23,18 +22,14 @@ export function tokenize(text: string): Token[] {
   while (i < n) {
     const rest = text.slice(i);
 
-    const num = NUMBER_RE.exec(rest);
-    if (num) {
-      tokens.push({ type: 'number', value: num[0] });
-      i += num[0].length;
-      continue;
-    }
-
+    // ASCII 連続を優先（数式 '2+3' を分割しない。演算子を含むかで分類）
     const ascii = ASCII_RUN_RE.exec(rest);
     if (ascii) {
       const s = ascii[0];
       if (/[+\-*/=^]/.test(s)) {
         tokens.push({ type: 'math', value: s });
+      } else if (/^\d+(?:\.\d+)?$/.test(s)) {
+        tokens.push({ type: 'number', value: s });
       } else if (/^[a-zA-Z]$/.test(s)) {
         tokens.push({ type: 'variable', value: s });
       } else {

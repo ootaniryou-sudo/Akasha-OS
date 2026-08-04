@@ -31,7 +31,14 @@ export function parse(norm: NormalizedInput): AilsmBuilder {
   }
 
   for (const a of norm.attributes) {
-    const id = b.addNode('value', a.name, a.value !== '' ? 'number' : 'string', { [a.name]: a.value });
+    const numeric = a.value !== '';
+    const id = b.addNode(
+      'value',
+      a.name,
+      numeric ? 'number' : 'string',
+      { [a.name]: a.value },
+      numeric ? { min: 0 } : undefined, // 例: 半径・直径・辺は正の値（制約の実演）
+    );
     b.connect(taskId, id, 'uses');
   }
 

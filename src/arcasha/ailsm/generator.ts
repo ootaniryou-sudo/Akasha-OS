@@ -3,6 +3,11 @@
  *
  * AILSMグラフを読み、Phase 0 の命令セット（AILSA ISA）へ変換する。
  * 生成された命令列は Phase 0 の Validator / Codec で再検証される。
+ *
+ * 生成ルール（充実版）:
+ *   - CALL に SLOT_DOMAIN を付与（ルーティング情報）
+ *   - ドメイン既知なら DOMAIN_* 命令を出力（CALL 直後）
+ *   - Constant Folding で確定した値は SLOT_INPUT として伝達
  */
 
 import { Domain, Slot, Task } from '../ailsa/vocab.js';
@@ -25,6 +30,13 @@ const EXPERT_OF_DOMAIN: Record<string, string> = {
   code: 'code',
   search: 'search',
   reasoning: 'reasoning',
+};
+
+const DOMAIN_OF_NAME: Record<string, Domain> = {
+  math: Domain.MATH,
+  code: Domain.CODE,
+  search: Domain.SEARCH,
+  reasoning: Domain.REASONING,
 };
 
 const OPCODE_OF_ACTION: Partial<Record<CanonicalAction, MathOpcode>> = {
@@ -62,14 +74,18 @@ export function generateAilsa(g: AilsmGraph): Instruction[] {
   const intent = String(task.attrs.intent ?? 'unknown');
   const expert = EXPERT_OF_DOMAIN[domain] ?? 'general';
   const tid = '0';
+  const domainOp = DOMAIN_OF_NAME[domain];
 
-  instrs.push({
-    opcode: Opcode.CALL,
-    slots: [
-      { slot: Slot.EXPERT, value: expert },
-      { slot: Slot.TASK_ID, value: tid },
-    ],
-  });
+  // CALL（SLOT_DOMAIN 付与）
+  const callSlots: SlotValue[] = [
+    { slot: Slot.EXPERT, value: expert },
+    { slot: Slot.TASK_ID, value: tid },
+  ];
+  if (domainOp) callSlots.push({ slot: Slot.DOMAIN, value: domain });
+  instrs.push({ opcode: Opcode.CALL, slots: callSlots });
+
+  // ドメイン宣言（CALL 直後）
+  if (domainOp) instrs.push({ opcode: domainOp });
 
   const goalSlots: SlotValue[] = [];
   addSlot(goalSlots, Slot.GOAL, task.label);
@@ -82,10 +98,13 @@ export function generateAilsa(g: AilsmGraph): Instruction[] {
     if (text) addSlot(goalSlots, Slot.INPUT, text);
   }
 
+  // 入力式 / 定数畳み込み結果
   const equation = g.nodes.find((n) => n.type === 'equation');
+  const constant = g.nodes.find((n) => n.kind === 'value' && n.label === 'constant');
   const inputExpr = equation ? String((equation.attrs.expr as string | undefined) ?? '') : null;
+  const foldedValue = constant ? String((constant.attrs.value as number | undefined) ?? '') : null;
 
-  // 数学アクション → 数学オペコード（入力式が必要）
+  // 数学アクション → 数学オペコード（方程式の入力式が必要）
   const actions = (task.attrs.actions as string[] | undefined) ?? [];
   let mathOpEmitted = 0;
   for (const action of actions) {
@@ -102,10 +121,13 @@ export function generateAilsa(g: AilsmGraph): Instruction[] {
     }
   }
 
-  // 入力式があり数学オペコードが未出力なら、既定の EQ を出力
+  // 方程式があり数学オペコード未出力 → 既定の EQ
   if (inputExpr && mathOpEmitted === 0) {
     instrs.push({ opcode: MathOpcode.EQ, slots: [{ slot: Slot.INPUT, value: inputExpr }] });
   }
+
+  // 定数畳み込み結果は SLOT_INPUT として伝達（オペコードは不要 — 値が確定済み）
+  if (foldedValue) addSlot(goalSlots, Slot.INPUT, foldedValue);
 
   const taskOp = TASK_OF_INTENT[intent] ?? Task.SOLVE;
   instrs.push({ opcode: taskOp, slots: goalSlots });
@@ -113,6 +135,3 @@ export function generateAilsa(g: AilsmGraph): Instruction[] {
 
   return instrs;
 }
-
-// Domain enum を参照しておく（将来のドメイン拡張時の整合確認用）
-export const AILSM_DOMAINS = [Domain.MATH, Domain.CODE, Domain.SEARCH, Domain.REASONING] as const;

@@ -5,7 +5,7 @@
  * Stage 2（LLM残差）は辞書で判定できない入力（semantic が解釈不能を返す）を
  * 外部LLMへ委譲するためのプラグイン点であり、ここでは AilsmError で明示する。
  *
- *   Lexer → Parser → Normalizer → Semantic Analyzer → Optimizer → AILSA Generator
+ *   Lexer → Parser → Normalizer → Semantic Analyzer → Optimizer(-O0..-O3) → AILSA Generator
  */
 
 import { encode as ailsaEncode } from '../ailsa/codec.js';
@@ -17,10 +17,12 @@ import { parse } from './parser.js';
 import { analyze } from './semantic.js';
 import type { SemanticResult } from './semantic.js';
 import { optimize } from './optimizer.js';
-import type { OptimizeResult } from './optimizer.js';
+import type { OptimizationLevel, PassResult } from './optimizer.js';
 import { generateAilsa } from './generator.js';
 import { verifyCompilation } from './verifier.js';
 import type { VerificationResult } from './verifier.js';
+import { inferCapability } from './capability.js';
+import type { CapabilityInference } from './capability.js';
 
 export class AilsmError extends Error {
   constructor(message: string) {
@@ -33,15 +35,17 @@ export interface CompileResult {
   text: string;
   normalized: NormalizedInput;
   semantic: SemanticResult;
-  optimized: OptimizeResult;
+  optimized: PassResult;
+  capability: CapabilityInference;
   instructions: Instruction[];
   bytes: Uint8Array;
   verification: VerificationResult;
+  notes: string[];
   confidence: number;
 }
 
 /** 自然言語 → AILSM → AILSA。検証を通らないものは絶対に返さない。 */
-export function compile(text: string): CompileResult {
+export function compile(text: string, level: OptimizationLevel = 2): CompileResult {
   if (!text.trim()) throw new AilsmError('空入力');
 
   const tokens = tokenize(text);
@@ -53,7 +57,7 @@ export function compile(text: string): CompileResult {
     throw new AilsmError(`意味解析失敗: ${semantic.issues.join('; ')}`);
   }
 
-  const optimized = optimize(semantic.graph);
+  const optimized = optimize(semantic.graph, level);
   const instructions = generateAilsa(optimized.graph);
 
   const verification = verifyCompilation(optimized.graph, instructions);
@@ -64,14 +68,18 @@ export function compile(text: string): CompileResult {
   }
 
   const bytes = ailsaEncode(instructions); // Phase 0 Codec（内部で再検証）
+  const capability = inferCapability(optimized.graph);
+
   return {
     text,
     normalized: norm,
     semantic,
     optimized,
+    capability,
     instructions,
     bytes,
     verification,
+    notes: optimized.notes,
     confidence: norm.confidence,
   };
 }

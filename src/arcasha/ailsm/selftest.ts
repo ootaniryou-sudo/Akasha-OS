@@ -102,6 +102,22 @@ const ra = compile('x+2=5を解いて').bytes;
 const rb = compile('x+2=5を解いて').bytes;
 check('同じ入力 → 同じバイト列', ra.every((v, i) => v === rb[i]));
 
+// [9] Optimizer / Capability / 定数畳み込み / 制約
+console.log('\n[9] Optimizer / Capability / Fold');
+const r9 = compile('2+3を計算して');
+check('定数畳み込みノート', r9.notes.some((n) => n.includes('constant fold')));
+check('fold 結果が INPUT=5', r9.instructions.some((i) => i.slots?.some((s) => s.slot === Slot.INPUT && s.value === '5')));
+check('能力推論 expert=math', r9.capability.expert === 'math');
+check('能力推論 requiredTypes に number', r9.capability.requiredTypes.includes('number'));
+
+const r9b = compile('x^2を積分して', 0); // -O0
+const r9c = compile('x^2を積分して', 2); // -O2
+check('-O0 / -O2 で命令列が一致（畳み込み対象なし）', r9b.instructions.length === r9c.instructions.length);
+
+const r10 = compile('半径3の円の面積を求めて');
+const radiusNode = r10.semantic.graph.nodes.find((n) => n.kind === 'value' && n.label === 'radius');
+check('制約 min=0 が付与', radiusNode?.constraints?.min === 0);
+
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {
   console.log('  ✅ ALL PASS — AILSM Phase 0.5（Stage 1 決定論 + Stage 3 決定論Verifier）');

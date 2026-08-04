@@ -19,7 +19,8 @@
     "demo:web": "tsx src/arcasha/demo-web.ts",
     "demo:mock-node": "tsx src/arcasha/demo-mock-node.ts",
     "ailsa:selftest": "tsx src/arcasha/ailsa/selftest.ts",
-    "ailsm:selftest": "tsx src/arcasha/ailsm/selftest.ts"
+    "ailsm:selftest": "tsx src/arcasha/ailsm/selftest.ts",
+    "ailsm:golden": "tsx src/arcasha/ailsm/golden.ts"
   },
   "engines": {
     "node": ">=20.0.0"
