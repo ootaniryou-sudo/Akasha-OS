@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.4** |
+| Status | **Draft v0.5** |
 | Date | 2026-08-04 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様） |
@@ -95,6 +95,35 @@ flowchart TB
 ```
 
 **不変条件**: 内部の意味は一度も自然言語に戻らない。最終結果だけが出口で自然言語へ戻る。
+
+### コンパイラ全体像（Front-End / Back-End）
+
+```
+Human → Natural Language
+        │  ─────────── Front-End Compiler ───────────
+        │  Lexer → Parser → Normalizer → Semantic Analyzer → Verifier
+        ▼
+      AILSM（ID付き意味グラフ = SSA風）
+        │  Optimizer（AILSM最適化）
+        ▼
+      AILSA（命令セット）
+        │  ─────────── Back-End Compiler ───────────
+        │  Expert IR → Dispatch → ODAR → Scheduler
+        ▼
+      Experts
+        │  Verifier → Reflection → Memory
+        ▼
+Natural Language → Human
+```
+
+**役割分担**（それぞれ独立した研究対象・公開可能なライブラリ単位）:
+
+| コンポーネント | 研究対象 | コンピュータ相当 |
+|---------------|---------|-----------------|
+| **AILSM** | AI向け意味IR（SSA風・ID付きグラフ） | LLVM IR |
+| **AILSA** | AI向け命令セット（ISA） | アセンブリ / RISC-V |
+| **Codec** | AIコンパイラ（Front-End + Back-End） | コンパイラ |
+| **ODAR** | AIスケジューラ | OSスケジューラ |
 
 ---
 
@@ -227,15 +256,35 @@ Question
  └── Expected Output
 ```
 
-AILSMの変換は**ParserではなくCodec（双方向）**として実装する。
+AILSMは**SSA（Static Single Assignment）風のID付き意味グラフ**として設計する。LLVMでSSAがVerifier・最適化を劇的に簡単にしたのと同じ発想。
 
 ```
-Encoder:  Natural Language → AILSM → AILSA Token
-Decoder:  AILSA Token      → AILSM → Natural Language
+（素朴なグラフ）                 （SSA風）
+Solve                           Task#1
+ ├─ Math                         ├─ Domain=Math
+ └─ Circle                      Object#1
+      └─ Radius=5                ├─ Type=Circle
+                                 └─ Value#1
+                                      └─ Radius=5
+                                Task#1 uses(Object#1)
+                                Task#1 uses(Value#1)
 ```
 
-- **Encoder**（コンパイラのフロントエンド）: 自然言語を意味グラフに正規化し、AILSAトークン列へ落とす
-- **Decoder**（コンパイラのバックエンド）: AILSAトークン列を意味グラフへ戻し、自然言語へ復元する
+- 全ノードに**一意ID**（Task#N / Object#N / Value#N）を付与
+- 参照はIDで表現（`uses(Object#1)`）
+- **Verifierが圧倒的に楽になる**: 同一ノードの同一性がIDで判定でき、文字列比較や言い換え耐性に依存しない
+
+**CodecはCompilerそのものである**。Encoder/Decoderだけでなく、以下のパイプラインで実装する。
+
+```
+Lexer → Parser → Normalizer → Semantic Analyzer → Optimizer → AILSA Generator
+```
+
+- **Lexer / Parser**: 自然言語をトークン化し、構文構造（AST）へ
+- **Normalizer**: 同義語を正準語へ畳み込む（足してください / 加えて / 和を求めよ → `ACTION_ADD`）
+- **Semantic Analyzer**: 意味ノード（Task / Object / Value）を抽出しIDを付与
+- **Optimizer**: AILSMレベルの最適化（§2.7）
+- **AILSA Generator**: AILSM → AILSA命令列（Byte Codec へ）
 
 AILSMは「人間の質問を意味として理解した状態」を保持し、AILSAへ落とすときの**正規化された中間体**。メモリには自然言語ではなくAILSMを保存する（§6）。
 
@@ -353,6 +402,39 @@ Math Dialect / Code Dialect / Search Dialect / Reasoning Dialect
 
 詳細は `AILSA_ISA.md`（命令セット仕様書）を参照。
 
+### 2.7 AILSM Optimizer（AILSM最適化）
+
+AILSMのまま最適化する（LLVM Passに相当）。
+
+**命令の畳み込み（Batching）**:
+
+```
+CALL Math
+CALL Math
+CALL Math
+```
+
+→
+
+```
+CALL Math  Batch=3
+```
+
+**並べ替え（Reordering）**:
+
+```
+検索 → 翻訳 → 検索
+```
+
+→
+
+```
+検索 → 検索 → 翻訳      （翻訳は最後に1回で済む）
+```
+
+- 通信コスト・レイテンシを最小化する
+- 決定論ルール（安全な変形のみ）から始め、学習ベースの最適化は研究フェーズ
+
 ---
 
 ## 3. Layer 2: Reasoning（思考）
@@ -464,6 +546,17 @@ Top1（主実行）
 
 を回し、**Exact Shadow**（同一モデル+バックエンド+精度 → トークン一致検証）と**Independent Shadow**（異なるバックエンド → 意味検証）を使い分ける。
 
+**Expert Calling もコンパイラ化する**。選択だけでなく、実行計画を最適化する。
+
+```
+ODAR → Candidate → Planner → Schedule Optimizer → Dispatch
+```
+
+- **Candidate**: Belief / Capability 等で候補エキスパートを列挙
+- **Planner**: 実行順序を決定（依存関係を考慮）
+- **Schedule Optimizer**: 通信コスト込みで配置を最適化（例: Math / Code / Translate → GPU1 / GPU2 / GPU3 へコスト最小で割当）
+- **Dispatch**: 実行
+
 ### 4.2 Expert の種類（初期9種）
 
 | # | Expert | 方言 | 役割 |
@@ -507,6 +600,21 @@ Reward       報酬（学習用）
 - 会話履歴もAILSMとして保存
 - Memory Expert が `STORE` / `LOAD` で応答
 - 経験はLinUCBの報酬学習に再利用
+
+### 4.4 Verifier（5種類）
+
+Verifierは単一ではなく、**5種類**を使い分ける。
+
+| 種別 | 検査内容 | 例 |
+|------|---------|-----|
+| **Syntax** | 命令列の構造 | CALLが閉じているか（Phase 0 Validator） |
+| **Semantic** | TaskとSlotの整合 | タスク種別とスロットの矛盾がないか |
+| **Capability** | エキスパート能力との整合 | Math ExpertにCode Taskを投げていないか |
+| **Consistency** | Belief / Memoryとの整合 | Beliefと保存済みMemoryが矛盾していないか |
+| **Safety** | 危険命令の排除 | 禁止オペコード / 制約違反がないか |
+
+- 各Verifierは決定論ルールで実装（AIを使わない）
+- Phase 3（Benchmark）で5種類それぞれの有効性を評価
 
 ---
 
@@ -552,7 +660,7 @@ Case2（AILSA）:
 |------|--------|
 | Semantic Drift | 入力意味と出力意味の**埋め込みコサイン**（Sentence Transformer） |
 | 精度 | **Intent F1 / Slot F1**（正解AILSMアノテーションとの一致率） |
-| グラフ一致率 | 正解AILSMと生成AILSMのノード一致（正準ノードで比較） |
+| グラフ一致率 | 正解AILSMと生成AILSMのノード一致（SSA風ID付きグラフで比較） |
 | Latency | エンドツーエンド応答時間 |
 | Token数 | 消費トークン総数 |
 | Memory | ピークメモリ |
@@ -580,6 +688,8 @@ Case2（AILSA）:
 1. **Paper 1: ODAR** — 分散環境での適応的ルーティング（誰に任せるか）
 2. **Paper 2: AILSA** — AI向け命令セットアーキテクチャ（ISA）
 3. **Paper 3: AILSM** — AI向け中間表現（IR）
+   - 候補タイトル: "Compiler-oriented Semantic IR for Distributed Expert Systems" / "Hierarchical Semantic IR"
+   - 論文化の中心は **SSA風ID付き意味グラフ**（正準化・Verifier容易性・最適化可能性）
 4. **Paper 4: Compiler** — 自然言語からAILSM/AILSAへの変換（3段階精度保証）
 5. **Paper 5: Native Expert** — AILSAネイティブ小型モデル
 6. **Paper 6: ArcAsha Architecture** — 全体アーキテクチャと分散実行基盤
@@ -593,7 +703,7 @@ Case2（AILSA）:
 | Phase | 内容 | 成果物 | 既存資産の活用 |
 |-------|------|--------|---------------|
 | **0** | ✅ **AILSA ISA 土台**（Registry v1.0 / Codec / Validator / Dialect） | `src/arcasha/ailsa/`（registry.json, vocab.ts, codec.ts, ...） | 完了（`npm run ailsa:selftest` 全合格） |
-| **0.5** | **AILSM Compiler**（3段階精度保証: Deterministic Parser → LLM残差 → Verifier） | `src/arcasha/ailsm/`（ailsm.ts, parser.ts, encoder.ts, verifier.ts） | Phase 0 の Validator を再利用 |
+| **0.5** | **AILSM Compiler**（Lexer→Parser→Normalizer→Semantic Analyzer→Optimizer→AILSA Generator、3段階精度保証） | `src/arcasha/ailsm/`（ailsm.ts, lexer.ts, parser.ts, normalizer.ts, semantic.ts, optimizer.ts, verifier.ts） | Phase 0 の Validator を再利用 |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |
