@@ -4,10 +4,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v0.1（Phase 0.20 実装済み）** |
+| Status | **Spec v0.2（Phase 0.20 AVM + Phase 0.21 Execution Context 実装済み）** |
 | Date | 2026-08-05 |
-| 実装 | `src/arcasha/ailsm/context.ts`, `slice.ts`, `cache.ts`, `avm.ts` |
-| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.1）, `AI_ABI.md`（Long Context ABI）, `AILSA_RUNTIME.md` |
+| 実装 | `src/arcasha/ailsm/context.ts`, `slice.ts`, `cache.ts`, `avm.ts`, `execution.ts`, `demand-paging.ts` |
+| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.2）, `AI_ABI.md`（Long Context ABI）, `AILSA_RUNTIME.md` |
 
 ---
 
@@ -77,7 +77,8 @@ AILSM
 ├── Context  ← NEW
 ├── Page     ← NEW
 ├── Slice     ← NEW
-└── Cache     ← NEW
+├── Cache     ← NEW
+└── Execution ← NEW（Phase 0.21）
 ```
 
 - **Hot / Warm / Cold Context Tier**（MASTER_SPEC §17 と接続）
@@ -86,4 +87,59 @@ AILSM
 
 ---
 
-*AI Virtual Memory は ArcAsha から独立した研究テーマとして論文化できる（AILSM/ODAR/AILSA に次ぐ第4の柱候補）。*
+## 6. Execution Context（Phase 0.21）
+
+AVM は「メモリ管理」まで完成した。次は **思考途中（Execution Context）** の管理。
+
+### 6.1 Execution Context SSA
+
+Expert が「Page1 で A だと思った → Page100 で B → Page300 で C」となる思考途中を保存する。
+
+```
+Context → Execution Context → Belief → Memory → Reflection
+```
+
+`Execution#N` が保持するもの（= CPU の Process Context）:
+
+| フィールド | 例 |
+|-----------|-----|
+| current page | `Page#45` |
+| current hypothesis | `B: 数式も確認した（x=-1）` |
+| temporary variables | `['x=-1']` |
+| call stack | `['planning','math']` |
+| active experts | `['math']` |
+| resident pages | `[45, 46, 47]` |
+
+### 6.2 Context Switch
+
+Expert 切り替え（Math → Search → Planner）時に **save() / restore()** する（CPU のコンテキストスイッチ）。
+これで **AI Thread が本当の Thread** になる。
+
+```
+ExecutionContext#5 → save() → Math 停止 → Search 開始 → restore()
+```
+
+### 6.3 Demand Paging / Context Fault
+
+Planner が事前指定するのではなく、Expert が「今必要なページ」を要求し、未ロードなら **Context Fault**（= OS の Page Fault）を起こして Kernel がロードする。
+
+```
+Expert: Page45 が必要 → Context Fault → Kernel → Page45 ロード
+```
+
+### 6.4 Prefetcher
+
+現在ページの隣接ページ（局所性）を先読みして resident set に入れる。
+
+### 6.5 デモ結果（`runExecutionDemo`）
+
+```
+planning: Page1 を読む（fault）→ 仮説 A
+→ SWITCH planning→math（save/restore）
+→ math: 数式ページへ Context Fault → Kernel ロード → vars=['x=-1']
+→ PREFETCH: 隣接ページを先読み
+→ SWITCH math→planning（仮説 A を復元）→ 仮説 A→B に更新
+→ final_hypothesis を Memory へ保存
+```
+
+ロングコンテキスト = 「100万Token読む」ではなく **「Execution Context を維持しながら必要ページだけ読む」**。

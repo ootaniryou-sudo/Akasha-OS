@@ -16,12 +16,15 @@ import type { AilsmGraph } from './ailsm.js';
 import { createContext, contextOf, pagesOf } from './context.js';
 import type { ContextObject } from './context.js';
 import { DEFAULT_PAGE_SIZE } from './context.js';
-import { selectPages } from './slice.js';
+import { selectPages, hasEquation } from './slice.js';
 import type { ExpertKind } from './slice.js';
 import { cacheArtifact, getCached } from './cache.js';
 import type { CacheKind } from './cache.js';
 import { buildContextArgument } from './abi.js';
 import type { ContextRef } from './abi.js';
+import { createExecutionContext, contextSwitch, commitMemory, updateExecution, executionOf } from './execution.js';
+import type { ExecutionContext } from './execution.js';
+import { contextFault, prefetch } from './demand-paging.js';
 
 export interface SliceLoad {
   contextId: number;
@@ -218,5 +221,117 @@ export function runAvmDemo(): AvmDemoResult {
     results,
     totalChars: context.text.length,
     maxLoadedRatio: Math.max(...results.map((r) => r.stats.loadedRatio)),
+  };
+}
+
+export interface ExecutionDemoEvent {
+  kind: 'READ' | 'FAULT' | 'PREFETCH' | 'SWITCH' | 'HYPOTHESIS' | 'MEMORY';
+  detail: string;
+}
+
+export interface ExecutionDemoResult {
+  graph: AilsmGraph;
+  contextId: number;
+  events: ExecutionDemoEvent[];
+  planner: ExecutionContext;
+  math: ExecutionContext;
+  faults: number;
+  switches: number;
+  prefetched: number;
+  finalHypothesis: string;
+}
+
+/**
+ * Execution Context デモ（Phase 0.21）:
+ * Planner が概要を読み（仮説A）→ Math へ Context Switch → 数式ページを
+ * Demand Paging（Context Fault）で Kernel ロード → 隣接ページを Prefetch
+ * → Planner へ復帰して仮説B に更新 → Memory へ保存。
+ *
+ * 「100万Token読む」のではなく「Execution Context を維持しながら必要ページだけ読む」。
+ */
+export function runExecutionDemo(): ExecutionDemoResult {
+  const text = [
+    'これはAI仮想記憶の概要ノート。本稿ではContext ObjectをOSが管理する方式を提案し、ページングとスライスにより必要な知識だけを供給する。',
+    'まず式x^2+2x+1=0を考える。これは(x+1)^2=0と因数分解でき、解はx=-1である。次に積分∫x dx=(1/2)x^2+Cを確認する。',
+    'ここでは導関数d/dx(x^3)=3x^2を計算する。また行列の固有値はλ^2-5λ+6=0を満たす。',
+    '検索結果: arXivの論文は巨大な知識空間を扱う。referenceはdoc1であり、doc2はContext Pagingに関する研究である。',
+    'まとめ: 要約すると、AI OSは全ての入力をモデルに投げるのではなく、仮想メモリとして管理し必要部分だけをExpertへ供給する。',
+  ].join('\n');
+
+  let g = createContext({ nodes: [], edges: [] }, 'EC研究ノート', text, DEFAULT_PAGE_SIZE).graph;
+  const context = contextOf(g, 1);
+  if (!context) throw new Error('AVM: コンテキスト初期化に失敗');
+  const contextId = context.id;
+  const pages = pagesOf(g, contextId);
+  const events: ExecutionDemoEvent[] = [];
+  let faults = 0;
+  let switches = 0;
+  let prefetchedTotal = 0;
+
+  // 1. Planner Execution Context を作成
+  const plannerCreated = createExecutionContext(g, contextId, 'proc1', 'planning');
+  g = plannerCreated.graph;
+  const plannerId = plannerCreated.exec.id;
+
+  // 2. Planner が概要ページを読む（仮説A）→ Demand Paging（フォールト）
+  const p0 = contextFault(g, plannerId, pages[0].id);
+  g = p0.graph;
+  if (p0.faulted) faults++;
+  events.push({ kind: 'READ', detail: `planning: Page${pages[0].id} を読む（fault=${p0.faulted}）` });
+  const hA = updateExecution(g, plannerId, { hypothesis: 'A: 概要を確認した' });
+  g = hA.graph;
+  events.push({ kind: 'HYPOTHESIS', detail: 'planning 仮説 A' });
+
+  // 3. Math Execution Context を作成し Context Switch（planning save → math restore）
+  const mathCreated = createExecutionContext(g, contextId, 'proc1', 'math');
+  g = mathCreated.graph;
+  const mathId = mathCreated.exec.id;
+  const sw = contextSwitch(g, plannerId, mathId);
+  g = sw.graph;
+  switches++;
+  for (const ev of sw.events) events.push({ kind: 'SWITCH', detail: ev.detail });
+
+  // 4. Math が数式ページを要求 → 未ロードなら Context Fault → Kernel ロード
+  const eqPage = pages.find((p) => hasEquation(p.text));
+  if (eqPage) {
+    const f = contextFault(g, mathId, eqPage.id);
+    g = f.graph;
+    if (f.faulted) faults++;
+    events.push({
+      kind: 'FAULT',
+      detail: `math: Page${eqPage.id} へ Context Fault → Kernel がロード（${f.loaded.length}文字）`,
+    });
+    const vars = updateExecution(g, mathId, { vars: ['x=-1'], hypothesis: 'x=-1 を導出' });
+    g = vars.graph;
+  }
+
+  // 5. Prefetch: 現在ページの隣接ページを先読み
+  const pf = prefetch(g, mathId, 1);
+  g = pf.graph;
+  prefetchedTotal += pf.prefetched.length;
+  events.push({ kind: 'PREFETCH', detail: `math: 隣接 ${pf.prefetched.length} ページを先読み` });
+
+  // 6. Planner へ Context Switch 復帰 → 仮説 B に更新 → Memory 保存
+  const sw2 = contextSwitch(g, mathId, plannerId);
+  g = sw2.graph;
+  switches++;
+  for (const ev of sw2.events) events.push({ kind: 'SWITCH', detail: ev.detail });
+  const hB = updateExecution(g, plannerId, { hypothesis: 'B: 数式も確認した（x=-1）' });
+  g = hB.graph;
+  events.push({ kind: 'HYPOTHESIS', detail: 'planning 仮説 A → B' });
+  const mem = commitMemory(g, plannerId, 'final_hypothesis', 'B: 数式も確認した（x=-1）');
+  g = mem.graph;
+  events.push({ kind: 'MEMORY', detail: 'planning: final_hypothesis を Memory へ保存' });
+
+  return {
+    graph: g,
+    contextId,
+    events,
+    planner: executionOf(g, plannerId)!,
+    math: executionOf(g, mathId)!,
+    faults,
+    switches,
+    prefetched: prefetchedTotal,
+    finalHypothesis: executionOf(g, plannerId)!.hypothesis,
   };
 }

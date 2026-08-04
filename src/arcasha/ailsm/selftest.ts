@@ -29,7 +29,9 @@ import { createContext, contextOf, pagesOf, splitContext } from './context.js';
 import { loadPage as loadContextPage } from './context.js';
 import { hasEquation, selectPages } from './slice.js';
 import { cacheArtifact, getCached } from './cache.js';
-import { requestSlice, runAvmDemo, storeContext, cacheResult } from './avm.js';
+import { requestSlice, runAvmDemo, storeContext, cacheResult, runExecutionDemo } from './avm.js';
+import { createExecutionContext, contextSwitch, saveExecutionContext, restoreExecutionContext, updateExecution, executionOf, commitMemory } from './execution.js';
+import { contextFault, prefetch, isResident } from './demand-paging.js';
 
 let failed = 0;
 
@@ -441,6 +443,75 @@ const abiArg = buildContextArgument(0, { contextId: demo.contextId, pageIds: mat
 check('buildContextArgument が context ABI 引数を作る', abiArg.type === 'context' && abiArg.ownership === 'borrow' && abiArg.alignment === 8);
 const ctx28 = storeContext({ nodes: [], edges: [] }, 'k', 'k1 k2 k3');
 check('storeContext で Context Object を管理', ctx28.context.title === 'k' && ctx28.context.pageCount >= 1);
+
+// [29] Execution Context SSA（思考途中を保存するプロセスコンテキスト）
+console.log('\n[29] Execution Context SSA');
+const ectx = createContext({ nodes: [], edges: [] }, 'ec', '0123456789abcdef', 8);
+const ex29 = createExecutionContext(ectx.graph, ectx.contextId, 'proc1', 'planning');
+check('Execution#N が作成される', ex29.exec.id > 0);
+check('初期状態 created / expert=planning', ex29.exec.state === 'created' && ex29.exec.expert === 'planning');
+check('context contains execution エッジ', ex29.graph.edges.some((e) => e.rel === 'contains' && e.to === ex29.exec.id));
+const up29 = updateExecution(ex29.graph, ex29.exec.id, {
+  hypothesis: 'A: 概要を確認した',
+  currentPage: 2,
+  vars: ['tmp=1'],
+  residentPages: [1, 2],
+});
+check('仮説・現在ページ・一時変数を更新', up29.exec.hypothesis === 'A: 概要を確認した' && up29.exec.currentPage === 2 && up29.exec.vars.length === 1);
+check('resident set にページ追加', up29.exec.residentPages.length === 2);
+check('Execution ノードが重複しない', up29.graph.nodes.filter((n) => n.kind === 'execution').length === 1);
+
+// [30] Context Switch（save/restore — AI Thread が本物の Thread になる）
+console.log('\n[30] Context Switch');
+const saved30 = saveExecutionContext(up29.graph, ex29.exec.id);
+check('save で suspend（思考途中を保存）', saved30.exec.state === 'suspended' && saved30.exec.hypothesis === 'A: 概要を確認した');
+const restored30 = restoreExecutionContext(saved30.graph, ex29.exec.id);
+check('restore で running（思考途中を復元）', restored30.exec.state === 'running' && restored30.exec.hypothesis === 'A: 概要を確認した');
+const math30 = createExecutionContext(restored30.graph, ectx.contextId, 'proc1', 'math');
+const sw30 = contextSwitch(math30.graph, ex29.exec.id, math30.exec.id);
+check('Context Switch で planning→math', sw30.events.some((e) => e.kind === 'SWITCH' && e.from === 'planning' && e.to === 'math'));
+check('switch 後 math は running / planning は suspended', executionOf(sw30.graph, math30.exec.id)?.state === 'running' && executionOf(sw30.graph, ex29.exec.id)?.state === 'suspended');
+
+// [31] Demand Paging（必要になったページだけをロード）
+console.log('\n[31] Demand Paging');
+const dp31 = createContext({ nodes: [], edges: [] }, 'dp', 'aaa\nx^2+2x+1=0\nbbb', 40);
+const dpPages = pagesOf(dp31.graph, dp31.contextId);
+const ex31 = createExecutionContext(dp31.graph, dp31.contextId, 'proc1', 'math');
+check('初期は resident 0 ページ', ex31.exec.residentPages.length === 0);
+const f31a = contextFault(ex31.graph, ex31.exec.id, dpPages[0].id);
+check('未ロードページ → Context Fault 発生', f31a.faulted === true);
+check('Fault 後 resident に追加・current page 更新', f31a.exec.residentPages.includes(dpPages[0].id) && f31a.exec.currentPage === dpPages[0].id);
+const f31b = contextFault(f31a.graph, ex31.exec.id, dpPages[0].id);
+check('ロード済みページ → フォールトなし', f31b.faulted === false && f31b.resident === true);
+
+// [32] Context Fault（Kernel がページ実体をロード）
+console.log('\n[32] Context Fault');
+// 3 ページ構成: 通常ページ / 数式ページ / 通常ページ（各 10 文字でページ境界を揃える）
+const ctx32 = createContext({ nodes: [], edges: [] }, 'fault', 'aaaaaaaaaax^2+2x+1=0bbbbbbbbbb', 10);
+const p32 = pagesOf(ctx32.graph, ctx32.contextId);
+check('テスト用に 3 ページ', p32.length === 3);
+const ex32 = createExecutionContext(ctx32.graph, ctx32.contextId, 'proc1', 'math');
+const f0 = contextFault(ex32.graph, ex32.exec.id, p32[0].id); // 通常ページを先にロード
+const eq32 = p32.find((p) => hasEquation(p.text));
+const f32 = eq32 && eq32.id !== p32[0].id ? contextFault(f0.graph, ex32.exec.id, eq32.id) : null;
+check('数式ページを Fault で Kernel がロード', f32 !== null && f32.faulted === true && f32.loaded.includes('x^2+2x+1=0'));
+check('Fault でロード済み判定', f32 !== null && isResident(f32.exec, eq32!.id));
+
+// [33] Prefetcher + Execution Context デモ
+console.log('\n[33] Prefetcher / Execution Context デモ');
+const pf33 = f32 ? prefetch(f32.graph, ex32.exec.id, 1) : null;
+check('Prefetch で隣接ページを先読み', pf33 !== null && pf33.prefetched.length > 0 && pf33.prefetched.includes(p32[2].id));
+const edemo = runExecutionDemo();
+check('デモ: Context Fault が発生', edemo.faults > 0);
+check('デモ: Context Switch が発生', edemo.switches > 0);
+check('デモ: Prefetch が発生', edemo.prefetched > 0);
+check('デモ: 仮説が A → B に更新（思考途中を維持）', edemo.finalHypothesis === 'B: 数式も確認した（x=-1）', edemo.finalHypothesis);
+check('デモ: planner は suspended から復帰して running', edemo.planner.state === 'running');
+check('デモ: 最終仮説が Memory へ保存', edemo.graph.nodes.some((n) => n.kind === 'memory' && n.attrs.key === 'final_hypothesis' && String(n.attrs.value).includes('B:')));
+const eqPage33 = pagesOf(edemo.graph, edemo.contextId).find((p) => hasEquation(p.text));
+check('デモ: math は数式ページを resident に持つ', eqPage33 !== undefined && edemo.math.residentPages.includes(eqPage33.id));
+const mem33 = commitMemory(edemo.graph, edemo.planner.id, 'note', 'done');
+check('commitMemory で execution stores memory', mem33.graph.edges.some((e) => e.rel === 'stores' && e.from === edemo.planner.id));
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {

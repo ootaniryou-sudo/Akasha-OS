@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.1（凍結 + MINOR 追加: Context/Page/Slice/Cache）** |
+| Status | **Spec v1.2（凍結 + MINOR 追加: Context/Page/Slice/Cache/Execution）** |
 | Date | 2026-08-05 |
 | 実装 | `src/arcasha/ailsm/ailsm.ts`, `types.ts`, `visualizer.ts` |
 | 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSM_COMPILER.md`, `AILSA_RUNTIME.md`, `AI_ABI.md`, `AI_VIRTUAL_MEMORY.md` |
@@ -45,6 +45,7 @@ AILSMは単なるIRではなく、**AI Operating IR** — CPUだけでなく AI 
 | **Page** | `Page#N` | `Page#45 : string {context=論文, index=2, offset=128, length=64, text=...}`（固定サイズページ） |
 | **Slice** | `Slice#N` | `Slice#50 : unknown {context=20, expert=math, pageCount=3, pageIds=[45,46,47]}`（Expert が読むページだけ） |
 | **Cache** | `Cache#N` | `Cache#51 : unknown {context=20, kind=equation, key=parsed, value=...}`（解析済み Context の再利用） |
+| **Execution** | `Execution#N` | `Execution#60 : unknown {context=20, owner=proc1, expert=math, state=running, currentPage=45, hypothesis='B: 数式も確認した', vars=[x=-1], residentPages=[45,46,47]}`（AI の思考途中 = プロセスコンテキスト） |
 
 各ノード: `{ id, kind, label, type, attrs, constraints? }`
 
@@ -101,7 +102,7 @@ IR は後から変更すると Compiler / Executor / Runtime / Visualizer / Expe
 
 | 安定化対象 | 定義 |
 |-----------|------|
-| **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread / namespace / **context / page / slice / cache** |
+| **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread / namespace / **context / page / slice / cache / execution** |
 | **エッジカタログ** | uses / input / produces / stores / informs / plans / reflects / schedules / processes / threads / **contains** |
 | **型システム** | AilsmType + AilsmTypeRef（union / optional）+ NodeConstraints |
 | **状態遷移** | ローカル解決: Result→Memory / 委譲: Belief→Capability→Schedule→CALL |
