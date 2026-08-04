@@ -7,6 +7,7 @@
 import { Slot, Task } from '../ailsa/vocab.js';
 import { MathOpcode } from '../ailsa/dialect.js';
 import { compile, describeGraph, toHex } from './compiler.js';
+import { toAsciiTree, toDot, toMermaid } from './visualizer.js';
 
 let failed = 0;
 
@@ -117,6 +118,19 @@ check('-O0 / -O2 で命令列が一致（畳み込み対象なし）', r9b.instr
 const r10 = compile('半径3の円の面積を求めて');
 const radiusNode = r10.semantic.graph.nodes.find((n) => n.kind === 'value' && n.label === 'radius');
 check('制約 min=0 が付与', radiusNode?.constraints?.min === 0);
+
+// [10] Visualizer（見えるIR）
+console.log('\n[10] Visualizer');
+const rv = compile('x+2=5を解いて');
+const mm = toMermaid(rv.optimized.graph);
+const dot = toDot(rv.optimized.graph);
+const tree = toAsciiTree(rv.optimized.graph);
+check('Mermaid に Task#1 が含まれる', mm.includes('Task#1'));
+check('Mermaid に uses エッジ', mm.includes('-->|uses|'));
+check('DOT に digraph 宣言', dot.includes('digraph AILSM'));
+check('ASCII ツリーに Object#2', tree.includes('Object#2'));
+console.log('  --- Mermaid ---');
+console.log(mm.split('\n').map((l) => `  ${l}`).join('\n'));
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {
