@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.5** |
+| Status | **Draft v0.6** |
 | Date | 2026-08-04 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様） |
@@ -124,6 +124,26 @@ Natural Language → Human
 | **AILSA** | AI向け命令セット（ISA） | アセンブリ / RISC-V |
 | **Codec** | AIコンパイラ（Front-End + Back-End） | コンパイラ |
 | **ODAR** | AIスケジューラ | OSスケジューラ |
+
+### AI Compiler Ecosystem（CompilerもExpertになる）
+
+LLVMがClangと分離されているように、ArcAshaでは**Compilerは基盤と独立した部品**であり、それ自体がExpertになり得る。
+
+```
+日本語 → [Front-end Compiler: GPT / Gemini / Claude / Qwen どれでも] → AILSM
+AILSM → [Back-end Compiler: Math / Code / Reasoning 別々] → AILSA → Expert
+```
+
+- **Front-end Compiler**（NL → AILSM）: 好きなモデルでよい。インターフェース（入力: 自然言語 / 出力: AILSM）が固定され、出力はValidatorで検証される
+- **Back-end Compiler**（AILSM → AILSA）: Math Compiler / Code Compiler / Reasoning Compiler とドメイン別に分離可能
+- **CompilerもExpertになる**: 既存9種の「Translation Expert」がFront-end相当。各ドメインExpertは自前のBack-end Compilerを持つ
+- ODARは**どのCompilerを使うかもルーティング**する（能力・コスト・レイテンシで選択）
+
+| LLVM | ArcAsha |
+|------|---------|
+| Clang | Front-end Compiler（GPT / Gemini / ...） |
+| LLVM | AILSM |
+| x86 Back-end | Math Compiler → AILSA → Math Expert |
 
 ---
 
@@ -286,6 +306,20 @@ Lexer → Parser → Normalizer → Semantic Analyzer → Optimizer → AILSA Ge
 - **Optimizer**: AILSMレベルの最適化（§2.7）
 - **AILSA Generator**: AILSM → AILSA命令列（Byte Codec へ）
 
+#### 型システム（Typed AILSM）
+
+SSAの次の進化として**型システム**を導入する。
+
+```
+Value#12 : Number
+Object#3  : Circle
+Task#1    : Solve
+```
+
+- **コンパイル時の型エラー検出**: 型が合わない演算・接続をAILSA生成前に検出
+- **静的IR検査**: Expertが受け取れるIRを型で静的検査（Math Expert は Number のみ受領、等）
+- **Verifierの事前排除**: 実行前に矛盾を排除（型安全性 = プログラミング言語の型安全性をAIシステムへ持ち込む）
+
 AILSMは「人間の質問を意味として理解した状態」を保持し、AILSAへ落とすときの**正規化された中間体**。メモリには自然言語ではなくAILSMを保存する（§6）。
 
 #### 精度保証：3段階 Codec（自然言語 ⇄ AILSM ⇄ AILSA）
@@ -439,6 +473,8 @@ CALL Math  Batch=3
 
 ## 3. Layer 2: Reasoning（思考）
 
+**全サブシステムは同じAILSMグラフを見る（共有IR）**。SSA化により依存関係が全て見える（`Task#1 → Math#2 → Equation#5 → Result#9`）ため、Planner / Tree Search / Reflection / Memory / Verifier / ODAR は全て同じAILSMを読み書きする。これはCPUで「**全員が同じメモリを見る**」のに等しい。従来のように各コンポーネントが自然言語を個別に解釈する（「たぶんこういう意味」）曖昧さが消える。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -571,6 +607,8 @@ ODAR → Candidate → Planner → Schedule Optimizer → Dispatch
 | 8 | Translation Expert | — | 自然言語 ⇄ AILSM/AILSA |
 | 9 | Vision Expert | AILSA-V | 画像入力（将来） |
 
+> **CompilerもExpertである**: Translation Expert（#8）はFront-end Compiler、各ドメインExpertは自前のBack-end Compilerを持つ（§1 Compiler Ecosystem）。
+
 #### エキスパートは自然言語を見ない
 
 各エキスパートは自ドメインの**専門IRだけ**を処理する。自然言語能力は不要。
@@ -629,6 +667,9 @@ Verifierは単一ではなく、**5種類**を使い分ける。
 7. **記憶は意味で保存** — 自然言語は保存しない
 8. **同一意味は同一表現（正準化）** — 多様な自然言語表現を一つのToken ID列に写像し、学習・検証・記憶を効率化
 9. **エキスパートは専門IRのみ** — 自然言語能力を要求しない（小型化・省リソース）
+10. **共有IR（全サブシステムが同じAILSMを見る）** — Planner / Memory / Verifier / Reflection / ODAR の個別解釈による曖昧さを排除
+11. **Compilerは交換可能（Compiler Ecosystem）** — Front-end / Back-end Compilerはモデル・ドメインごとに差し替え可能
+12. **型安全性** — Typed AILSM でコンパイル時検出・静的IR検査・実行前矛盾排除
 
 ---
 
@@ -690,6 +731,7 @@ Case2（AILSA）:
 3. **Paper 3: AILSM** — AI向け中間表現（IR）
    - 候補タイトル: "Compiler-oriented Semantic IR for Distributed Expert Systems" / "Hierarchical Semantic IR"
    - 論文化の中心は **SSA風ID付き意味グラフ**（正準化・Verifier容易性・最適化可能性）
+   - 発展: **共有IR**（全サブシステムが同一グラフを参照）と**型システム**（型安全性）
 4. **Paper 4: Compiler** — 自然言語からAILSM/AILSAへの変換（3段階精度保証）
 5. **Paper 5: Native Expert** — AILSAネイティブ小型モデル
 6. **Paper 6: ArcAsha Architecture** — 全体アーキテクチャと分散実行基盤
@@ -703,7 +745,7 @@ Case2（AILSA）:
 | Phase | 内容 | 成果物 | 既存資産の活用 |
 |-------|------|--------|---------------|
 | **0** | ✅ **AILSA ISA 土台**（Registry v1.0 / Codec / Validator / Dialect） | `src/arcasha/ailsa/`（registry.json, vocab.ts, codec.ts, ...） | 完了（`npm run ailsa:selftest` 全合格） |
-| **0.5** | **AILSM Compiler**（Lexer→Parser→Normalizer→Semantic Analyzer→Optimizer→AILSA Generator、3段階精度保証） | `src/arcasha/ailsm/`（ailsm.ts, lexer.ts, parser.ts, normalizer.ts, semantic.ts, optimizer.ts, verifier.ts） | Phase 0 の Validator を再利用 |
+| **0.5** | **AILSM Compiler**（Lexer→Parser→Normalizer→Semantic Analyzer→Optimizer→AILSA Generator、3段階精度保証） | `src/arcasha/ailsm/`（ailsm.ts, types.ts, lexer.ts, parser.ts, normalizer.ts, semantic.ts, optimizer.ts, verifier.ts） | Phase 0 の Validator を再利用 |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |
