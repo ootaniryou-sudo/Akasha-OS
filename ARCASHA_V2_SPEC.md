@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.1** |
+| Status | **Draft v0.2** |
 | Date | 2026-08-04 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名） |
@@ -41,6 +41,20 @@
 | **Layer 3: Execution（実行）** | ODAR / Expert Calling / Belief / Memory | 「誰に任せるか」 |
 
 この3層は互いに補完し合い、それぞれが独立した研究テーマになり得ます。
+
+### v2 の本質：AI Compiler
+
+AILSAは「AI共通言語」ではなく、**AI専用中間表現（IR）**である。人間のコンパイラスタックに例えると：
+
+| 人間のコンパイラ | ArcAsha v2 |
+|----------------|-----------|
+| ソースコード | 自然言語 |
+| 高級IR（LLVM IR） | AILSM（意味グラフ） |
+| 低級IR / アセンブリ | AILSA（Token ID列） |
+| ターゲットバックエンド | 専門IR（AILSA-M / AILSA-C / AILSA-S ...） |
+| 実行ユニット | 小型Expertモデル |
+
+つまり ArcAsha v2 は **「AIのコンパイラ」** である。LLVMが様々なCPUアーキテクチャを対象にするように、様々な小型AIを対象にした中間表現と最適化基盤を提供する。これが「AIオーケストレーション」から「**AIコンピュータアーキテクチャ**」への進化の本質。
 
 ---
 
@@ -103,6 +117,7 @@ TASK {
 - **検証可能**：閉じた語彙は厳密パーサーで検証でき、「生成→検証→修復」ループに載せられる
 - **小型モデルでも学習・生成しやすい**：JSONツール呼び出し形式と同型であり、Qwen2.5-1.5B クラスでもプロンプトで出せ、ファインチューニングで完全固定できる
 - **バイナリ化できる**：閉じた語彙は固定IDに写像でき、既存のバイナリ配線プロトコル（Knowledge Edict）と整合する
+- **学習効率が激増**：同じ意味は常に同じ表現（正準化）になるため、「Solve x+2=5.」も「x+2=5を解け」も「Find x.」も全て `TASK_SOLVE EQ_LINEAR VAR_X` に写像され、多様な自然言語表現を個別に学習する必要がなくなる
 
 #### 基本構造（入力側）
 
@@ -145,6 +160,31 @@ STORE        LOAD          SEARCH      MERGE
 
 **専門家ごとにIRが異なる**ことが設計の核心。共通AILSAは「翻訳・中継」のための言語であり、各エキスパートは自ドメインのIRで最も効率よく推論する。
 
+#### Token ID 化（AI用アセンブリ言語）
+
+最終形は人間可読な名前ではなく**固定Token ID**。閉じた語彙の各トークンに一意のIDを割り当て、AILSAそのものを**AI用アセンブリ言語**にする。
+
+| 範囲 | カテゴリ | 例 |
+|------|---------|-----|
+| `0x01–0x0F` | タスク動詞 | `TASK_SOLVE=0x04` `TASK_VERIFY=0x05` `TASK_PLAN=0x06` `TASK_SEARCH` `TASK_PATCH` `TASK_TRANSLATE` |
+| `0x10–0x1F` | ドメイン | `DOMAIN_MATH=0x12` `DOMAIN_CODE` `DOMAIN_SEARCH` |
+| `0x20–0x2F` | スロット（フィールド） | `SLOT_GOAL` `SLOT_INPUT` `SLOT_OUTPUT` `SLOT_CONF` `SLOT_NEXT` `SLOT_CONSTRAINT` |
+| `0x30–0x3F` | 制御 | `CALL` `RETURN` `FAIL` `PASS` `MERGE` `PARALLEL` |
+| `0x40–0x4F` | AILSA-M（Math） | `EQ` `DERIVE` `LIMIT` `MATRIX` `INTEGRAL` |
+| `0x50–0x5F` | AILSA-C（Code） | `FUNCTION` `CLASS` `PATCH` `BUILD` `TEST` |
+| `0x60–0x6F` | AILSA-S（Search） | `QUERY` `FILTER` `RANK` `EXTRACT` |
+| `0x70–0x7F` | AILSA-R（Reasoning） | `CAUSE` `PLAN` `VERIFY` |
+
+開いたスロットの値は**長さ前置（varint + UTF-8）**で続く。
+
+```
+04 12 20 05 'x' 22 ...        TASK_SOLVE DOMAIN_MATH SLOT_GOAL len=1 "x" ...
+```
+
+- 意味がバイト列そのものになり、機械が直接処理できる
+- 人間の可読性は不要（デバッグ用の逆引きテーブルを別途用意）
+- エキスパートは自分が処理する**範囲のToken IDだけ**を理解すればよい（§4.2）
+
 #### バイナリ写像（Knowledge Edict との関係）
 
 AILSAは**意味層**であり、既存の `PROTOCOL.md`（Knowledge Edict）は**輸送層**である。両者は直交する。
@@ -166,14 +206,6 @@ Knowledge Edict（輸送層）: 既存の48バイトヘッダ + ペイロード
 自然言語を意味グラフ（Semantic Graph）に構造化したもの。
 
 ```
-自然言語
-  ↓ Parser
-AILSM（意味グラフ）
-  ↓ Compiler
-AILSA
-```
-
-```
 Question
  ├── Goal
  ├── Constraints
@@ -181,6 +213,16 @@ Question
  ├── Operations
  └── Expected Output
 ```
+
+AILSMの変換は**ParserではなくCodec（双方向）**として実装する。
+
+```
+Encoder:  Natural Language → AILSM → AILSA Token
+Decoder:  AILSA Token      → AILSM → Natural Language
+```
+
+- **Encoder**（コンパイラのフロントエンド）: 自然言語を意味グラフに正規化し、AILSAトークン列へ落とす
+- **Decoder**（コンパイラのバックエンド）: AILSAトークン列を意味グラフへ戻し、自然言語へ復元する
 
 AILSMは「人間の質問を意味として理解した状態」を保持し、AILSAへ落とすときの**正規化された中間体**。メモリには自然言語ではなくAILSMを保存する（§6）。
 
@@ -359,6 +401,20 @@ Top1（主実行）
 | 8 | Translation Expert | — | 自然言語 ⇄ AILSM/AILSA |
 | 9 | Vision Expert | AILSA-V | 画像入力（将来） |
 
+#### エキスパートは自然言語を見ない
+
+各エキスパートは自ドメインの**専門IRだけ**を処理する。自然言語能力は不要。
+
+```
+Math Expert が見るもの:
+04 12 20 05 'x' 22 ...     TASK_SOLVE DOMAIN_MATH SLOT_GOAL len=1 "x" ...
+
+（従来: 「x+2=5を解け」「Solve x+2=5.」「Find x.」を全て学習する必要があった）
+```
+
+- **語彙が激減** → トークナイザ・モデルサイズを縮小できる
+- **学習データが激減** → 同じ意味は常に同じToken ID列（正準化）なので、学習効率が向上（§6 の H5）
+
 ### 4.3 Memory（記憶）
 
 **保存するもの**（自然言語は保存しない）：
@@ -386,6 +442,8 @@ Reward       報酬（学習用）
 5. **Belief駆動の分解** — 確信度が低いところだけさらに分解
 6. **検証の常設** — Top1 + Shadow + Verifier は常に回す
 7. **記憶は意味で保存** — 自然言語は保存しない
+8. **同一意味は同一表現（正準化）** — 多様な自然言語表現を一つのToken ID列に写像し、学習・検証・記憶を効率化
+9. **エキスパートは専門IRのみ** — 自然言語能力を要求しない（小型化・省リソース）
 
 ---
 
@@ -397,6 +455,7 @@ Reward       報酬（学習用）
 - **H2**: 小型モデルはAILSA（閉じた語彙+開いたスロット）を生成・消費できる（プロンプト → ファインチューニングで固定）
 - **H3**: Belief駆動の階層分解は、単一パス推論より複合タスクで精度が高い
 - **H4**: LinUCBによるExpert選択は、固定ルーティングより累積報酬が高い
+- **H5**: 専門IRのみを処理する小型モデルは、自然言語を処理する同規模モデルより**タスク精度/パラメータ比**で高効率である
 
 ### 6.2 セマンティックドリフト実験（最も説得力のある実験）
 
@@ -422,6 +481,8 @@ NL → AILSA → モデルA → AILSA → モデルB → NL   （AILSA）
 
 **差別化点**: 既存研究が「単一モデル内 or 少数エージェント」であるのに対し、AILSAは「**分散された小型モデル群が共通IRで協調する**」点で、規模と分散性で差が出せる。
 
+さらにAILSAは単なる通信形式ではなく、**AIコンパイラの中間表現**として位置づけられる。LLVMがCPUアーキテクチャの差異を吸収するように、AILSA/AILSMはモデル・バックエンド・精度の差異を吸収し、「**専門IRを処理する小型モデル群**」という新しい学習・推論パラダイムへ接続する。これが「AI共通言語」ではなく「**AI専用IR**」としての本質であり、論文の中心命題になる。
+
 ### 6.4 論文3本立て（将来）
 
 1. **Paper 1: ODAR** — Observation-Driven Adaptive Routing（誰に任せるか）
@@ -434,9 +495,10 @@ NL → AILSA → モデルA → AILSA → モデルB → NL   （AILSA）
 
 | Phase | 内容 | 成果物 | 既存資産の活用 |
 |-------|------|--------|---------------|
-| **0** | AILSA パーサー + 検証器（閉じた語彙のスキーマ定義） | `src/arcasha/ailsa/`（schema.ts, parser.ts, validator.ts） | — |
+| **0** | **AILSA Schema + Closed Vocabulary 定義**（Token ID 割当表） | `src/arcasha/ailsa/vocab.ts` | — |
+| **0.5** | **AILSA Codec**（Encoder: NL→AILSM→Token / Decoder: Token→AILSM→NL） | `src/arcasha/ailsa/`（codec.ts, encoder.ts, decoder.ts） | 小型モデルでEncoder/Decoderをプロンプト実装 |
 | **1** | ハブでのAILSAリレー（2ノード間マルチホップ） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
-| **2** | AILSM パーサー（自然言語→意味グラフ） | `src/arcasha/ailsm/` | Translation Expert 相当をプロンプトで |
+| **2** | AILSM Codec 本実装（意味グラフ ⇄ トークン） | `src/arcasha/ailsm/` | Translation Expert 相当をプロンプトで |
 | **3** | Hierarchical Reasoning（Reasoning Unit + Tree Search） | `src/arcasha/reasoning/` | — |
 | **4** | Expert Calling（LinUCB + Shadow + Verifier） | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **5** | Memory（AILSM保存 + Memory Expert） | `src/memory/` 拡張 | 既存 `src/memory/store.ts` |
@@ -464,12 +526,40 @@ NL → AILSA → モデルA → AILSA → モデルB → NL   （AILSA）
 | **AILSA** | AI同士が意味をやり取りする共通中間表現（閉じた語彙+開いたスロット） |
 | **AILSM** | 自然言語を意味グラフ化した意味モデル（AILSAの前段） |
 | **AILSA-M/C/R/S/V** | 各エキスパート専用のIR方言 |
+| **Codec** | AILSAとAILSM/自然言語を相互変換する双方向モジュール（Encoder + Decoder） |
+| **Token ID** | 閉じた語彙に割り当てた固定ID（0x04=TASK_SOLVE 等）。AILSAをアセンブリ言語化する |
 | **Reasoning Unit** | 推論木のノード（Goal/Input/Output/Belief/Verifier/Children） |
 | **Belief** | タスク達成確信度 [0,1]。分解・ルーティング・検証の判断基準 |
 | **ODAR** | Observation-Driven Adaptive Routing。Expert選択アルゴリズム |
 | **LinUCB** | バンディットによる探索・活用の均衡アルゴリズム |
 | **Shadow** | 検証用の複製実行（Exact / Independent の2種） |
 | **Relay** | Master経由のAILSA中継。直接通信は禁止 |
+
+---
+
+## 10. 未来展望：ArcAsha v3（専門IRネイティブ）
+
+```
+Human → Natural Language → AILSM → AILSA → Math IR → Math Model
+```
+
+v2 では自然言語入力をAILSAへ変換し、既存の（自然言語を理解する）モデルへ渡す。**v3** では、各エキスパートが最初から**専門IRを直接処理する小型モデル**として生まれ変わる。
+
+- Math: `EQ` `DERIVE` `LIMIT` `MATRIX` だけ
+- Coding: `FUNCTION` `CLASS` `PATCH` `BUILD` だけ
+- Search: `QUERY` `FILTER` `RANK` だけ
+
+この段階で ArcAsha は「自然言語を理解するLLM」から「**専門IRを処理する小型モデル群**」の分散基盤へ完全移行する。
+
+**ArcAsha v3 の3本柱**：
+
+| 柱 | 役割 | 問い |
+|----|------|------|
+| **AILSA** | AI間通信プロトコル | 何を伝えるか |
+| **ODAR** | 適応型ルーティング | 誰に任せるか |
+| **専門IR + 小型Expert** | 高効率な分散推論 | 何を考えるか |
+
+これはArcAshaの中で最も大きく発展する可能性を秘めた部分であり、研究としての独自性の核心。
 
 ---
 
