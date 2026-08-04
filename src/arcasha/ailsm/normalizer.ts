@@ -9,7 +9,7 @@
 
 import type { Token } from './lexer.js';
 
-export type Intent = 'solve' | 'summarize' | 'search' | 'verify' | 'code' | 'unknown';
+export type Intent = 'solve' | 'summarize' | 'search' | 'verify' | 'code' | 'create' | 'unknown';
 export type Domain = 'math' | 'code' | 'search' | 'reasoning' | 'unknown';
 
 export type CanonicalAction =
@@ -51,6 +51,7 @@ const INTENT_WORDS: { intent: Intent; words: readonly string[] }[] = [
   { intent: 'search', words: ['検索', '探して', '調べて', 'search'] },
   { intent: 'verify', words: ['検証', '確認して', 'verify'] },
   { intent: 'code', words: ['コード', 'プログラム', '関数を書いて', 'バグ修正', '修正して'] },
+  { intent: 'create', words: ['作って', '作る', '作成', '実装', '書いて', '生成', '開発', '作りたい', '作ろう', '作ります', '作成して', '実装して', 'build', 'make', 'create', 'implement', 'generate', 'write'] },
 ];
 
 const OBJECT_SYNONYMS: Record<string, readonly string[]> = {
@@ -128,7 +129,7 @@ export function normalize(text: string, tokens: Token[]): NormalizedInput {
   if (actions.length > 0 || rawMath.length > 0 || intent === 'solve' || objects.some((o) => o !== 'function')) {
     domain = 'math';
   }
-  if (intent === 'code') domain = 'code';
+  if (intent === 'code' || intent === 'create') domain = 'code';
   if (intent === 'search') domain = 'search';
   if (intent === 'summarize') domain = 'reasoning';
   if (intent === 'verify' && domain === 'unknown') domain = 'reasoning';

@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.22** |
+| Status | **Draft v0.23** |
 | Date | 2026-08-05 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価） |
@@ -504,6 +504,8 @@ v0.21（Phase 1 実行系）では **設計から実動へ**。① **実LLM Driv
 
 v0.22（評価フェーズ）では **「巨大化」ではなく「優れていることを証明する」**。① **方式比較**（`comparison.ts`: RAG / KV Cache / MoE / Agent / MCP / Long Context と比較 — 全読方式の 4 倍以上高速、RAG より高精度 0.90 vs 0.85）② **Fault スケーリング実験**（`experiment.ts`: 100→5000 ページで Token削減 77% / Speedup 3.5x が完全安定 = スケールする設計）③ **AI OS Monitor**（`public/aios-monitor.html`: top/htop/perf/systemd-analyze 全部入りのリアルタイム可視化 + `/api/monitor`）④ **ODAR マルチシグナル学習**（success / battery / gpu を EMA で学習）⑤ **専門 Expert 10 種**（math/search/programming/vision/planning/translate/summarizer/retriever/reasoning/memory、10 Expert リレー全ホップ成功）（`AI_EVALUATION.md`）。
 
+v0.23（Phase 2.3）では **「既存AIにできるタスクの全てを任せられる」** ための 2 点。① **「作って」系意図（create）**（`normalizer.ts`: 作って/実装/書いて/生成/build/create 等 → domain=code → programming へ CALL、タスク文を INPUT に載せる）② **Stage-2 フォールバック**（`aios.ts`: 決定論コンパイラが解釈できないタスクを 400 にせず、生の CALL で実機LLM（general）へ委譲 → 自由文でも応答 + ODAR 学習）。これで「計算・検索・要約は決定論 / それ以外は実機LLM」の**ハイブリッド**になった（ツール呼び出しは未実装のまま）。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -804,6 +806,7 @@ Case2（AILSA）:
 | **2.1** | ✅ **AI OS Monitor**（リアルタイム可視化） | `public/aios-monitor.html` + `/api/monitor` | 完了（Live Pipeline / Device / ODAR / ベンチ表） |
 | **2.2** | ✅ **ODAR マルチシグナル学習**（success/battery/gpu） | `learning.ts`（EMA 拡張 / score 改良） | 完了（残量・GPU を学習してルーティング） |
 | **3.0** | ✅ **専門 Expert 10 種** | `driver.ts` / `expert-runtime.ts` | 完了（10 Expert リレー全ホップ成功） |
+| **2.3** | ✅ **create 意図 + Stage-2 フォールバック**（一般タスク対応） | `normalizer.ts`（create）, `aios.ts`（fallbackExecute） | 完了（「作って」→ programming / 自由文 → general 委譲を確認） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |

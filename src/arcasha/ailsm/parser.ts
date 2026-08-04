@@ -20,7 +20,7 @@ export function parse(norm: NormalizedInput): AilsmBuilder {
 
   const taskId = b.addNode('task', norm.intent === 'unknown' ? 'process' : norm.intent, 'unknown', taskAttrs);
 
-  if (norm.inputText && (norm.intent === 'summarize' || norm.intent === 'search')) {
+  if (norm.inputText && (norm.intent === 'summarize' || norm.intent === 'search' || norm.intent === 'create' || norm.intent === 'code')) {
     const n = b.addNode('value', 'input', 'string', { text: norm.inputText });
     b.connect(taskId, n, 'input');
   }

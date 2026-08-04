@@ -21,6 +21,13 @@ import { CapabilityLearner } from './learning.js';
 import { runRelay } from './relay.js';
 import type { RelayResult, RelayStep } from './relay.js';
 import type { ExpertDriver } from './driver.js';
+import { AilsmError } from './compiler.js';
+import type { CompileResult } from './compiler.js';
+import type { RuntimeTrace } from './runtime.js';
+import { Opcode } from '../ailsa/opcode.js';
+import { Slot } from '../ailsa/vocab.js';
+import type { Instruction } from '../ailsa/encoder.js';
+import { ABI_VERSION_1_0 } from './abi.js';
 
 const REMOTE_MAX_TOKENS = 64;
 
@@ -75,11 +82,62 @@ function driverFor(aios: AiOs, target: string | null, expert: string): ExpertDri
 export interface AiosExecution extends ExpertExecution {
   deviceId: string | null;
   learned: boolean;
+  fallback?: boolean; // true = Stage-2 フォールバック（決定論コンパイラが解釈できず実機LLMへ委譲）
+}
+
+/**
+ * Stage-2 フォールバック: 決定論コンパイラが解釈できないタスク（AilsmError）は
+ * 400 にせず、生の CALL として実機 LLM（general）へ委譲する。
+ * →「既存AIにできるタスクの全てを任せられる」ための一般フォールバック。
+ */
+async function fallbackExecute(
+  aios: AiOs,
+  text: string,
+  target: string | null,
+  cause: AilsmError,
+): Promise<AiosExecution> {
+  const { booted } = aios;
+  const rawProgram: Instruction[] = [
+    { opcode: Opcode.CALL, slots: [{ slot: Slot.EXPERT, value: 'general' }, { slot: Slot.INPUT, value: text }] },
+  ];
+  const driver = driverFor(aios, target, 'general') ?? booted.drivers.get('general');
+  if (!driver) throw cause;
+  const t0 = Date.now();
+  const resp = await driver.invoke({ program: rawProgram, abiVersion: ABI_VERSION_1_0 });
+  const ms = Date.now() - t0;
+  const compile = { instructions: rawProgram } as unknown as CompileResult;
+  const trace = {
+    text,
+    graph: { nodes: [], edges: [] },
+    steps: [
+      { kind: 'input', label: `Input: ${text.slice(0, 30)}` },
+      { kind: 'compile', label: `Compile: Stage-2 フォールバック（${cause.message.slice(0, 24)}）` },
+      { kind: 'call', label: 'CALL general（Stage-2 委譲）' },
+      { kind: 'wait', label: 'awaiting expert result' },
+    ],
+    events: [],
+    needsExpert: true,
+    resolvedValue: null,
+  } as unknown as RuntimeTrace;
+  return {
+    text,
+    compile,
+    trace,
+    driverId: driver.id,
+    driverResponse: resp,
+    finalGraph: { nodes: [], edges: [] },
+    result: resp.ok ? resp.result ?? null : null,
+    ms,
+    deviceId: target ?? null,
+    learned: true,
+    fallback: true,
+  };
 }
 
 /**
  * AI OS でタスクを実行。CALL は実デバイス（RemoteDriver）へ委譲され、
  * 実実行の観測（latency / 成功）を CapabilityLearner が学習する。
+ * 決定論コンパイラが解釈できないタスクは Stage-2 フォールバックで実機LLMへ委譲。
  */
 export async function aiosExecute(aios: AiOs, text: string, deviceId?: string): Promise<AiosExecution> {
   syncAiOs(aios); // 現在接続中の実機を DeviceTree / RemoteDriver へ反映してからルーティング
@@ -87,7 +145,14 @@ export async function aiosExecute(aios: AiOs, text: string, deviceId?: string): 
   const nodes = client.listNodes();
   const target = deviceId ?? routeCall(booted.deviceTree, nodes.length > 0 ? nodes[0].nodeId : undefined);
   const resolver = (expert: string): ExpertDriver | undefined => driverFor(aios, target, expert);
-  const ex = await execute(text, booted, resolver);
+  let ex: AiosExecution;
+  try {
+    const base = await execute(text, booted, resolver);
+    ex = { ...base, deviceId: target ?? null, learned: base.driverId !== null, fallback: false };
+  } catch (e) {
+    if (!(e instanceof AilsmError)) throw e;
+    ex = await fallbackExecute(aios, text, target, e);
+  }
   if (ex.driverId && ex.driverResponse) {
     const dev = target ? booted.deviceTree.node(target) : undefined;
     aios.learner.observe(ex.driverId, {
@@ -99,7 +164,7 @@ export async function aiosExecute(aios: AiOs, text: string, deviceId?: string): 
       gpu: dev?.features?.gpuUsage !== undefined ? Number(dev.features.gpuUsage) : undefined,
     });
   }
-  return { ...ex, deviceId: target ?? null, learned: ex.driverId !== null };
+  return ex;
 }
 
 /** 複数 Expert を AILSA でリレー（実デバイスへ委譲可能） */

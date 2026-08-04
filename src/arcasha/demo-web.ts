@@ -256,10 +256,11 @@ $('ailsm-run').addEventListener('click', async () => {
     });
     const d = await r.json();
     if (d.error) { ailsmStatusEl.textContent = '❌ ' + d.error; return; }
-    ailsmStatusEl.textContent = '✅ ' + (d.driverId ? 'CALL ' + d.driverId + ' → ' + d.deviceId + ' (' + d.ms + 'ms)' : 'ローカル解決') + ' / ODAR学習: ' + (d.learned ? '記録済み' : '-');
+    ailsmStatusEl.textContent = '✅ ' + (d.fallback ? 'Stage-2委譲: ' : '') + (d.driverId ? 'CALL ' + d.driverId + ' → ' + d.deviceId + ' (' + d.ms + 'ms)' : 'ローカル解決') + ' / ODAR学習: ' + (d.learned ? '記録済み' : '-');
     ailsmOutEl.style.display = 'block';
     ailsmOutEl.textContent =
-      'result : ' + d.result + '\\n' +
+      'result : ' + d.result + '\n' +
+      (d.fallback ? 'stage  : Stage-2 フォールバック（決定論→実機LLM）\n' : '') +
       'driver : ' + (d.driverId ?? 'local') + '\\n' +
       'device : ' + (d.deviceId ?? 'local') + '\\n' +
       'steps  : ' + d.steps.join(' → ') + '\\n' +
@@ -399,6 +400,7 @@ const server = http.createServer((req, res) => {
           deviceId: ex.deviceId,
           ms: ex.ms,
           learned: ex.learned,
+          fallback: ex.fallback ?? false,
           ailsaHex: toHex(encodeProgram(ex.compile.instructions)),
           steps: ex.trace.steps.map((s) => s.kind),
           learner: aios.learner.all(),

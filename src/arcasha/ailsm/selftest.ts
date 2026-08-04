@@ -388,7 +388,7 @@ check('DeviceTree describe に gpu/battery 情報', dtree.describe().includes('p
 // [23] Local Expert Runtime（1台のPCで2 Expert が AILSA で通信）
 console.log('\n[23] Local Expert Runtime');
 const booted = boot();
-check('Driver 10種登録（専門Expert）', booted.drivers.size === 10);
+check('Driver 11種登録（専門Expert + general）', booted.drivers.size === 11);
 const ex1 = await runtimeExecute('x^2を積分して', booted);
 check('積分 → math Driver へ委譲', ex1.driverId === 'math', String(ex1.driverId));
 check('Driver 結果が返る', typeof ex1.result === 'string' && (ex1.result as string).includes('∫'));
@@ -698,7 +698,7 @@ check('DeviceTree に遅延登録', aiosLate.booted.deviceTree.node('node-ios-ip
 // [50] 専門 Expert 10 種（Phase 3.0）
 console.log('\n[50] Expert 10 種');
 const booted50 = boot();
-check('10 種の専門 Expert が登録', booted50.drivers.size === 10);
+check('11 種のドライバが登録', booted50.drivers.size === 11);
 const prog50 = await booted50.drivers.get('programming')!.invoke({ program: [{ opcode: MathOpcode.EQ, slots: [{ slot: Slot.INPUT, value: 'sort array' }] }], abiVersion: ABI_VERSION_1_0 });
 check('programming Expert が応答', prog50.ok && String(prog50.result).includes('code'));
 const tr50 = await booted50.drivers.get('translate')!.invoke({ program: [{ opcode: MathOpcode.EQ, slots: [{ slot: Slot.INPUT, value: 'こんにちは' }] }], abiVersion: ABI_VERSION_1_0 });
@@ -753,6 +753,24 @@ const relay54 = await runRelay(booted50, [
 ]);
 check('7 ホップがすべて成功', relay54.hops.length === 7 && relay54.hops.every((h) => h.ok));
 check('AILSA メッセージが各ホップに', relay54.ailsaMessages.length === 7 && relay54.ailsaMessages[4].includes('CALL programming'));
+
+// [55] 「作って」系意図 + Stage-2 フォールバック（既存AIのタスクを全部任せられる）
+console.log('\n[55] create 意図 / Stage-2 フォールバック');
+const c55 = compile('ログイン機能を作って');
+check('「作って」→ intent=create / domain=code', c55.normalized.intent === 'create' && c55.normalized.domain === 'code');
+check('「作って」→ programming へ CALL', c55.capability.expert === 'programming', c55.capability.expert);
+check('「作って」のタスク文が INPUT に載る', c55.instructions.some((i) => i.slots?.some((s) => s.slot === Slot.INPUT && String(s.value).includes('ログイン'))));
+const c55b = compile('Todoアプリを実装して');
+check('「実装して」→ create', c55b.normalized.intent === 'create');
+const c55c = compile('ゲームを作ろう');
+check('「作ろう」→ create', c55c.normalized.intent === 'create');
+const aios55 = initAiOs();
+const cr55 = await aiosExecute(aios55, 'ログイン機能を作って');
+check('「作って」→ 実デバイス(mock)へ委譲', cr55.driverId?.includes('remote:') === true && cr55.result !== null, String(cr55.driverId));
+const fb55 = await aiosExecute(aios55, '量子コンピュータについて説明してください');
+check('解釈不能タスクもフォールバックで委譲（400にしない）', fb55.fallback === true && fb55.driverId !== null && fb55.result !== null, String(fb55.driverId));
+check('フォールバックの AILSA は生 CALL', (fb55.compile as { instructions: unknown[] }).instructions.length === 1);
+check('フォールバックでも ODAR 学習', aios55.learner.get(String(fb55.driverId)).samples >= 1);
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

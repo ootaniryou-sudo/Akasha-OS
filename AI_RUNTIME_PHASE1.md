@@ -110,9 +110,44 @@ Context Fault → Kernel → Device Tree → ページ取得（実デバイス�
 
 ## 検証
 
-- `tsc` ✅ / `ailsm:selftest` [1]-[49] ✅ / `golden` 30 ✅ / `ailsa:selftest` ✅ / dist ✅
+- `tsc` ✅ / `ailsm:selftest` [1]-[55] ✅ / `golden` 30 ✅ / `ailsa:selftest` ✅ / dist ✅
 - Hub API: `/api/ailsm`（math / search 委譲 + ODAR 学習）✅ / `/api/relay`（5ホップ全 ok）✅
 - 実機（iPhone: Qwen2.5-1.5B）は Hub 再起動で `/api/ailsm` 経由の委譲を確認可能
+
+---
+
+## Phase 2.3 — 「作って」系意図 + Stage-2 フォールバック（一般タスク対応）
+
+> 既存AIにできるタスクの**全て**を任せられるようにするための 2 つの追加。
+
+### 1. 「作って」系意図（create）
+
+`normalizer.ts` に `create` 意図を追加（作って / 作る / 作成 / 実装 / 書いて / 生成 / 開発 / build / make / create ...）。
+
+```
+「ログイン機能を作って」
+  → intent=create / domain=code
+  → programming Expert へ CALL（タスク文は INPUT に載る）
+  → 実機LLM（or mock）が生成
+```
+
+- parser: create/code でもタスク文を input ノード化（LLM へ渡すため）
+- capability / generator: `code → programming`（boot の 10 種と整合）
+
+### 2. Stage-2 フォールバック（決定論 → 実機LLM）
+
+今までは決定論コンパイラが解釈できないタスクは **400 エラー**だった。
+`aiosExecute` で AilsmError を捕捉し、**生の CALL（general）として実機LLMへ委譲**するようにした。
+
+```
+「量子コンピュータについて説明してください」
+  → 決定論では解釈不能（AilsmError）
+  → Stage-2 フォールバック: CALL general + INPUT（生テキスト）
+  → 実機LLMが生成 → ODAR も学習
+```
+
+これで「計算・検索・要約は決定論 / それ以外は実機LLM」という**ハイブリッド**になり、
+**既存AIができるタスクを全部任せられる**（ツール呼び出しは未実装のまま）。
 
 ---
 

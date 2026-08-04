@@ -166,6 +166,7 @@ export class MockExpertDriver implements ExpertDriver {
       summarizer: (t) => `summary: ${t.slice(0, 16)}...（${t.length}字）`,
       retriever: (t) => `retrieve: [doc-${t.length}] を取得`,
       memory: (t) => `memory: "${t.slice(0, 14)}" を保存しました`,
+      general: (t) => `general: ${t.slice(0, 24)}...`,
     };
     if (CANNED[this.id]) {
       return { trace: `${this.id.toUpperCase()}(${s})`, result: CANNED[this.id](s) };

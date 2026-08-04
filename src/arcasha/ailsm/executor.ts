@@ -162,7 +162,7 @@ export function execute(g: AilsmGraph): ExecutorResult {
   const resolved = builtinResolved || hasConstant;
   // Expert 委譲が必要なタスク: 未解決 かつ（アクション / 専門意図 / 既知ドメイン）
   const expertIntent =
-    intent === 'search' || intent === 'summarize' || intent === 'verify' || intent === 'code';
+    intent === 'search' || intent === 'summarize' || intent === 'verify' || intent === 'code' || intent === 'create';
   const needsExpert = !resolved && (actions.length > 0 || expertIntent || domain !== 'unknown');
 
   const after = rebuildWithResult(g, resolved ? resolvedValue : null);

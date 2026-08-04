@@ -17,7 +17,7 @@ export interface CapabilityInference {
 
 const EXPERT_OF_DOMAIN: Record<string, string> = {
   math: 'math',
-  code: 'code',
+  code: 'programming',
   search: 'search',
   reasoning: 'reasoning',
 };

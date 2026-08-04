@@ -23,11 +23,12 @@ const TASK_OF_INTENT: Record<string, Task> = {
   search: Task.SEARCH,
   verify: Task.VERIFY,
   code: Task.PATCH,
+  create: Task.SOLVE,
 };
 
 const EXPERT_OF_DOMAIN: Record<string, string> = {
   math: 'math',
-  code: 'code',
+  code: 'programming',
   search: 'search',
   reasoning: 'reasoning',
 };

@@ -43,10 +43,10 @@ export function boot(): BootResult {
   });
 
   const drivers = new Map<string, ExpertDriver>();
-  // Phase 3.0: 専門 Expert 10 種
+  // Phase 3.0: 専門 Expert 10 種 + general（Stage-2 フォールバック用）
   const EXPERT_10 = [
     'math', 'search', 'programming', 'vision', 'planning',
-    'translate', 'summarizer', 'retriever', 'reasoning', 'memory',
+    'translate', 'summarizer', 'retriever', 'reasoning', 'memory', 'general',
   ];
   for (const id of EXPERT_10) {
     drivers.set(id, new MockExpertDriver(id, `${id} Expert`));
