@@ -28,6 +28,10 @@ function nodeIdOf(n: AilsmNode): string {
     : n.kind === 'schedule' ? 'Sc'
     : n.kind === 'process' ? 'Ps'
     : n.kind === 'thread' ? 'Th'
+    : n.kind === 'context' ? 'Ct'
+    : n.kind === 'page' ? 'Pg'
+    : n.kind === 'slice' ? 'Sl'
+    : n.kind === 'cache' ? 'Ca'
     : 'Ns'; // namespace
   return `${prefix}${n.id}`;
 }
@@ -73,6 +77,10 @@ export function toMermaid(g: AilsmGraph): string {
     else if (n.kind === 'schedule') lines.push(`  ${id}>"${label}"]`); // フラグ
     else if (n.kind === 'process') lines.push(`  ${id}((("${label}")))`); // 二重丸
     else if (n.kind === 'thread') lines.push(`  ${id}(("${label}"))`); // 丸
+    else if (n.kind === 'context') lines.push(`  ${id}(["${label}"])`); // フォルダ（文書）
+    else if (n.kind === 'page') lines.push(`  ${id}["${label}"]`); // 箱（ページ）
+    else if (n.kind === 'slice') lines.push(`  ${id}/"${label}"/`); // 平行四辺形（スライス）
+    else if (n.kind === 'cache') lines.push(`  ${id}[("${label}")]`); // シリンダー（キャッシュ）
     else lines.push(`  ${id}(["${label}"])`); // スタジアム（namespace）
   }
   const idByNode = new Map(g.nodes.map((n) => [n.id, nodeIdOf(n)]));
@@ -99,6 +107,10 @@ export function toDot(g: AilsmGraph): string {
     process: 'doublecircle',
     thread: 'ellipse',
     namespace: 'box',
+    context: 'folder',
+    page: 'box',
+    slice: 'note',
+    cache: 'cylinder',
   };
   const lines = ['digraph AILSM {', '  node [fontname="Helvetica"];'];
   for (const n of g.nodes) {

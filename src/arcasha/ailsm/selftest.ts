@@ -19,12 +19,17 @@ import { pickNext } from './scheduler.js';
 import type { ScheduledUnit } from './scheduler.js';
 import { AIKernel, isKernelNode } from './kernel.js';
 import { assignNamespace, canAccessMemory, createNamespace, loadPage, pageMemory } from './namespace.js';
-import { ABI_VERSION_1_0, supportsAbi } from './abi.js';
+import { ABI_VERSION_1_0, buildContextArgument, supportsAbi } from './abi.js';
 import type { AbiArgument } from './abi.js';
 import { MockExpertDriver } from './driver.js';
 import { DeviceTree } from './device-tree.js';
 import { boot, execute as runtimeExecute } from './expert-runtime.js';
 import { toAsciiTree, toDot, toMermaid, toStateDiagram } from './visualizer.js';
+import { createContext, contextOf, pagesOf, splitContext } from './context.js';
+import { loadPage as loadContextPage } from './context.js';
+import { hasEquation, selectPages } from './slice.js';
+import { cacheArtifact, getCached } from './cache.js';
+import { requestSlice, runAvmDemo, storeContext, cacheResult } from './avm.js';
 
 let failed = 0;
 
@@ -373,6 +378,69 @@ check('検索 → search Driver へ委譲', ex2.driverId === 'search', String(ex
 check('search 結果 [doc1..]', ex2.result === '[doc1, doc2, doc3]', String(ex2.result));
 const ex3 = runtimeExecute('2と3を足して', booted);
 check('ローカル解決は Driver 不要（result=5）', ex3.driverId === null && ex3.result === null);
+
+// [24] Context SSA（長文・PDF・コードを表すノード）
+console.log('\n[24] Context SSA');
+const text24 = '0123456789abcdef'; // 16 文字
+const pages24 = splitContext(text24, 8);
+check('splitContext で 2 ページに分割', pages24.length === 2 && pages24[0] === '01234567' && pages24[1] === '89abcdef');
+const ctx24 = createContext({ nodes: [], edges: [] }, '論文', text24, 8);
+const cObj24 = contextOf(ctx24.graph, ctx24.contextId);
+check('Context#N ノードが作成される', cObj24 !== undefined && cObj24.title === '論文' && cObj24.pageCount === 2);
+check('Context contains Page エッジ ×2', ctx24.graph.edges.filter((e) => e.rel === 'contains').length === 2);
+check('Page ノードが 2 つ', ctx24.graph.nodes.filter((n) => n.kind === 'page').length === 2);
+
+// [25] Page Manager（固定サイズページの分割・ロード）
+console.log('\n[25] Page Manager');
+const allPages25 = pagesOf(ctx24.graph, ctx24.contextId);
+check('pagesOf が index 順に列挙', allPages25.length === 2 && allPages25[0].index === 0 && allPages25[1].index === 1);
+check('ページ実体は offset どおり', allPages25[0].text === '01234567' && allPages25[1].text === '89abcdef');
+const loaded25 = loadContextPage(ctx24.graph, allPages25[1].id);
+check('loadPage でページをロード（参照操作）', loaded25 !== undefined && loaded25.text === '89abcdef');
+
+// [26] Slice Loader（Expert ごとに必要なページだけをロード）
+console.log('\n[26] Slice Loader');
+const ct26 = createContext({ nodes: [], edges: [] }, 'doc', 'x^2+2x+1=0 を解け', 64);
+check('hasEquation で数式ページを判定', hasEquation('x^2+2x+1=0 を解け'));
+const mathSlice26 = selectPages(ct26.graph, ct26.contextId, 'math');
+check('Math Expert は数式ページだけを読む', mathSlice26.pageIds.length === 1);
+const searchSlice26 = selectPages(ct26.graph, ct26.contextId, 'search');
+check('Search Expert は検索語なしページを読まない', searchSlice26.pageIds.length === 0);
+check('Slice#N ノード（uses エッジ）', mathSlice26.graph.nodes.some((n) => n.kind === 'slice' && n.attrs.expert === 'math'));
+
+// [27] Context Cache（解析済み Context の再利用）
+console.log('\n[27] Context Cache');
+const ctx27 = createContext({ nodes: [], edges: [] }, 'c', 'text', 64);
+const cid27 = ctx27.contextId;
+const c1 = cacheArtifact(ctx27.graph, cid27, 'equation', 'parsed', 'x=-1');
+check('初回キャッシュは miss', c1.hit === false);
+check('キャッシュ参照で値を取得', getCached(c1.graph, cid27, 'equation', 'parsed') === 'x=-1');
+const c2 = cacheArtifact(c1.graph, cid27, 'equation', 'parsed', 'x=-1');
+check('2回目は hit（再解析不要）', c2.hit === true);
+check('Cache#N ノード（context contains cache）', c1.graph.nodes.some((n) => n.kind === 'cache' && n.attrs.kind === 'equation'));
+
+// [28] AI Virtual Memory デモ（3 Expert が巨大知識の一部だけを読む）
+console.log('\n[28] AI Virtual Memory');
+const demo = runAvmDemo();
+const demoCtx = contextOf(demo.graph, demo.contextId);
+check('長文 Context がページ分割される', (demoCtx?.pageCount ?? 0) >= 5);
+for (const r of demo.results) {
+  check(`${r.expert} は全ページを読まない（${r.stats.loadedPages}/${r.stats.totalPages}）`, r.stats.loadedPages < r.stats.totalPages);
+  check(`${r.expert} の供給割合 < 100%（${(r.stats.loadedRatio * 100).toFixed(0)}%）`, r.stats.loadedRatio < 1);
+}
+const mathR = demo.results[0];
+check('Long Context ABI: type=context（参照）', mathR.slice.argument.type === 'context' && mathR.slice.argument.ownership === 'borrow');
+check('ContextRef は実体ではなく ID 参照', mathR.slice.ref.contextId === demo.contextId && mathR.slice.ref.pageIds.length === mathR.slice.pageIds.length);
+const mathPages = pagesOf(demo.graph, demo.contextId).filter((p) => mathR.slice.pageIds.includes(p.id));
+check('Math スライスの各ページは数式を含む', mathPages.length > 0 && mathPages.every((p) => hasEquation(p.text)));
+const second = requestSlice(demo.graph, demo.contextId, 'math');
+check('再スライスで同一ページを参照', second.load.pageIds.length === mathR.slice.pageIds.length);
+const re = cacheResult(demo.graph, demo.contextId, 'summary', 'overview', 'x');
+check('Context Cache が再解析を防ぐ（hit）', re.hit === true && re.value !== null);
+const abiArg = buildContextArgument(0, { contextId: demo.contextId, pageIds: mathR.slice.pageIds });
+check('buildContextArgument が context ABI 引数を作る', abiArg.type === 'context' && abiArg.ownership === 'borrow' && abiArg.alignment === 8);
+const ctx28 = storeContext({ nodes: [], edges: [] }, 'k', 'k1 k2 k3');
+check('storeContext で Context Object を管理', ctx28.context.title === 'k' && ctx28.context.pageCount >= 1);
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {

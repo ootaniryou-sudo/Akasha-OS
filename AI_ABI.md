@@ -4,10 +4,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.0**（ABI / Driver / Device Tree 実装済み） |
+| Status | **Spec v1.0**（ABI / Driver / DeviceTree 実装済み + Long Context ABI 追加） |
 | Date | 2026-08-05 |
 | 実装 | `src/arcasha/ailsm/abi.ts`, `driver.ts`, `device-tree.ts`, `expert-runtime.ts` |
-| 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSA_RUNTIME.md`, `AI_TOOLCHAIN.md` |
+| 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSA_RUNTIME.md`, `AI_TOOLCHAIN.md`, `AI_VIRTUAL_MEMORY.md` |
 
 ---
 
@@ -56,6 +56,20 @@ prefers:  batch
 ```
 
 `capabilityFulfills(required, capability)` で Expert の交換可否を判定。
+
+### Long Context ABI（Phase 0.20 — AI Virtual Memory）
+
+Expert へ渡すのは **Context Slice（ID 参照）だけ**。実体は Kernel が保持する（Linux の file descriptor に相当）。
+
+```
+ContextRef { contextId: 20, pageIds: [45, 46, 47], sliceId?: 50 }
+→ buildContextArgument(0, ref)
+→ AbiArgument { index: 0, type: 'context', ownership: 'borrow', alignment: 8 }
+```
+
+- 引数型 `'context'` を追加（`AbiType` の拡張）
+- Driver は `invokeContext({ contextRef, loadedText, ... })` で供給されたページだけを処理
+- 詳細は `AI_VIRTUAL_MEMORY.md`
 
 ## 2. Expert Driver（Phase 0.18）
 

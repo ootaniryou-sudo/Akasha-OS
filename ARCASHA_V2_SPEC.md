@@ -5,10 +5,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.16** |
+| Status | **Draft v0.17** |
 | Date | 2026-08-05 |
 | Owner | ArcAsha Core Team |
-| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様） |
+| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様） |
 
 ---
 
@@ -492,6 +492,8 @@ v0.15 では **Toolchain** として体系化する。AI Program（AILSM で直�
 
 v0.16 では **AI ABI / Expert Driver / AI Device Tree**（`AI_ABI.md`）を追加し、AI Linux を完成させる。さらに **Phase 1 最小版（Local Expert Runtime）** を実装 — 1台のPC上で math / search / reasoning の Driver が AILSA で通信し、`CALL → Driver → RETURN → Kernel(Memory)` の一連が動作する。実機（iPad/iPhone）への委譲は同じ `ExpertDriver` インターフェースの実装で差し替え可能。
 
+v0.17（Phase 0.20）では **AI Virtual Memory（AVM）**（`AI_VIRTUAL_MEMORY.md`）を追加。既存LLMの「コンテキストウィンドウを拡大する」設計ではなく、「**AI OS が巨大な知識空間を仮想メモリとして管理し、必要な部分だけを Expert へ供給する**」アーキテクチャ。Context SSA / Page Manager / Slice Loader / Context Cache / Long Context ABI（ContextRef = Linux の file descriptor 相当）の 5 層を実装し、AILSM_IR は v1.1（MINOR 追加）へ。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -778,6 +780,7 @@ Case2（AILSA）:
 | **0.18** | ✅ **Expert Driver**（Kernel→Driver→LLM） | `driver.ts`（ExpertDriver インターフェース + MockExpertDriver） | 完了（EQ(2+3)=5 / 0除算→ErrorABI / ABI不一致） |
 | **0.19** | ✅ **AI Device Tree**（実行ノード情報） | `device-tree.ts`（DeviceInfo/registerNode/describe） | 完了（PC/スマホの GPU/Battery/WiFi を記述） |
 | **1（最小）** | ✅ **Local Expert Runtime**（1台PCで複数ExpertがAILSAで通信） | `expert-runtime.ts`（boot/execute: CALL→Driver→RETURN→Kernel(Memory)） | 完了（積分→math / 検索→search を確認） |
+| **0.20** | ✅ **AI Virtual Memory（AVM）**（Context SSA / Page / Slice / Cache / Long Context ABI） | `context.ts`, `slice.ts`, `cache.ts`, `avm.ts` + `abi.ts`（ContextRef） | 完了（math=49% / search=33% だけを供給 / キャッシュ hit を確認） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |

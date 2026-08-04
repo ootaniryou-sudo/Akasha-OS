@@ -4,10 +4,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.0（凍結）** |
-| Date | 2026-08-04 |
+| Status | **Spec v1.1（凍結 + MINOR 追加: Context/Page/Slice/Cache）** |
+| Date | 2026-08-05 |
 | 実装 | `src/arcasha/ailsm/ailsm.ts`, `types.ts`, `visualizer.ts` |
-| 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSM_COMPILER.md`, `AILSA_RUNTIME.md` |
+| 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSM_COMPILER.md`, `AILSA_RUNTIME.md`, `AI_ABI.md`, `AI_VIRTUAL_MEMORY.md` |
 
 ---
 
@@ -41,6 +41,10 @@ AILSMは単なるIRではなく、**AI Operating IR** — CPUだけでなく AI 
 | **Process** | `Process#N` | `Process#10 : unknown {state=running, owner=math, priority=0.82, memoryBytes=49152}` |
 | **Thread** | `Thread#N` | `Thread#11 : unknown {label=solve, state=ready}` |
 | **Namespace** | `Namespace#N` | `Namespace#12 : string {name=spaceA}`（Process Isolation / Virtual Memory） |
+| **Context** | `Context#N` | `Context#20 : string {title=論文, charCount=50000, pageCount=782}`（AI Virtual Memory — 長文・PDF・コード） |
+| **Page** | `Page#N` | `Page#45 : string {context=論文, index=2, offset=128, length=64, text=...}`（固定サイズページ） |
+| **Slice** | `Slice#N` | `Slice#50 : unknown {context=20, expert=math, pageCount=3, pageIds=[45,46,47]}`（Expert が読むページだけ） |
+| **Cache** | `Cache#N` | `Cache#51 : unknown {context=20, kind=equation, key=parsed, value=...}`（解析済み Context の再利用） |
 
 各ノード: `{ id, kind, label, type, attrs, constraints? }`
 
@@ -55,6 +59,7 @@ AILSMは単なるIRではなく、**AI Operating IR** — CPUだけでなく AI 
 | `informs` | Belief がタスクに確信度を提供（ODAR） |
 | `plans` | タスクが実行計画を持つ（Plan SSA） |
 | `reflects` | タスクが自己修正を持つ（Reflection SSA） |
+| `contains` | Context が Page / Slice / Cache を含む（AI Virtual Memory） |
 
 ## 5. 型システム（Typed AILSM）
 
@@ -96,8 +101,8 @@ IR は後から変更すると Compiler / Executor / Runtime / Visualizer / Expe
 
 | 安定化対象 | 定義 |
 |-----------|------|
-| **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread / namespace |
-| **エッジカタログ** | uses / input / produces / stores / informs / plans / reflects / schedules / processes / threads |
+| **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread / namespace / **context / page / slice / cache** |
+| **エッジカタログ** | uses / input / produces / stores / informs / plans / reflects / schedules / processes / threads / **contains** |
 | **型システム** | AilsmType + AilsmTypeRef（union / optional）+ NodeConstraints |
 | **状態遷移** | ローカル解決: Result→Memory / 委譲: Belief→Capability→Schedule→CALL |
 | **ABI** | ノード {id, kind, label, type, attrs, constraints} / エッジ {from, to, rel} |

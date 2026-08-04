@@ -10,7 +10,29 @@
  * - Capability ABI: requires / supports / prefers（Expert の交換可能性）
  */
 
-export type AbiType = 'float32' | 'float16' | 'int32' | 'tensor' | 'matrix' | 'string' | 'any';
+export type AbiType = 'float32' | 'float16' | 'int32' | 'tensor' | 'matrix' | 'string' | 'any' | 'context';
+
+/**
+ * Long Context ABI（Phase 0.20）— 実体ではなく参照を Expert へ渡す
+ *
+ * Linux の file descriptor に近い。Expert は ContextID / PageID しか見ない。
+ * 実体（テキスト）は Kernel（Context Object）が保持し、Slice Loader が必要ページだけを供給する。
+ */
+export interface ContextRef {
+  contextId: number;
+  pageIds: number[]; // ロードするページ（Slice）
+  sliceId?: number; // どのスライスか
+}
+
+export interface ContextAbiArgument extends AbiArgument {
+  type: 'context';
+  ref: ContextRef;
+}
+
+/** ContextRef → ABI 引数（ownership=borrow: 実体は Kernel が持つ） */
+export function buildContextArgument(index: number, ref: ContextRef): ContextAbiArgument {
+  return { index, type: 'context', ref, ownership: 'borrow', alignment: 8 };
+}
 
 export interface AbiArgument {
   index: number;

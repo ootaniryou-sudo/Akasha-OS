@@ -20,7 +20,11 @@ export type NodeKind =
   | 'schedule'
   | 'process'
   | 'thread'
-  | 'namespace';
+  | 'namespace'
+  | 'context'
+  | 'page'
+  | 'slice'
+  | 'cache';
 
 export interface AilsmNode {
   id: number;
@@ -55,6 +59,10 @@ const KIND_LABEL: Record<NodeKind, string> = {
   process: 'Process',
   thread: 'Thread',
   namespace: 'Namespace',
+  context: 'Context',
+  page: 'Page',
+  slice: 'Slice',
+  cache: 'Cache',
 };
 
 export function nodeKindLabel(kind: NodeKind): string {

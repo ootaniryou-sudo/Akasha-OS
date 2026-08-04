@@ -13,11 +13,21 @@ import { MathOpcode, SearchOpcode } from '../ailsa/dialect.js';
 import type { Instruction } from '../ailsa/encoder.js';
 import { evalArith } from './optimizer.js';
 import { ABI_VERSION_1_0, ERRORS } from './abi.js';
-import type { AbiVersion, CapabilityAbi, ErrorAbi } from './abi.js';
+import type { AbiVersion, CapabilityAbi, ContextRef, ErrorAbi } from './abi.js';
+import { hasEquation } from './slice.js';
+import type { ExpertKind } from './slice.js';
 
 export interface DriverRequest {
   program: Instruction[]; // AILSA 命令列（対象セグメント）
   abiVersion: AbiVersion;
+}
+
+/** Long Context の受け渡し（Context ABI）: 実体ではなく ContextRef を渡す */
+export interface ContextDriverRequest {
+  contextRef: ContextRef;
+  loadedText: string; // Slice Loader が供給したページ実体（数ページだけ）
+  abiVersion: AbiVersion;
+  expert: ExpertKind;
 }
 
 export interface DriverResponse {
@@ -34,6 +44,8 @@ export interface ExpertDriver {
   readonly capability: CapabilityAbi;
   supports(opcode: number): boolean;
   invoke(req: DriverRequest): DriverResponse;
+  /** Long Context ABI: ContextRef を受け取り、供給されたページだけを処理する */
+  invokeContext?(req: ContextDriverRequest): DriverResponse;
 }
 
 export class MockExpertDriver implements ExpertDriver {
@@ -73,8 +85,37 @@ export class MockExpertDriver implements ExpertDriver {
     return { ok: true, result, trace };
   }
 
-  private exec(instr: Instruction): { trace: string; result?: string | number; error?: ErrorAbi } | null {
-    const input = instr.slots?.find((s) => s.slot === Slot.INPUT)?.value;
+  /**
+   * Long Context ABI: Expert は ContextRef と供給されたページ（Slice）だけを見る。
+   * 実体全体は Kernel が保持している（ここでは loadedText として供給済み）。
+   */
+  invokeContext(req: ContextDriverRequest): DriverResponse {
+    const trace: string[] = [];
+    if (req.abiVersion.major !== this.abiVersion.major || req.abiVersion.minor > this.abiVersion.minor) {
+      return { ok: false, error: ERRORS.UNSUPPORTED_ABI, trace: ['abi version mismatch'] };
+    }
+    trace.push(`CONTEXT#${req.contextRef.contextId} pages=[${req.contextRef.pageIds.join(',')}]`);
+
+    if (this.id === 'math') {
+      // 供給されたページから数式だけを取り出して解析
+      const eqs = req.loadedText
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0 && hasEquation(l));
+      const result = eqs.length > 0 ? eqs.join(' ; ') : 'no equation in slice';
+      trace.push(`MATH(slice ${req.loadedText.length} chars) -> ${result}`);
+      return { ok: true, result, trace };
+    }
+    if (this.id === 'search') {
+      // 供給されたページ（検索結果）をそのまま返す
+      const result = req.loadedText.trim() !== '' ? `[doc: ${req.loadedText.split('\n')[0]}]` : '[no results]';
+      trace.push(`SEARCH(slice) -> ${result}`);
+      return { ok: true, result, trace };
+    }
+    return { ok: false, error: ERRORS.UNSUPPORTED_OP, trace: [...trace, 'unsupported context op'] };
+  }
+
+  private exec(instr: Instruction): { trace: string; result?: string | number; error?: ErrorAbi } | null {    const input = instr.slots?.find((s) => s.slot === Slot.INPUT)?.value;
     const s = typeof input === 'string' ? input : input === undefined ? '' : String(input);
 
     if (this.id === 'math') {
