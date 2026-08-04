@@ -40,6 +40,7 @@ AILSMは単なるIRではなく、**AI Operating IR** — CPUだけでなく AI 
 | **Schedule** | `Schedule#N` | `Schedule#9 : unknown {node=math, priority=0.93, eta=24, cost=0.4}` |
 | **Process** | `Process#N` | `Process#10 : unknown {state=running, owner=math, priority=0.82, memoryBytes=49152}` |
 | **Thread** | `Thread#N` | `Thread#11 : unknown {label=solve, state=ready}` |
+| **Namespace** | `Namespace#N` | `Namespace#12 : string {name=spaceA}`（Process Isolation / Virtual Memory） |
 
 各ノード: `{ id, kind, label, type, attrs, constraints? }`
 
@@ -95,7 +96,7 @@ IR は後から変更すると Compiler / Executor / Runtime / Visualizer / Expe
 
 | 安定化対象 | 定義 |
 |-----------|------|
-| **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread |
+| **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread / namespace |
 | **エッジカタログ** | uses / input / produces / stores / informs / plans / reflects / schedules / processes / threads |
 | **型システム** | AilsmType + AilsmTypeRef（union / optional）+ NodeConstraints |
 | **状態遷移** | ローカル解決: Result→Memory / 委譲: Belief→Capability→Schedule→CALL |

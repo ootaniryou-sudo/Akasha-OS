@@ -12,6 +12,8 @@ import { run } from './runtime.js';
 import { canTransition, believe, plan, reflect, remember } from './state.js';
 import { pickNext } from './scheduler.js';
 import type { ScheduledUnit } from './scheduler.js';
+import { AIKernel, isKernelNode } from './kernel.js';
+import { assignNamespace, canAccessMemory, createNamespace, loadPage, pageMemory } from './namespace.js';
 import { toAsciiTree, toDot, toMermaid, toStateDiagram } from './visualizer.js';
 
 let failed = 0;
@@ -231,6 +233,54 @@ const units: ScheduledUnit[] = [
 check('pickNext: 最高優先度（同点は低ID）', pickNext(units)?.processId === 2);
 check('created→ready 遷移可', canTransition('created', 'ready'));
 check('finished→running 遷移不可', !canTransition('finished', 'running'));
+
+// [15] AI Kernel / System Call（Kernel-mediated AI Runtime）
+console.log('\n[15] AI Kernel / System Call');
+const rtK = run('x^2を積分して');
+const pidK = rtK.processId!;
+const k = new AIKernel();
+
+const ms = k.memoryStore(rtK.graph, pidK, 'answer', 42);
+check('SYSCALL_MEMORY_STORE granted', ms.granted);
+check('Memory ノード追加（Kernel経由）', ms.graph.nodes.some((n) => n.kind === 'memory' && n.attrs.key === 'answer' && n.attrs.value === 42));
+check('SYSCALL_MEMORY_LOAD value=42', k.memoryLoad(ms.graph, pidK, 'answer').value === 42);
+check('SYSCALL_MEMORY_QUERY で answer 検出', (k.memoryQuery(ms.graph, pidK, 'answ').value as string[]).includes('answer'));
+check('同owner の MEMORY_DELETE は granted', k.memoryDelete(ms.graph, pidK, 'answer', 'math').granted);
+const mdDenied = k.memoryDelete(ms.graph, pidK, 'answer', 'code');
+check('別owner への DELETE は拒否', mdDenied.granted === false && mdDenied.detail.includes('permission denied'));
+const rfK = k.reflectRequest(ms.graph, pidK, 'precision', 'switch backend');
+check('SYSCALL_REFLECT granted + Reflection ノード', rfK.granted && rfK.graph.nodes.some((n) => n.kind === 'reflection'));
+const ucK = k.updateCapability(rfK.graph, pidK, 'math', 0.05, 'math');
+check('UPDATE_CAPABILITY granted', ucK.granted);
+check('memory は Kernel Space', isKernelNode('memory'));
+check('task は User Space', !isKernelNode('task'));
+
+// [16] Namespace / Virtual Memory（Process Isolation）
+console.log('\n[16] Namespace / Virtual Memory');
+let gn = rtK.graph;
+const nsA = createNamespace(gn, 'spaceA');
+gn = nsA.graph;
+const nsB = createNamespace(gn, 'spaceB');
+gn = nsB.graph;
+gn = assignNamespace(gn, pidK, nsA.id).graph;
+
+// gn 内に第2プロセスを Kernel 経由で生成（SYSCALL_SPAWN）
+const taskK = gn.nodes.find((n) => n.kind === 'task')?.id ?? 0;
+const spawnRes = k.spawnRequest(gn, taskK, 'code', 0.7);
+gn = spawnRes.graph;
+const pidP2 = spawnRes.value as number;
+gn = assignNamespace(gn, pidP2, nsB.id).graph;
+
+gn = k.memoryStore(gn, pidK, 'secretA', 1, 'spaceA').graph;
+gn = k.memoryStore(gn, pidP2, 'secretB', 2, 'spaceB').graph;
+
+check('spaceA の記憶は processA から可読', canAccessMemory(gn, pidK, 'secretA') === true);
+check('spaceA の記憶は processB から不可読（Isolation）', canAccessMemory(gn, pidP2, 'secretA') === false);
+check('spaceB の記憶は processB から可読', canAccessMemory(gn, pidP2, 'secretB') === true);
+const pages = pageMemory(gn);
+check('Memory Page 分割', pages.length >= 1);
+const page1 = loadPage(pages, 1);
+check('LOAD PAGE 1 でエントリ取得', page1 !== undefined && page1.entries.length >= 1);
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {

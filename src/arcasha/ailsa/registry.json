@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "AILSA ISA Registry — ArcAsha Inter Language for Small AI models. 唯一の権威 (Heart of Wisdom 管理)。TypeScript / Python / Rust 全てここを参照する。",
   "dialects": ["base", "math", "code", "search", "reasoning"],
   "instructions": [
@@ -71,6 +71,18 @@
     { "name": "EXTRACT", "opcode": 98, "category": "search", "dialect": "search", "description": "抽出" },
 
     { "name": "CAUSE", "opcode": 113, "category": "reasoning", "dialect": "reasoning", "description": "因果" },
-    { "name": "GOAL", "opcode": 114, "category": "reasoning", "dialect": "reasoning", "description": "目標" }
+    { "name": "GOAL", "opcode": 114, "category": "reasoning", "dialect": "reasoning", "description": "目標" },
+
+    { "name": "SYSCALL_EXECUTE", "opcode": 128, "category": "syscall", "dialect": "base", "description": "syscall: 実行" },
+    { "name": "SYSCALL_SPAWN", "opcode": 129, "category": "syscall", "dialect": "base", "description": "syscall: プロセス生成" },
+    { "name": "SYSCALL_PLAN", "opcode": 130, "category": "syscall", "dialect": "base", "description": "syscall: 計画" },
+    { "name": "SYSCALL_VERIFY", "opcode": 131, "category": "syscall", "dialect": "base", "description": "syscall: 検証" },
+    { "name": "SYSCALL_REFLECT", "opcode": 132, "category": "syscall", "dialect": "base", "description": "syscall: 自己修正" },
+    { "name": "SYSCALL_ROUTE", "opcode": 133, "category": "syscall", "dialect": "base", "description": "syscall: ルーティング" },
+    { "name": "SYSCALL_MEMORY_STORE", "opcode": 134, "category": "syscall", "dialect": "base", "description": "syscall: 記憶保存" },
+    { "name": "SYSCALL_MEMORY_LOAD", "opcode": 135, "category": "syscall", "dialect": "base", "description": "syscall: 記憶読出" },
+    { "name": "SYSCALL_MEMORY_QUERY", "opcode": 136, "category": "syscall", "dialect": "base", "description": "syscall: 記憶検索" },
+    { "name": "SYSCALL_MEMORY_DELETE", "opcode": 137, "category": "syscall", "dialect": "base", "description": "syscall: 記憶削除" },
+    { "name": "SYSCALL_UPDATE_CAPABILITY", "opcode": 138, "category": "syscall", "dialect": "base", "description": "syscall: 能力更新" }
   ]
 }

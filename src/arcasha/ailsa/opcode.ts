@@ -8,6 +8,21 @@
  * スロット領域 (0x20–0x2F) は他カテゴリと排他なので、デコードは曖昧さなく進む。
  */
 
+/** System Call オペコード（AI OS の syscall = AILSA 命令） */
+export enum SyscallOpcode {
+  EXECUTE = 0x80,
+  SPAWN = 0x81,
+  PLAN = 0x82,
+  VERIFY = 0x83,
+  REFLECT = 0x84,
+  ROUTE = 0x85,
+  MEMORY_STORE = 0x86,
+  MEMORY_LOAD = 0x87,
+  MEMORY_QUERY = 0x88,
+  MEMORY_DELETE = 0x89,
+  UPDATE_CAPABILITY = 0x8a,
+}
+
 /** Base ISA 制御命令 */
 export enum Opcode {
   CALL = 0x30,

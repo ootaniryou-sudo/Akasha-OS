@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.13** |
+| Status | **Draft v0.14** |
 | Date | 2026-08-05 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様） |
@@ -486,6 +486,8 @@ CALL Math  Batch=3
 
 v0.13 では **AIProcess / AIThread / ReasoningScheduler** を追加し、AILSM は **AI Kernel IR** になる。Process ライフサイクル（`created→ready→running→{waiting/finished/failed}`）・Thread（複数タスク同時進行）・優先度スケジューラ・Runtime Events（`SPAWN/CALL/RETURN/YIELD/WAIT/TIMEOUT/FAIL/FINISH`）で、**「AI を実行する OS」**として説明できる。**AI Runtime Model は v1.0 で凍結**（`AILSA_RUNTIME.md` §7）。
 
+v0.14 では **AI System Call / Kernel API** を導入し、Expert（User Space）は Kernel（Memory / Belief / Schedule / Reflection / Capability）に直接触れず、`SYSCALL_*`（AILSA 命令 0x80-0x8A）でのみ要求する（**Kernel-mediated AI Runtime**）。さらに **Namespace**（プロセスごとの Memory Space 分離 = Process Isolation）と **Memory Page**（Virtual Memory）を追加。ArcAsha は AI Compiler でも Distributed Runtime でもなく、**AI Operating System** として説明できる。実機通信（Phase 1）は単なる「実行バックエンドの一つ」になる。
+
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
 推論は**木**になる。
@@ -763,6 +765,8 @@ Case2（AILSA）:
 | **0.9** | ✅ **AI State SSA**（Memory / Belief / Plan / Reflection を SSA ノード化） | `src/arcasha/ailsm/state.ts`（remember/believe/plan/reflect）+ `runtime.ts`（run: 状態遷移トレース）+ `toStateDiagram` | 完了（ローカル解決→Memory / Expert委譲→Belief→CALL を確認） |
 | **0.10** | ✅ **Scheduler / Capability SSA + AILSM仕様凍結 v1.0**（ODAR = SSA） | `state.ts`（capability/schedule）, `runtime.ts`（Belief→Capability→Schedule→CALL） | 完了（全ノード・エッジ・型・状態遷移・ABIを v1.0 で凍結） |
 | **0.11** | ✅ **AI Process / Thread / Reasoning Scheduler**（AI Kernel IR） | `state.ts`（createProcess/spawnThread/setProcessState）, `scheduler.ts`（pickNext/pickRoundRobin + RuntimeEvents）, `runtime.ts`（SPAWN→CALL→WAIT/FINISH） | 完了（AI Runtime Model を v1.0 で凍結） |
+| **0.12** | ✅ **AI System Call / Kernel API**（Kernel-mediated AI Runtime） | `kernel.ts`（AIKernel: EXECUTE/SPAWN/PLAN/VERIFY/REFLECT/ROUTE/MEMORY_*/UPDATE_CAPABILITY + 権限チェック）、Registry **v1.2.0**（SYSCALL 0x80-0x8A） | 完了（別ownerへのDELETE拒否 / Kernel経由メモリ を確認） |
+| **0.13** | ✅ **Namespace / Virtual Memory**（Process Isolation） | `namespace.ts`（createNamespace/assignNamespace/canAccessMemory/pageMemory/loadPage） | 完了（spaceA↔spaceB 分離 / Memory Page を確認） |
 | **1** | **Expert間AILSA通信**（Math→Code→Math をAILSAだけでリレー） | 最小デモ（既存 `demo-web.ts` 拡張） | 既存ハブ+実機ノード |
 | **2** | **Expert Calling + Relay + Shadow** | `src/arcasha/odar/` | 既存 `src/fault/fault-tolerance.ts` |
 | **3** | **AILSA Benchmark + Semantic Drift実験** | `experiments/EXP-AILSA/` | 既存 `experiments/EXP-XXXX` フレームワーク |

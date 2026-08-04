@@ -74,6 +74,42 @@ Task#1
 
 これで AILSM は **AI Kernel IR**（AI OS の Kernel Object）になる。複数タスクを Process として同時進行できる。
 
+### 2.3 AI System Call / Kernel API（Kernel-mediated AI Runtime — Phase 0.12）
+
+**Expert（User Space）は Kernel に直接触れない**。全て System Call で要求し、Kernel が 権限チェック → 適用 する（OS の User/Kernel 分離と同型）。
+
+```
+Math Expert ──REQUEST STORE──▶ Kernel ──▶ Verifier ──▶ Memory（壊れない）
+```
+
+- **User Space**: Task / Object / Value / Expert / Planner / Verifier
+- **Kernel Space**: Memory / Belief / Schedule / Reflection / Capability / Process / Thread / Namespace
+
+**System Call（AILSA 命令 0x80-0x8A）**:
+
+| syscall | 役割 |
+|---------|------|
+| `SYSCALL_EXECUTE` `SYSCALL_SPAWN` | 実行 / プロセス生成 |
+| `SYSCALL_PLAN` `SYSCALL_VERIFY` | 計画 / 検証 |
+| `SYSCALL_REFLECT` | 自己修正（REQUEST → Kernel → Reflection Node） |
+| `SYSCALL_ROUTE` | ルーティング（ODAR） |
+| `SYSCALL_MEMORY_STORE/LOAD/QUERY/DELETE` | Memory API（直接 Memory SSA を触れない） |
+| `SYSCALL_UPDATE_CAPABILITY` | Capability API（権限チェック付き） |
+
+**権限モデル**: `MEMORY_DELETE` / `UPDATE_CAPABILITY` は対象 owner と一致するプロセスのみ許可（拒否は `granted:false`）。
+
+### 2.4 Namespace / Virtual Memory（Process Isolation — Phase 0.13）
+
+```
+Process A → Memory Space A（Namespace）
+Process B → Memory Space B（他プロセスの記憶は読めない）
+```
+
+- **Namespace**: プロセスごとに Memory Space を分離。`canAccessMemory` で参照可否を判定
+- **Memory Page**: Memory SSA が巨大化したら `pageMemory` で分割し、`LOAD PAGE` で必要分だけ参照（**Virtual Memory** 相当）
+
+これで ArcAsha は AI Compiler でも Distributed Runtime でもなく、**AI Operating System** として説明できる。
+
 ## 3. Expert Runtime（設計 — Phase 1）
 
 **Expert = CPU**。CALL/RETURN で AILSA を処理する。
@@ -126,6 +162,8 @@ Natural Language
 | AI State SSA（Memory/Belief/Plan/Reflection） | 0.9 | ✅ 実装済み（`state.ts`, `runtime.ts`） |
 | Scheduler / Capability SSA（ODAR=SSA） | 0.10 | ✅ 実装済み（`state.ts`, `runtime.ts`） |
 | AI Process / Thread / Reasoning Scheduler | 0.11 | ✅ 実装済み（`state.ts`, `scheduler.ts`, `runtime.ts`） |
+| AI System Call / Kernel API | 0.12 | ✅ 実装済み（`kernel.ts`） |
+| Namespace / Virtual Memory | 0.13 | ✅ 実装済み（`namespace.ts`） |
 | Expert Runtime（CALL/RETURN） | 1 | 未着手（実機デモで実装） |
 | Reasoning Runtime（PLAN/VERIFY/REFLECT） | 2 | 未着手 |
 | Expert間AILSA通信 | 1 | 未着手 |
@@ -144,6 +182,8 @@ Natural Language
 | **ReasoningScheduler** | `pickNext`（最高優先度・同点はID昇順）/ `pickRoundRobin`（公平性）。プリエンプションは running→ready |
 | **Runtime Events** | `SPAWN` `CALL` `RETURN` `YIELD` `WAIT` `RESUME` `PREEMPT` `TIMEOUT` `FAIL` `FINISH` |
 | **Execution Trace** | `{seq, kind, processId, threadId, detail}` の逐次記録。全ての状態遷移を再現可能 |
+| **System Call** | `EXECUTE/SPAWN/PLAN/VERIFY/REFLECT/ROUTE/MEMORY_*/UPDATE_CAPABILITY`（AILSA 命令 0x80-0x8A） |
+| **Namespace / Memory Page** | プロセスごとの Memory Space 分離 + ページング（Virtual Memory） |
 
 **位置付け**: AILSM = **AI Kernel IR**（AI OS の Kernel Object）。Process / Thread / Scheduler を追加し、本当に **AI OS** になる。
 

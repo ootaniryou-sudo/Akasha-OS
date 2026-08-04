@@ -183,6 +183,21 @@ AILSA Registry v1.1.0
 
 > この一覧は **Registry v1.0** の一部。権威は常にRegistryであり、本仕様書はその抜粋である。
 
+### 5.5 System Call（AI OS の syscall = AILSA 命令）
+
+Expert（User Space）は Kernel に直接触れない。全て syscall で要求する（v1.2.0）。
+
+| ID | 命令 | 意味 |
+|----|------|------|
+| `0x80` | `SYSCALL_EXECUTE` | 実行 |
+| `0x81` | `SYSCALL_SPAWN` | プロセス生成 |
+| `0x82` | `SYSCALL_PLAN` | 計画 |
+| `0x83` | `SYSCALL_VERIFY` | 検証 |
+| `0x84` | `SYSCALL_REFLECT` | 自己修正 |
+| `0x85` | `SYSCALL_ROUTE` | ルーティング（ODAR） |
+| `0x86-0x89` | `SYSCALL_MEMORY_STORE/LOAD/QUERY/DELETE` | Memory API |
+| `0x8A` | `SYSCALL_UPDATE_CAPABILITY` | 能力更新（権限チェック付き） |
+
 ---
 
 ## 6. Dialect（方言）＝ RISC-V の拡張

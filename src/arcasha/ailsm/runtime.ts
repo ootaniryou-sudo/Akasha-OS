@@ -17,13 +17,13 @@ import {
   believe,
   capability,
   createProcess,
-  remember,
   schedule,
   setProcessState,
   spawnThread,
 } from './state.js';
 import type { AilsmGraph } from './ailsm.js';
 import type { RuntimeEvent } from './scheduler.js';
+import { AIKernel } from './kernel.js';
 
 export interface RuntimeStep {
   kind:
@@ -63,6 +63,7 @@ export function run(text: string, level: 0 | 1 | 2 | 3 = 2): RuntimeTrace {
   ];
   const events: RuntimeEvent[] = [];
   let seq = 0;
+  const kernel = new AIKernel();
 
   const task = graph.nodes.find((n) => n.kind === 'task');
   const taskId = task?.id;
@@ -98,8 +99,10 @@ export function run(text: string, level: 0 | 1 | 2 | 3 = 2): RuntimeTrace {
     const value = execution.value;
     steps.push({ kind: 'resolve', label: `Resolve: ${execution.steps.join('; ') || 'local'}` });
     steps.push({ kind: 'result', label: `Result: ${String(value)}` });
-    graph = remember(graph, taskId, 'result', value ?? 0).graph;
-    steps.push({ kind: 'memory', label: `Memory stores result=${String(value)}` });
+    // Kernel-mediated: Expert は直接 Memory を触れない（SYSCALL_MEMORY_STORE）
+    const res = kernel.memoryStore(graph, processId, 'result', value ?? 0);
+    graph = res.graph;
+    steps.push({ kind: 'memory', label: res.detail });
     graph = setProcessState(graph, processId, 'finished').graph;
     events.push({ seq: seq++, kind: 'FINISH', processId, detail: `result=${String(value)}` });
     steps.push({ kind: 'finish', label: `Process#${processId} finished` });

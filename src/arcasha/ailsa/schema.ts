@@ -5,7 +5,7 @@
  * ここは決定論（AI を使わない）。validator がこのスキーマに従って検査する。
  */
 
-import { Opcode } from './opcode.js';
+import { Opcode, SyscallOpcode } from './opcode.js';
 import {
   AILSARegistry,
   Category,
@@ -110,6 +110,19 @@ export const SCHEMAS: Record<number, InstructionSchema> = {
   // --- 専門IR: Reasoning ---
   [ReasoningOpcode.CAUSE]: def(ReasoningOpcode.CAUSE, [Slot.INPUT], DIALECT_OPTS),
   [ReasoningOpcode.GOAL]: def(ReasoningOpcode.GOAL, [Slot.INPUT], DIALECT_OPTS),
+
+  // --- System Call（AI OS の syscall = AILSA 命令） ---
+  [SyscallOpcode.EXECUTE]: def(SyscallOpcode.EXECUTE, [], [Slot.TASK_ID, Slot.GOAL]),
+  [SyscallOpcode.SPAWN]: def(SyscallOpcode.SPAWN, [], [Slot.GOAL, Slot.EXPERT, Slot.TASK_ID]),
+  [SyscallOpcode.PLAN]: def(SyscallOpcode.PLAN, [], [Slot.GOAL, Slot.INPUT]),
+  [SyscallOpcode.VERIFY]: def(SyscallOpcode.VERIFY, [], [Slot.TASK_ID, Slot.OUTPUT, Slot.CONF]),
+  [SyscallOpcode.REFLECT]: def(SyscallOpcode.REFLECT, [], [Slot.TASK_ID, Slot.REASON, Slot.STRATEGY]),
+  [SyscallOpcode.ROUTE]: def(SyscallOpcode.ROUTE, [], [Slot.EXPERT, Slot.TASK_ID, Slot.DOMAIN]),
+  [SyscallOpcode.MEMORY_STORE]: def(SyscallOpcode.MEMORY_STORE, [Slot.KEY, Slot.VALUE], [Slot.TASK_ID]),
+  [SyscallOpcode.MEMORY_LOAD]: def(SyscallOpcode.MEMORY_LOAD, [Slot.KEY], [Slot.TASK_ID]),
+  [SyscallOpcode.MEMORY_QUERY]: def(SyscallOpcode.MEMORY_QUERY, [], [Slot.INPUT, Slot.KEY]),
+  [SyscallOpcode.MEMORY_DELETE]: def(SyscallOpcode.MEMORY_DELETE, [Slot.KEY], [Slot.TASK_ID]),
+  [SyscallOpcode.UPDATE_CAPABILITY]: def(SyscallOpcode.UPDATE_CAPABILITY, [], [Slot.EXPERT, Slot.CONF]),
 };
 
 export function getSchema(opcode: number): InstructionSchema | undefined {

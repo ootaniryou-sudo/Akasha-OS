@@ -55,7 +55,7 @@ export enum Slot {
 export type DialectId = 'base' | 'math' | 'code' | 'search' | 'reasoning';
 export type Category =
   | 'task' | 'domain' | 'slot' | 'control'
-  | 'math' | 'code' | 'search' | 'reasoning';
+  | 'math' | 'code' | 'search' | 'reasoning' | 'syscall';
 export type ValueType = 'string' | 'number' | 'boolean';
 
 export interface RegistryEntry {
@@ -165,7 +165,7 @@ export function assertRegistryIntegrity(r: AILSARegistry): void {
   const seenNames = new Set<string>();
   const seenOps = new Set<number>();
   const validCategories = new Set<Category>([
-    'task', 'domain', 'slot', 'control', 'math', 'code', 'search', 'reasoning',
+    'task', 'domain', 'slot', 'control', 'math', 'code', 'search', 'reasoning', 'syscall',
   ]);
   const validDialects = new Set<DialectId>(r.dialects);
 
