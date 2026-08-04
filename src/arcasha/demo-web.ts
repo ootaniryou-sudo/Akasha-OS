@@ -259,10 +259,10 @@ $('ailsm-run').addEventListener('click', async () => {
     ailsmStatusEl.textContent = '✅ ' + (d.driverId ? 'CALL ' + d.driverId + ' → ' + d.deviceId + ' (' + d.ms + 'ms)' : 'ローカル解決') + ' / ODAR学習: ' + (d.learned ? '記録済み' : '-');
     ailsmOutEl.style.display = 'block';
     ailsmOutEl.textContent =
-      'result : ' + d.result + '\n' +
-      'driver : ' + (d.driverId ?? 'local') + '\n' +
-      'device : ' + (d.deviceId ?? 'local') + '\n' +
-      'steps  : ' + d.steps.join(' → ') + '\n' +
+      'result : ' + d.result + '\\n' +
+      'driver : ' + (d.driverId ?? 'local') + '\\n' +
+      'device : ' + (d.deviceId ?? 'local') + '\\n' +
+      'steps  : ' + d.steps.join(' → ') + '\\n' +
       'AILSA  : ' + d.ailsaHex;
     refreshNodes();
   } catch (e) {
