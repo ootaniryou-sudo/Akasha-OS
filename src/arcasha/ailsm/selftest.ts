@@ -57,6 +57,8 @@ import { executive, executivesOf, executiveOf, updateExecutive } from './executi
 import { runExecutiveDemo, renderExecutive, defaultDecide } from './executive-runtime.js';
 import { metaExecutive, updateMetaExecutive, metaExecutiveOf, metaExecutivesOf, estimateBudget } from './meta-executive.js';
 import { runMetaExecutiveDemo, renderMetaExecutive } from './meta-executive-runtime.js';
+import { expert, expertsOf, expertOf, computeHealth, shouldSplit, shouldMerge, shouldRetire, splitExpert, mergeExperts, retireExpert } from './expert-evolution.js';
+import { runExpertEvolutionDemo, renderExpertEvolution } from './expert-evolution-runtime.js';
 import type { Hypothesis } from './reasoning.js';
 
 let failed = 0;
@@ -931,6 +933,40 @@ check('精度・レイテンシ・コストを計測', r63.trials.every((t) => t
 check('推奨設定で統合仮説に到達', r63.finalText !== null && r63.finalText.includes('統合仮説'), String(r63.finalText));
 check('Meta Executive が Executive を管理（manages エッジ）', r63.graph.edges.some((e) => e.rel === 'manages' && r63.graph.nodes.find((n) => n.id === e.from)?.kind === 'metaexecutive' && r63.graph.nodes.find((n) => n.id === e.to)?.kind === 'executive'));
 check('renderMetaExecutive が Budget + 学習テーブル表示', renderMetaExecutive(r63).includes('BUDGET') && renderMetaExecutive(r63).includes('◀ 推奨'));
+
+// [64] Expert Evolution（Expert が自分で分裂・統合・引退する）
+console.log('\n[64] Expert Evolution');
+const b64 = new AilsmBuilder();
+const t64 = b64.addNode('task', 'evolve', 'unknown', { domain: 'reasoning', intent: 'unknown' });
+const ex64 = expert(b64.graph(), t64, 'math', { accuracy: 0.85, novelty: 0.8, cost: 0.7, utilization: 1.0 });
+check('Expert ノード生成（task manages expert）', ex64.graph.nodes.some((n) => n.kind === 'expert') && ex64.graph.edges.some((e) => e.rel === 'manages' && e.from === t64 && ex64.graph.nodes.find((n) => n.id === e.to)?.kind === 'expert'));
+const health64 = computeHealth({ expert: 'math', accuracy: 0.85, novelty: 0.8, cost: 0.7, latency: 0.4, confidence: 0.8, memory: 0.3, battery: 0.5, gpu: 0.6, temperature: 0.4, utilization: 1.0, overlap: 0.2 });
+check('合成健康度が計算される', health64 > 0 && health64 < 1, health64.toFixed(3));
+check('SPLIT 判定（忙しい+高精度+高新規性+高コスト）', shouldSplit({ expert: 'math', accuracy: 0.85, novelty: 0.8, cost: 0.7, latency: 0.4, confidence: 0.8, memory: 0.3, battery: 0.5, gpu: 0.6, temperature: 0.4, utilization: 1.0, overlap: 0.2, health: health64 }) === true);
+check('SPLIT 判定（低負荷は false）', shouldSplit({ expert: 'math', accuracy: 0.85, novelty: 0.8, cost: 0.7, latency: 0.4, confidence: 0.8, memory: 0.3, battery: 0.5, gpu: 0.6, temperature: 0.4, utilization: 0.1, overlap: 0.2, health: health64 }) === false);
+const hStat64: Parameters<typeof shouldMerge>[0] = { expert: 'statistics', accuracy: 0.6, latency: 0.3, cost: 0.2, novelty: 0.15, confidence: 0.6, memory: 0.2, battery: 0.5, gpu: 0.2, temperature: 0.3, utilization: 0.3, overlap: 0.75, health: 0.32 };
+const hAlg64: Parameters<typeof shouldMerge>[1] = { expert: 'algebra', accuracy: 0.7, latency: 0.35, cost: 0.3, novelty: 0.3, confidence: 0.7, memory: 0.25, battery: 0.5, gpu: 0.3, temperature: 0.35, utilization: 0.35, overlap: 0.75, health: 0.39 };
+check('MERGE 判定（overlap↑ + 中程度ヘルス）', shouldMerge(hStat64, hAlg64) === true);
+check('RETIRE 判定（低ヘルス + 低利用率）', shouldRetire({ expert: 'calc', accuracy: 0.4, latency: 0.4, cost: 0.3, novelty: 0.1, confidence: 0.4, memory: 0.3, battery: 0.6, gpu: 0.4, temperature: 0.5, utilization: 0.05, overlap: 0.4, health: 0.16 }) === true);
+const sp64 = splitExpert(ex64.graph, t64, ex64.id, [{ name: 'geometry' }, { name: 'algebra' }, { name: 'calculus' }, { name: 'statistics' }]);
+check('SPLIT: math → 4 子 + specializes エッジ', sp64.ids.length === 4 && sp64.graph.edges.filter((e) => e.rel === 'specializes' && e.from === ex64.id).length === 4);
+const mg64 = mergeExperts(sp64.graph, t64, sp64.ids.slice(1, 3), 'math-general');
+check('MERGE: mergesInto エッジ（統合）', mg64.graph.edges.filter((e) => e.rel === 'mergesInto').length === 2 && expertOf(mg64.graph, mg64.id)?.name === 'math-general');
+const rt64 = retireExpert(mg64.graph, sp64.ids[0]);
+check('RETIRE: state=retired', expertOf(rt64.graph, sp64.ids[0])?.state === 'retired');
+check('expertsOf が列挙', expertsOf(rt64.graph, t64).length >= 6);
+
+const r64 = runExpertEvolutionDemo();
+const ops64 = r64.rounds.flatMap((rd) => rd.ops);
+check('数学が SPLIT（math → geometry 等 4 種）', ops64.some((o) => o.kind === 'split' && o.source === 'math' && o.children?.includes('geometry')));
+check('幾何が SPLIT（geometry → triangle 等）', ops64.some((o) => o.kind === 'split' && o.source === 'geometry' && o.children?.includes('graph')));
+check('統計+代数 → math-general（MERGE）', ops64.some((o) => o.kind === 'merge' && o.target === 'math-general'));
+check('低ヘルスは引退（calculus RETIRE）', ops64.some((o) => o.kind === 'retire' && o.source === 'calculus'));
+check('グラフが SPLIT（graph → bfs/dfs/shortestpath/flow）', ops64.some((o) => o.kind === 'split' && o.source === 'graph' && o.children?.includes('bfs') && o.children?.includes('flow')));
+check('進化後のプールに専門化先が含まれる', ['bfs', 'dfs', 'shortestpath', 'flow', 'triangle', 'math-general'].every((n) => r64.finalPool.includes(n)), r64.finalPool.join(','));
+check('客観的理由が数値で説明される', ops64.every((o) => /util=|overlap=|health=/.test(o.reason)));
+check('Expert Health が記録される', Object.keys(r64.healthByExpert).length > 0 && r64.healthByExpert.math?.health > 0);
+check('renderExpertEvolution が進化ツリー表示', renderExpertEvolution(r64).includes('=== Expert Evolution') && renderExpertEvolution(r64).includes('SPLIT'));
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

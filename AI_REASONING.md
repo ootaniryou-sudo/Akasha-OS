@@ -4,10 +4,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v0.4（Phase 2.7 実装済み）** |
+| Status | **Spec v0.5（Phase 2.9 実装済み）** |
 | Date | 2026-08-06 |
-| 実装 | `reasoning.ts`, `reasoning-runtime.ts`, `search.ts`, `reasoning-search.ts`, `executive.ts`, `executive-runtime.ts`, `meta-executive.ts`, `meta-executive-runtime.ts` |
-| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.7）, `AILSA_RUNTIME.md`, `AI_VIRTUAL_MEMORY.md`, `AI_EVALUATION.md` |
+| 実装 | `reasoning.ts`, `reasoning-runtime.ts`, `search.ts`, `reasoning-search.ts`, `executive.ts`, `executive-runtime.ts`, `meta-executive.ts`, `meta-executive-runtime.ts`, `expert-evolution.ts`, `expert-evolution-runtime.ts` |
+| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.8）, `AILSA_RUNTIME.md`, `AI_VIRTUAL_MEMORY.md`, `AI_EVALUATION.md` |
 
 ---
 
@@ -245,22 +245,89 @@ FINAL  : 統計的に検証する + 位相で一般化する（統合仮説）
 - **学習結果**: beam1 / explore0.2 / **search 不要**（編成から外れた）を推奨
 - これは Transformer にない「**推論戦略・探索予算・資源配分を学習して改善する**」層
 
-## 7. 4 本柱
+## 7. Expert Evolution（Phase 2.9）— Expert が自分で分裂・統合・引退する
+
+「Expert Ecosystem（Expert が自分で進化する世界）」— Expert は固定されたルーティング単位ではなく、**Expert Health** を持ち、**客観的基準**に従って進化する。
+
+```
+Meta Executive → Executive → Expert Manager → Experts（分裂・統合・引退）
+```
+
+### 7.1 Expert Health
+
+各 Expert が Accuracy / Latency / Cost / Novelty / Confidence / Memory / Battery / GPU / Temperature + **Utilization（利用率）** / **Overlap（機能重複率）** を持ち、合成健康度を計算:
+
+```
+health = accuracy×0.5 + novelty×0.15 + confidence×0.1 − cost×0.1 − latency×0.05 − memory×0.05 − battery×0.02 − gpu×0.02 − temperature×0.01
+```
+
+### 7.2 客観的基準（研究の核 —「なぜ進化したか」を数値で説明）
+
+| 操作 | 基準 | 意味 |
+|------|------|------|
+| **SPLIT**（専門化） | util>0.6 かつ acc>0.8 かつ nov>0.7 かつ cost>0.5 | 忙しい+高精度+高新規性+高コスト → 専門化する価値 |
+| **MERGE**（統合） | overlap>0.7 かつ 両者 health<0.7 | 機能が重複しどちらも突出しない → 一般化して統合 |
+| **RETIRE**（引退） | health<0.4 かつ util<0.2 | 健康度が低く利用率も低い → 引退 |
+
+### 7.3 デモ（数学エコシステムの進化）
+
+```
+=== Expert Evolution (数学エコシステムの進化) ===
+Round 1:
+  SPLIT  math → geometry, algebra, calculus, statistics
+    ↳ util=1.00>0.6 acc=0.85>0.8 nov=0.80>0.7 cost=0.70>0.5（忙しい+高精度+高新規性+高コスト → 専門化する価値）
+Round 2:
+  SPLIT  geometry → triangle, circle, coordinate, graph
+  MERGE  statistics+algebra → math-general
+    ↳ overlap=0.75>0.7 health(statistics)=0.32 health(algebra)=0.39<0.7（機能が重複しどちらも突出しない → 一般化して統合）
+  RETIRE calculus
+    ↳ health=0.16<0.4 util=0.05<0.2（健康度が低く利用率も低い → 引退）
+Round 3:
+  SPLIT  graph → bfs, dfs, shortestpath, flow
+FINAL : triangle, circle, coordinate, math-general, bfs, dfs, shortestpath, flow
+```
+
+```mermaid
+flowchart TB
+    Math --> Geometry
+    Math --> Algebra
+    Math --> Calculus
+    Math --> Statistics
+    Geometry --> Triangle
+    Geometry --> Circle
+    Geometry --> Coordinate
+    Geometry --> Graph
+    Graph --> BFS
+    Graph --> DFS
+    Graph --> ShortestPath
+    Graph --> Flow
+    Algebra -.統合.-> MathGeneral
+    Statistics -.統合.-> MathGeneral
+    Calculus -.引退.-> X
+```
+
+- **自動細分化**: Math → 4 種 → Geometry → 4 種 → Graph → 4 種（BFS/DFS/ShortestPath/Flow）
+- **統合**: Statistics + Algebra（overlap 0.75）→ Math-General
+- **引退**: Calculus（health 0.16 / util 0.05）
+
+> **MoE との最大の違い**: Gate の先の Expert は固定。ArcAsha は Expert 自体が分裂・統合・引退し、OS というより **AI の生態系（Ecosystem）**。
+
+## 8. 4 本柱
 
 | 柱 | 成果 |
 |----|------|
-| AI Operating IR | AILSM（v1.7: hypothesis / expands / executive / metaexecutive） |
+| AI Operating IR | AILSM（v1.8: hypothesis / expands / executive / metaexecutive / expert） |
 | AI Virtual Memory | AVM（Context / Page / Slice / Cache / TLB / Tier） |
 | AI Kernel | Kernel / Process / Thread / Syscall / Namespace |
-| **AI Reasoning Runtime** | **Hypothesis SSA + Reasoning Graph + Search + Executive + Meta Executive（本仕様）** |
+| **AI Reasoning Runtime** | **Hypothesis SSA + Reasoning Graph + Search + Executive + Meta Executive + Expert Evolution（本仕様）** |
 
-## 8. 今後の拡張（ロードマップ）
+## 9. 今後の拡張（ロードマップ）
 
 - **Phase 2.8 Distributed Reasoning**: 仮説ごとに複数デバイスへ並列実行（iPhone・iPad・Mac で同時探索、Executive が結果を統合）
-- **Phase 3 Expert Ecosystem**: 数十〜数百の Sub-Expert の動的ロード・アンロード + Capability 継続学習
+- **Phase 3.0 Self-Organizing Expert Ecosystem**: Expert 群が自己組織化（進化 + タスク分布の学習）
+- **Phase 4.0 Self-Improving AI OS**: Meta Executive と Expert Evolution を統合し、OS 全体が継続的に自己改善
 - **Tool Calling**: Web 検索・コード実行・DB・API を Expert 化（ユーザー指定により未実装のまま）
-- **Expert 細分化**: 数学 → 図形・統計・代数など
-- 実験: 「探索の途中で戦略を切り替える」「複数デバイスへの動的仮説分散実行」= MoE では難しい ArcAsha 独自のテーマ
+- 実験: 「探索の途中で戦略を切り替える」「複数デバイスへの動的仮説分散実行」「Expert の自動細分化」= MoE では難しい ArcAsha 独自のテーマ
 
 ---
 

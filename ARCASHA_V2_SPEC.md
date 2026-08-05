@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.27** |
+| Status | **Draft v0.28** |
 | Date | 2026-08-06 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価）, `AI_REASONING.md`（Reasoning Runtime） |
@@ -514,16 +514,18 @@ v0.26（Phase 2.6）では **Executive Runtime** を追加 — Reasoning Graph �
 
 v0.27（Phase 2.7）では **Meta Executive** を追加 — **「Executive 自身はどう賢くなるの？」** に答える、Executive を学習する Executive。`meta-executive.ts`（新ノード `MetaExecutive#N`: goal / policy / beam / explore / experts / trials / bestAccuracy / bestLatency、`task manages metaexecutive` / `metaexecutive manages executive`）と **Thinking Budget**（`estimateBudget(text, {battery})`: 2+2 → Reasoning 禁止 / 新理論 → 大予算(beam4/depth10/全Expert) / Battery 8% → Reasoning 禁止 / 低バッテリ → 軽い推論のみ）を実装。`meta-executive-runtime.ts`（`runMetaExecutive`: **Executive policy → 実行 → 評価 → 改善** のオンライン学習ループ）。各 candidate で `runExecutive` を試行し `metaScore = accuracy − latency/10000 − cost×0.02` で最良設定を学習・推奨、**Search Policy 自体を切替**（beam → best-first → mcts）。デモ「数学の新理論を考える」: T1(beam2/explore0.4)と T3(mcts/explore0.5)は探索が強すぎて有望仮説を KILL し acc=0 / T2(best-first/explore0.2)が停滞→探索切替で統合仮説 acc=0.71 → **推奨: beam1/explore0.2/search 不要**。Transformer にない「推論戦略・探索予算・資源配分を学習して改善する層」（`AI_REASONING.md` v0.4）。AILSM_IR は v1.7（metaexecutive）。
 
-## ロードマップ（Meta Executive の先）
+v0.28（Phase 2.9）では **Expert Evolution** を追加 — 「Expert Ecosystem（Expert が自分で進化する世界）」。Expert は固定されたルーティング単位ではなく **Expert Health**（Accuracy/Latency/Cost/Novelty/Confidence/Memory/Battery/GPU/Temperature + Utilization/Overlap）を持ち、**客観的基準**（`expert-evolution.ts`: `computeHealth` / `shouldSplit` / `shouldMerge` / `shouldRetire`）で進化する: **SPLIT**（util>0.6 かつ acc>0.8 かつ nov>0.7 かつ cost>0.5 = 忙しい+高精度+高新規性+高コスト → 専門化）/ **MERGE**（overlap>0.7 かつ 両者 health<0.7 = 機能重複 → 一般化）/ **RETIRE**（health<0.4 かつ util<0.2）。`expert-evolution-runtime.ts`（`runExpertEvolution`: 各ラウンドで Health 計測 → SPLIT/MERGE/RETIRE を決定・適用、SPLIT>MERGE>RETIRE 優先、未観測 Expert は判定しない）。新ノード `Expert#N`（X プレフィックス）+ `specializes` / `mergesInto` エッジ。デモ「数学エコシステムの進化」: math → {geometry,algebra,calculus,statistics} → geometry → {triangle,circle,coordinate,graph} → graph → {bfs,dfs,shortestpath,flow} まで自動細分化 + statistics+algebra → math-general（統合）+ calculus（health0.16）引退。**MoE との最大の違い** = Gate の先の Expert は固定、ArcAsha は Expert 自体が分裂・統合・引退する（OS というより AI の生態系）（`AI_REASONING.md` v0.5）。AILSM_IR は v1.8（expert / specializes / mergesInto）。
+
+## ロードマップ（Expert Evolution の先）
 
 | Phase | 内容 |
 |-------|------|
 | **2.8 Distributed Reasoning** | 仮説ごとに複数デバイスへ並列実行（iPhone・iPad・Mac で同時探索、Executive が結果を統合） |
-| **3 Expert Ecosystem** | 数十〜数百の Sub-Expert の動的ロード・アンロード + Capability 継続学習 |
+| **3.0 Self-Organizing Expert Ecosystem** | Expert 群が自己組織化（進化 + タスク分布の学習） |
+| **4.0 Self-Improving AI OS** | Meta Executive と Expert Evolution を統合し、OS 全体が継続的に自己改善 |
 | Tool Calling | Web 検索・コード実行・DB・API を Expert 化（ユーザー指定により未実装のまま） |
-| Expert 細分化 | 数学 → 図形・統計・代数など |
 
-> 位置づけ: ArcAsha は「MoE の代替」ではなく **「ニューラルモデルの上で動く AI オペレーティングシステム」**。研究の価値は「Executive があることで Transformer/MoE では難しい何ができるか」を実験で示すこと（探索途中の戦略切替 / 推論予算の管理 / 複数デバイスへの動的仮説分散実行）。
+> 位置づけ: ArcAsha は「MoE の代替」ではなく **「ニューラルモデルの上で動く AI オペレーティングシステム」**。研究の価値は「Executive があることで Transformer/MoE では難しい何ができるか」を実験で示すこと（探索途中の戦略切替 / 推論予算の管理 / Expert の自動細分化 / 複数デバイスへの動的仮説分散実行）。
 
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
