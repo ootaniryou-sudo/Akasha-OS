@@ -49,8 +49,11 @@ import { initAiOs, aiosExecute, aiosRelay } from './aios.js';
 import { AilsmBuilder } from './ailsm.js';
 import { runComparisonBenchmark } from './comparison.js';
 import { runScalingExperiment, renderScaling } from './experiment.js';
-import { hypothesize, activate, evaluate, accept, merge, hypothesesOf, hypothesisOf } from './reasoning.js';
+import { hypothesize, activate, evaluate, accept, merge, hypothesesOf, hypothesisOf, expand, childrenOf, markExpanded } from './reasoning.js';
 import { runReasoning, runReasoningDemo, defaultHypothesisGenerator } from './reasoning-runtime.js';
+import { selectionScore, BeamSearchPolicy, BestFirstPolicy, DFSPolicy, BFSPolicy, MctsPolicy } from './search.js';
+import { runSearchDemo, renderSearch } from './reasoning-search.js';
+import type { Hypothesis } from './reasoning.js';
 
 let failed = 0;
 
@@ -814,6 +817,58 @@ check('汎用: Hypothesis ノードが SSA に', r58.graph.nodes.some((n) => n.k
 check('汎用: Expert 呼び出し / Process 生成', r58.expertCalls >= 3 && r58.processes >= 3);
 check('汎用: 既定生成がドメイン別（math）', defaultHypothesisGenerator('x^2=9を解く')[0].expert === 'math' && defaultHypothesisGenerator('アプリを作って')[0].expert === 'programming');
 check('汎用: 収束 or 全ラウンド完了', r58.finalText !== null || r58.rounds.every((rd) => rd.accepted.length === 0));
+
+// [59] Reasoning Tree（EXPAND / 子仮説 / depth / expands エッジ）
+console.log('\n[59] Reasoning Tree');
+const b59 = new AilsmBuilder();
+const t59 = b59.addNode('task', 'reason', 'unknown', { domain: 'reasoning', intent: 'unknown' });
+let g59 = b59.graph();
+const h59 = hypothesize(g59, t59, '既存の枠組みを疑う', 0.4, 'reasoning');
+g59 = h59.graph;
+const ex59 = expand(g59, t59, h59.id, [
+  { text: '統計的に検証する', confidence: 0.5, expert: 'math' },
+  { text: '幾何学的に解釈する', confidence: 0.5, expert: 'math' },
+]);
+g59 = ex59.graph;
+check('EXPAND で子仮説が生成される', ex59.ids.length === 2);
+check('expands エッジ（Reasoning Tree）', g59.edges.some((e) => e.rel === 'expands' && e.from === h59.id));
+check('子仮説の depth=1 / parentIds', childrenOf(g59, h59.id).every((c) => c.depth === 1 && c.parentIds.includes(h59.id)));
+g59 = markExpanded(g59, h59.id).graph;
+check('markExpanded で展開済み', hypothesisOf(g59, h59.id)?.expanded === true);
+const ex59b = expand(g59, t59, ex59.ids[1], [{ text: '位相で一般化する', confidence: 0.6, expert: 'reasoning' }]);
+g59 = ex59b.graph;
+check('深さ2の孫仮説（depth=2）', hypothesisOf(g59, ex59b.ids[0])?.depth === 2);
+
+// [60] Search Policy（探索 vs 活用 / Beam / Best-First / DFS / BFS / MCTS）
+console.log('\n[60] Search Policy');
+const mkH = (id: number, score: number, novelty: number, depth = 0, cost = 0.1): Hypothesis => ({
+  id, text: `H${id}`, confidence: 0.5, state: 'proposed', expert: 'math', score, parentIds: [],
+  novelty, diversity: 0.5, cost, consistency: 0.5, visits: 0, depth, expanded: false,
+});
+const hNovel = mkH(1, 0.5, 0.9);
+const hSafe = mkH(2, 0.8, 0.05);
+check('explore=0 は高スコア優先（活用）', selectionScore(hSafe, { explore: 0, costPenalty: 0.3 }) > selectionScore(hNovel, { explore: 0, costPenalty: 0.3 }));
+check('explore=0.8 は新規性優先（探索）', selectionScore(hNovel, { explore: 0.8, costPenalty: 0.3 }) > selectionScore(hSafe, { explore: 0.8, costPenalty: 0.3 }));
+const ready60 = [mkH(1, 0.5, 0.9, 1), mkH(2, 0.8, 0.05, 0), mkH(3, 0.6, 0.6, 2), mkH(4, 0.4, 0.7, 0)];
+const w60 = { explore: 0.5, costPenalty: 0.3 };
+check('Beam は top-2 を選ぶ', new BeamSearchPolicy().select(ready60, 2, w60).length === 2);
+check('Best-First は 1 つ選ぶ', new BestFirstPolicy().select(ready60, 2, w60).length === 1);
+check('DFS は深い仮説を優先', new DFSPolicy().select(ready60, 1, w60)[0].depth === 2);
+check('BFS は浅い仮説を優先', new BFSPolicy().select(ready60, 1, w60)[0].depth === 0);
+const mcts = new MctsPolicy();
+const mctsSel = mcts.select(ready60, 1, w60);
+check('MCTS が UCB で選択できる', mctsSel.length === 1 && mctsSel[0].id >= 1);
+
+// [61] Reasoning Search Runtime（ループ: EXPAND→EVAL→REFLECT→...）
+console.log('\n[61] Reasoning Search Runtime');
+const r61 = await runSearchDemo();
+check('探索ポリシー = beam', r61.policy === 'beam', r61.policy);
+check('Reasoning Tree（depth=2 まで）', r61.tree.some((t) => t.depth === 2));
+check('EXPAND ループが回る', r61.expansions >= 2 && r61.evaluations >= 4);
+check('新規性で低スコア仮説が生き残る（探索）', r61.acceptedTexts.some((t) => t.includes('統計')), r61.acceptedTexts.join('|'));
+check('低新規性仮説は KILL（淘汰）', r61.killedCount === 1);
+check('採用仮説を最終 MERGE（統合）', r61.finalText !== null && r61.finalText.includes('統合仮説'), String(r61.finalText));
+check('renderSearch がツリー表示', renderSearch(r61).includes('=== Reasoning Search') && renderSearch(r61).includes('FINAL'));
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

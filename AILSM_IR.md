@@ -4,7 +4,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.4（凍結 + MINOR 追加: Context/Page/Slice/Cache/Execution/Chunk/Span/Frame/Hypothesis）** |
+| Status | **Spec v1.5（凍結 + MINOR 追加: Context/Page/Slice/Cache/Execution/Chunk/Span/Frame/Hypothesis/expands）** |
 | Date | 2026-08-05 |
 | 実装 | `src/arcasha/ailsm/ailsm.ts`, `types.ts`, `visualizer.ts` |
 | 関連 | `ARCASHA_V2_SPEC.md`, `AILSA_ISA.md`, `AILSM_COMPILER.md`, `AILSA_RUNTIME.md`, `AI_ABI.md`, `AI_VIRTUAL_MEMORY.md`, `AI_REASONING.md` |
@@ -66,6 +66,7 @@ AILSMは単なるIRではなく、**AI Operating IR** — CPUだけでなく AI 
 | `reflects` | タスクが自己修正を持つ（Reflection SSA） |
 | `contains` | Context が Page / Slice / Cache を含む（AI Virtual Memory） |
 | `hypothesizes` | Task が仮説を生成（AI Reasoning Runtime） |
+| `expands` | 仮説が子仮説を展開（Reasoning Tree の親子関係、depth+1） |
 
 ## 5. 型システム（Typed AILSM）
 
@@ -108,7 +109,7 @@ IR は後から変更すると Compiler / Executor / Runtime / Visualizer / Expe
 | 安定化対象 | 定義 |
 |-----------|------|
 | **SSAノードカタログ** | task / object / value / memory / belief / plan / reflection / capability / schedule / process / thread / namespace / **context / page / slice / cache / execution / chunk / span / frame / hypothesis** |
-| **エッジカタログ** | uses / input / produces / stores / informs / plans / reflects / schedules / processes / threads / **contains / hypothesizes** |
+| **エッジカタログ** | uses / input / produces / stores / informs / plans / reflects / schedules / processes / threads / **contains / hypothesizes / expands** |
 | **型システム** | AilsmType + AilsmTypeRef（union / optional）+ NodeConstraints |
 | **状態遷移** | ローカル解決: Result→Memory / 委譲: Belief→Capability→Schedule→CALL |
 | **ABI** | ノード {id, kind, label, type, attrs, constraints} / エッジ {from, to, rel} |

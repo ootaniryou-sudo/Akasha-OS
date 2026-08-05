@@ -4,10 +4,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v0.1（Phase 2.4 実装済み）** |
-| Date | 2026-08-05 |
-| 実装 | `src/arcasha/ailsm/reasoning.ts`, `reasoning-runtime.ts` |
-| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.4）, `AILSA_RUNTIME.md`, `AI_VIRTUAL_MEMORY.md`, `AI_EVALUATION.md` |
+| Status | **Spec v0.2（Phase 2.5 実装済み）** |
+| Date | 2026-08-06 |
+| 実装 | `src/arcasha/ailsm/reasoning.ts`, `reasoning-runtime.ts`, `search.ts`, `reasoning-search.ts` |
+| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.5）, `AILSA_RUNTIME.md`, `AI_VIRTUAL_MEMORY.md`, `AI_EVALUATION.md` |
 
 ---
 
@@ -79,20 +79,74 @@ Expert : 3 calls / Processes: 3
 - 低評価の仮説（平方完成）は **KILL で淘汰**
 - 各仮説は独立 Process（OS レベルの並列）
 
-## 4. 4 本柱
+## 4. Reasoning Search Runtime（Phase 2.5）— 推論そのものを OS のスケジューリング対象に
+
+MoE が**苦手とする探索**（タスクが分解できず、複数の仮説を深く・広く試し、探索と活用をバランスさせる）を逆に**得意**にする。`search.ts` / `reasoning-search.ts` で**探索ポリシーがプラグイン化**され、仮説は **Reasoning Tree** を形成する。
+
+### 4.1 OS 対応表
+
+| OS の概念 | Reasoning Search の対応 |
+|-----------|--------------------------|
+| **実行資源（Expert）** | 仮説を評価・展開する Expert（math / search / reasoning / …） |
+| **プロセス（Hypothesis）** | 仮説 = 独立 AI Process（`createProcess`） |
+| **スケジューラ FB（Reflection）** | 評価結果 → selectionScore で ACCEPT / KILL / 再展開 |
+| **実行グラフ（Reasoning Graph）** | task hypothesizes → 仮説 expands → 子仮説 … |
+| **Kernel（探索全体の管理者）** | `runSearch` がラウンドループ + ポリシー選択 + 予算管理 |
+
+### 4.2 探索ポリシー（プラグイン）
+
+| ポリシー | 戦略 | `select()` の挙動 |
+|----------|------|-------------------|
+| `BeamSearchPolicy` | 幅優先 + 上位ビーム | top-N（beam） |
+| `BestFirstPolicy` | 貪欲 | 最高 1 個 |
+| `DFSPolicy` | 深さ優先 | 最深仮説 |
+| `BFSPolicy` | 幅優先 | 最浅仮説 |
+| `MctsPolicy` | UCB1 | winRate + C√(ln(N+1)/(visits+1)) |
+
+### 4.3 探索 vs 活用（Exploration / Exploitation）
+
+```
+selectionScore = score×(1−explore) + novelty×explore − cost×costPenalty
+```
+
+- `explore=0` → 高スコア優先（活用 / 既知の良い解）
+- `explore=0.8` → 新規性優先（探索 / 未踏の仮説）
+- **低スコアでも新規性が高ければ生き残る** = MoE が苦手な「仮説の多様性」を明示制御
+
+### 4.4 デモ（新しい数学の理論を考える）
+
+```
+=== Reasoning Search (beam) ===
+H2 [reasoning] "既存の枠組みを疑う"
+  H4 [math] "統計的に検証する"     score=0.55 nov=0.90 🔀
+    H12 [?] "統計的に検証する + 位相で一般化する（統合仮説）" ✅
+  H5 [math] "幾何学的に解釈する"   score=0.80 nov=0.40
+    H10 [reasoning] "位相で一般化する" score=0.70 nov=0.95 🔀
+  H6 [search] "文献を鵜呑みにする" score=0.30 nov=0.05 ❌
+EXPAND=2 EVAL=4 ACCEPT=1 KILL=1
+FINAL : 統計的に検証する + 位相で一般化する（統合仮説）
+```
+
+- **depth=2 の Reasoning Tree**: H2 → {H4, H5, H6} → H5 → H10
+- **探索（exploration）**: 低スコア（0.55）でも新規性（0.90）で H4 採用
+- **活用（exploitation）**: 高スコア H5 も再展開（H10 位相で一般化）
+- **淘汰**: 低新規性（0.05）の H6 は KILL
+- **統合**: H4 + H10 → MERGE「統合仮説」
+
+## 5. 4 本柱
 
 | 柱 | 成果 |
 |----|------|
-| AI Operating IR | AILSM（v1.4: hypothesis 追加） |
+| AI Operating IR | AILSM（v1.5: hypothesis / expands 追加） |
 | AI Virtual Memory | AVM（Context / Page / Slice / Cache / TLB / Tier） |
 | AI Kernel | Kernel / Process / Thread / Syscall / Namespace |
-| **AI Reasoning Runtime** | **Hypothesis SSA + Reasoning Graph（本仕様）** |
+| **AI Reasoning Runtime** | **Hypothesis SSA + Reasoning Graph + Reasoning Search（本仕様）** |
 
-## 5. 今後の拡張
+## 6. 今後の拡張
 
 - **並列実行**: 仮説ごとの真の並列（Promise.all）→ 実機複数台で Math A/B/C を分散
 - **Reflection の学習**: スコアリングを ODAR（LearnedCapability）と統合
-- **仮説の多段階**（generate コールバックで複数ラウンド）
+- **探索の深化**: ポリシー組み合わせ / 予算適応 / マルチシグナル重み学習
 - 論文: 「MoE の暗黙的探索を OS で明示化した実行モデル」
 
 ---

@@ -15,6 +15,14 @@ import type { AilsmGraph } from './ailsm.js';
 
 export type HypothesisState = 'proposed' | 'active' | 'accepted' | 'rejected' | 'merged' | 'killed';
 
+export interface EvaluationSignals {
+  score: number;
+  novelty?: number; // 新規性 0-1（探索 vs 活用）
+  diversity?: number; // 多様性 0-1
+  cost?: number; // 評価コスト 0-1
+  consistency?: number; // 整合性 0-1
+}
+
 export interface Hypothesis {
   id: number;
   text: string;
@@ -23,6 +31,17 @@ export interface Hypothesis {
   expert: string | null; // 評価する Expert
   score: number | null; // Reflection による評価スコア
   parentIds: number[]; // マージ元
+  novelty: number; // 新規性
+  diversity: number; // 多様性
+  cost: number; // 評価コスト
+  consistency: number; // 整合性
+  visits: number; // 探索回数（MCTS 用）
+  depth: number; // ツリー深さ（Reasoning Tree）
+  expanded: boolean; // 展開済み（子生成済み）
+}
+
+function num(v: unknown, def: number): number {
+  return v === undefined ? def : Number(v);
 }
 
 function toHypothesis(g: AilsmGraph, id: number): Hypothesis | undefined {
@@ -31,11 +50,18 @@ function toHypothesis(g: AilsmGraph, id: number): Hypothesis | undefined {
   return {
     id: n.id,
     text: String(n.attrs.text ?? ''),
-    confidence: typeof n.attrs.confidence === 'number' ? n.attrs.confidence : Number(n.attrs.confidence ?? 0),
+    confidence: num(n.attrs.confidence, 0),
     state: ((n.attrs.state as HypothesisState) ?? 'proposed') as HypothesisState,
     expert: n.attrs.expert === undefined || n.attrs.expert === '' ? null : String(n.attrs.expert),
     score: n.attrs.score === undefined ? null : Number(n.attrs.score),
     parentIds: ((n.attrs.parentIds as string[] | undefined) ?? []).map(Number),
+    novelty: num(n.attrs.novelty, 0.5),
+    diversity: num(n.attrs.diversity, 0.5),
+    cost: num(n.attrs.cost, 0.1),
+    consistency: num(n.attrs.consistency, 0.5),
+    visits: num(n.attrs.visits, 0),
+    depth: num(n.attrs.depth, 0),
+    expanded: n.attrs.expanded === true,
   };
 }
 
@@ -52,6 +78,25 @@ function mutate(g: AilsmGraph, patches: Map<number, Record<string, string | numb
     const from = remap.get(e.from);
     const to = remap.get(e.to);
     if (from !== undefined && to !== undefined && from !== to) b.connect(from, to, e.rel);
+  }
+  return b.graph();
+}
+
+/** エッジを 1 本追加したグラフを返す（ID は不変） */
+function withEdge(g: AilsmGraph, from: number, to: number, rel: string): AilsmGraph {
+  const b = new AilsmBuilder();
+  const remap = new Map<number, number>();
+  for (const n of g.nodes) {
+    const id = b.addNode(n.kind, n.label, n.type, n.attrs, n.constraints);
+    remap.set(n.id, id);
+  }
+  const f = remap.get(from);
+  const t = remap.get(to);
+  if (f !== undefined && t !== undefined && f !== t) b.connect(f, t, rel);
+  for (const e of g.edges) {
+    const f2 = remap.get(e.from);
+    const t2 = remap.get(e.to);
+    if (f2 !== undefined && t2 !== undefined && f2 !== t2) b.connect(f2, t2, e.rel);
   }
   return b.graph();
 }
@@ -83,6 +128,13 @@ export function hypothesize(
     expert: expert ?? '',
     score: 0,
     parentIds: [],
+    novelty: 0.5,
+    diversity: 0.5,
+    cost: 0.1,
+    consistency: 0.5,
+    visits: 0,
+    depth: 0,
+    expanded: false,
   });
   const t = remap.get(taskId);
   if (t !== undefined && t !== newId) b.connect(t, newId, 'hypothesizes');
@@ -99,9 +151,19 @@ export function activate(g: AilsmGraph, hypothesisId: number, expert: string): {
   return { graph: mutate(g, new Map([[hypothesisId, { state: 'active', expert }]])) };
 }
 
-/** EVALUATE 結果: スコアを記録 */
-export function evaluate(g: AilsmGraph, hypothesisId: number, score: number): { graph: AilsmGraph } {
-  return { graph: mutate(g, new Map([[hypothesisId, { score }]])) };
+/** EVALUATE 結果: スコア + マルチシグナル（score/novelty/diversity/cost/consistency）を記録 */
+export function evaluate(
+  g: AilsmGraph,
+  hypothesisId: number,
+  signals: EvaluationSignals | number,
+): { graph: AilsmGraph } {
+  const s = typeof signals === 'number' ? { score: signals } : signals;
+  const patch: Record<string, string | number | boolean | string[]> = { score: s.score };
+  if (s.novelty !== undefined) patch.novelty = s.novelty;
+  if (s.diversity !== undefined) patch.diversity = s.diversity;
+  if (s.cost !== undefined) patch.cost = s.cost;
+  if (s.consistency !== undefined) patch.consistency = s.consistency;
+  return { graph: mutate(g, new Map([[hypothesisId, patch]])) };
 }
 
 /** ACCEPT: 採用（Reflection の judge で 採用） */
@@ -148,4 +210,39 @@ export function hypothesesOf(g: AilsmGraph, taskId: number): Hypothesis[] {
 
 export function hypothesisOf(g: AilsmGraph, id: number): Hypothesis | undefined {
   return toHypothesis(g, id);
+}
+
+/** EXPAND: 親仮説から子仮説を生成（hypothesis `expands` hypothesis = Reasoning Tree） */
+export function expand(
+  g: AilsmGraph,
+  taskId: number,
+  parentId: number,
+  children: { text: string; confidence: number; expert?: string }[],
+): { graph: AilsmGraph; ids: number[] } {
+  const parent = toHypothesis(g, parentId);
+  if (!parent) throw new Error(`expand: Hypothesis#${parentId} がありません`);
+  let graph = g;
+  const ids: number[] = [];
+  for (const c of children) {
+    const r = hypothesize(graph, taskId, c.text, c.confidence, c.expert);
+    graph = r.graph;
+    graph = withEdge(graph, parentId, r.id, 'expands');
+    graph = mutate(graph, new Map([[r.id, { depth: parent.depth + 1, parentIds: [parentId].map(String) }]]));
+    ids.push(r.id);
+  }
+  return { graph, ids };
+}
+
+/** 親仮説の子仮説を列挙 */
+export function childrenOf(g: AilsmGraph, parentId: number): Hypothesis[] {
+  return g.edges
+    .filter((e) => e.from === parentId && e.rel === 'expands')
+    .map((e) => toHypothesis(g, e.to))
+    .filter((h): h is Hypothesis => h !== undefined)
+    .sort((a, b) => a.id - b.id);
+}
+
+/** 展開済みにマーク（Reasoning Scheduler: 再展開を防ぐ） */
+export function markExpanded(g: AilsmGraph, hypothesisId: number): { graph: AilsmGraph } {
+  return { graph: mutate(g, new Map([[hypothesisId, { expanded: true }]])) };
 }

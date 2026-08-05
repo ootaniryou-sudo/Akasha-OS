@@ -5,8 +5,8 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.24** |
-| Date | 2026-08-05 |
+| Status | **Draft v0.25** |
+| Date | 2026-08-06 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価）, `AI_REASONING.md`（Reasoning Runtime） |
 
@@ -507,6 +507,8 @@ v0.22（評価フェーズ）では **「巨大化」ではなく「優れてい
 v0.23（Phase 2.3）では **「既存AIにできるタスクの全てを任せられる」** ための 2 点。① **「作って」系意図（create）**（`normalizer.ts`: 作って/実装/書いて/生成/build/create 等 → domain=code → programming へ CALL、タスク文を INPUT に載せる）② **Stage-2 フォールバック**（`aios.ts`: 決定論コンパイラが解釈できないタスクを 400 にせず、生の CALL で実機LLM（general）へ委譲 → 自由文でも応答 + ODAR 学習）。これで「計算・検索・要約は決定論 / それ以外は実機LLM」の**ハイブリッド**になった（ツール呼び出しは未実装のまま）。
 
 v0.24（Phase 2.4）では **AI Reasoning Runtime（第4の柱）** を追加。創発的知能は「Expert 同士の循環」で生まれる — MoE が Transformer 内部で暗黙に行う探索を、OS レベルで明示化する。**Hypothesis SSA**（新ノード: text/confidence/state/expert/score + `task hypothesizes hypothesis`）と **Reasoning Graph Runtime**（`reasoning.ts` / `reasoning-runtime.ts`: SPAWN → EVALUATE（各仮説 = 独立 Process = OS 並列）→ REFLECTION（ACCEPT / KILL / MERGE）→ 収束）。デモ x^2=9: x=3 / x=-3 を並列評価 → 両方 ACCEPT → MERGE「x=±3」/ 低評価は KILL（`AI_REASONING.md`）。AILSM_IR は v1.4。
+
+v0.25（Phase 2.5）では **Reasoning Search Runtime** を追加 — **推論そのものを OS のスケジューリング対象にする**。① **探索ポリシーのプラグイン化**（`search.ts`: Beam / BestFirst / DFS / BFS / MCTS(UCB1)、`SearchPolicy` インターフェース + `SEARCH_POLICIES` ファクトリ）② **Reasoning Tree**（`reasoning.ts`: `expand` で子仮説を生成 + `expands` エッジ + depth/parentIds、`markExpanded`/`childrenOf`）③ **マルチシグナル評価**（score / novelty / diversity / cost / consistency の `EvaluationSignals`）④ **探索 vs 活用**（`selectionScore = score×(1−explore) + novelty×explore − cost×costPenalty` — 低スコアでも新規性が高ければ生き残る）⑤ **Reasoning Search Runtime**（`reasoning-search.ts`: ラウンドループ = READY（Hypothesis Queue）→ EXPAND（各子仮説に Process を生成）→ EVALUATE → REFLECT → 最終 MERGE。デモ: 新しい数学の理論を考える → 枠組み H2 → {統計 0.55/新規性0.90 を探索で採用、幾何 0.80 → 位相 0.70/0.95 へ再展開、文献を鵜呑み 0.05 を KILL} → MERGE「統計的に検証する + 位相で一般化する（統合仮説）」）。OS 対応: Expert=実行資源 / Hypothesis=プロセス / Reflection=スケジューラ FB / Reasoning Graph=実行グラフ / Kernel=探索全体の管理者（`AI_REASONING.md` v0.2）。AILSM_IR は v1.5（`expands` 追加）。
 
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 
