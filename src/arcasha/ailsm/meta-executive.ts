@@ -41,7 +41,7 @@ export interface MetaExecutive {
 }
 
 const TRIVIAL_RE = /^\s*\d+\s*[+\-*/×÷]\s*\d+/;
-const HARD_RE = /新理論|理論を|証明|仮説|考える|発明|設計|戦略|研究|革新|反例/;
+const HARD_RE = /新理論|理論を|証明|仮説|考える|考えて|アイデア|アルゴリズム|発明|設計|戦略|研究|革新|反例/;
 
 /** タスクの複雑さから Thinking Budget を決定（決定論） */
 export function estimateBudget(text: string, opts: { battery?: number } = {}): ThinkingBudget {

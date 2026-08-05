@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.33** |
+| Status | **Draft v0.34** |
 | Date | 2026-08-06 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価）, `AI_REASONING.md`（Reasoning Runtime）, `AI_ATTACHMENTS.md`（プラグイン層）, `AI_VALIDATION.md`（再現可能な評価） |
@@ -525,6 +525,8 @@ v0.31（Phase 3.2）では **Attachment Validation（実証）** を追加 — �
 v0.32（Phase 4.0）では **Scientific Validation（再現可能な評価基盤）** を追加 — 方針を「新機能 2 割・実験と検証 8 割」に転換。`scientific.ts` の `runScientificReport()` で 5 レポートを 1 コマンドで再生成: **Validation A**（Long Context: Qwen 50,000ms/1M token vs AVM 12,187ms/229k token、Speedup **4.10x**・TokenReduction **77.1%**）/**Validation B**（14 問固定コーパスで Normal/Reflection/Planning/Debate/All を評価 — 正答率 **57% → 64% → 86% → 93%** と単調増加、レイテンシ・トークン・電力は実実行、品質は決定論モデル `fast=0.95−0.45×難易度` + 能力増分）/**Validation C**（Robot: Fast 30.3fps/36°C/0.95 vs Deep 1.2fps/44°C/0.20 — 電力・温度を追加）/**Validation D**（Executive なし 0.50 → あり 0.71 / Meta は少ない推論で同品質）/**Flagship**（**同じ Qwen1.5B** でも OS 構成で品質 0.57→0.79（+38%）、Fast は最速・低電力 =「OS がモデルの能力をどれだけ引き出せるか」）。**再現性**: コーパス・難易度・モデルパラメータはすべて固定、実機実測は Phase 1 の Device Runtime と差し替え可能（`AI_VALIDATION.md`）。
 
 v0.33（Phase 4.1）では **Real Benchmark Suite** を追加 — 「実装できた」と「証明できた」は別。`src/arcasha/bench/` に **Validation E: 外部ベンチ**（GSM8K / MATH500 / HumanEval / MBPP / MMLU / LiveCodeBench、各 10 問・固定）を実装し、Qwen1.5B（単体 / Thinking / +Fast / +Auto / +Deep）で評価: **全体正答率 27% → 95%**（Qwen 単体 → +Deep）。**Qwen Thinking vs ArcAsha**（human_eval: Qwen Thinking 50% > +Fast 40% だが +Deep 100% > Thinking 50% — 難しいタスクではモデル内思考より OS のルーティング + Attachment が上）。**OS Overhead**（`overhead.ts`: Kernel / Scheduler / AVM / Executive / Attachment の CPU・Token・Memory・Latency 内訳 — Fast で LLM 85%、Deep でも LLM 40% = OS を増やしてもオーバーヘッドは小さい）。**`npm run benchmark`** 一発で全項目（Long Context / Reasoning / Coding / Math / Knowledge / Robot / Power / Temperature）+ **`reports/benchmark/report.{json,csv,md}` 自動生成**（機械可読・追試可能・バージョン付き）。品質モデルは決定論（`qwen=0.89−0.45×難易度` / `+Fast=0.95−0.45×難易度` / 能力増分）、実機実測は Device Runtime と差し替え可能（`AI_VALIDATION.md` v1.1）。
+
+v0.34（Phase 4.2）では **Validation の 2 本立て + Decision Explanation** を追加。① **Simulation と Real Device を分離** — 現在の数値は `kind: 'simulation'`（設計上の評価モデル・決定論）として report.json に明示ラベル付けし、`bench/real-device.ts`（Real Device ハーネス）は実機未接続時 `not-connected` を返して**数値を偽造しない**（iPhone/iPad/Mac 接続時は Hub 経由で実測し latency/power/temp/accuracy を記録）。② **Decision Explanation**（`attachments/explain.ts`）— **「Why did Executive choose this?」**: Executive がなぜそのモード・Attachment 構成を選んだかを、構成ごとの期待ゲイン（Planning +31% / Debate +22% / Creativity +28% / Reflection +19%）、コスト（ms）、理由（タスク特性から固定・文書化）で説明。総合期待向上 +34%（最有力 + 相乗効果 3%）。`2+2` は「trivial → Fast Runtime のみ（考える必要なし）」と説明。多くの LLM では見えない「OS が推論を管理する」ことを外から見える形にする強いデモ（`AI_VALIDATION.md` v1.2）。
 
 ## ロードマップ（Expert Evolution の先）
 

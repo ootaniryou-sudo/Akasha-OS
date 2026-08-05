@@ -1,5 +1,7 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "kind": "simulation",
+  "note": "設計上の評価モデル（決定論・再現可能）。実機実測は Real Device Benchmark（bench/real-device.ts）と区別する。",
   "corpus": "GSM8K/MATH500/HumanEval/MBPP/MMLU/LiveCodeBench (deterministic subset)",
   "configs": [
     "Qwen1.5B 単体",

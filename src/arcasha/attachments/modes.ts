@@ -87,8 +87,8 @@ export async function resolvePipeline(
     } else {
       ids = manager.list().filter((a) => a.enabled && a.supports(taskText)).map((a) => a.id);
       if (budget.reason === 'high') {
-        // 難しいタスク: Planning + Debate + Creativity も自動起動
-        for (const extra of ['planning', 'debate', 'creativity']) {
+        // 難しいタスク: Planning + Debate + Creativity + Reflection も自動起動
+        for (const extra of ['planning', 'debate', 'creativity', 'reflection']) {
           if (!ids.includes(extra)) ids.push(extra);
         }
       }

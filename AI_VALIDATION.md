@@ -4,12 +4,50 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.1（Phase 4.1 実装済み）** |
+| Status | **Spec v1.2（Phase 4.2 実装済み）** |
 | Date | 2026-08-06 |
-| 実装 | `src/arcasha/attachments/scientific.ts`, `src/arcasha/bench/`（Real Benchmark Suite） |
-| 方針 | 新機能 2 割・実験と検証 8 割。品質モデルは決定論（固定パラメータ・再現可能）、レイテンシ/トークン/電力は実実行 |
+| 実装 | `src/arcasha/attachments/scientific.ts`, `src/arcasha/bench/`（Real Benchmark Suite）, `src/arcasha/attachments/explain.ts`（Decision Explanation）, `src/arcasha/bench/real-device.ts`（実機ハーネス） |
+| 方針 | 新機能 2 割・実験と検証 8 割。**Simulation と Real Device を分離**（数値を偽装しない） |
 
 ---
+
+## Validation の 2 本立て（重要）
+
+「設計上の評価モデルの数字」と「実機実測の数字」を**明確に区別**する。
+
+| 種別 | 内容 | ラベル |
+|------|------|--------|
+| **Validation A: Simulation** | 決定論シミュレータ（Reasoning / Power / Robot Simulator、品質モデル） | `kind: 'simulation'`（report.json） |
+| **Validation B: Real Device** | iPhone / iPad / Mac 実機 + Qwen1.5B の実測（Phase 1 Device Runtime） | `kind: 'real-device'`（`bench/real-device.ts`） |
+
+- Simulation は「**設計上の評価モデル**」として価値（再現可能・決定論）
+- Real Device は未接続時 `not-connected` を返し、**数値を偽造しない**
+- 論文ではこの 2 本立てで記載（`npm run benchmark` が両方を表示）
+
+## Decision Explanation（Phase 4.2）—「Why did Executive choose this?」
+
+多くの LLM では「Thinking ON → 内部で何か長く考える」だけで、何をしているか外から見えない。ArcAsha は Executive の意思決定（モード・Attachment 構成・予算）を**ゲイン・コスト・理由**で説明する（`explain.ts`）:
+
+```
+=== Decision Explanation（なぜ Executive はこの構成を選んだか）===
+Task : "新しいアルゴリズムを考えて"
+Mode : auto — Auto: estimateBudget が高複雑度と判定（「考える/アイデア/アルゴリズム」等）
+       → Planning+Debate+Creativity+Reflection を自動起動。
+Base : quality=0.50
+
+Selected (4):
+  reflection   +19%   150ms  自己批判（Answer→Score→Revise）で品質を向上
+  creativity   +28%   200ms  新規仮説生成が必要（「考えて/新しい/アイデア」）
+  debate       +22%   400ms  複数視点の検討で新規性・妥当性を担保
+  planning     +31%   250ms  目標分解・実行手順が必要（高複雑度タスク）
+
+Budget : 1000ms (used 1000ms)
+Expected Gain : +34%
+```
+
+- `2+2` → 「Auto: trivial → Fast Runtime のみ」（選択なし、考える必要なしと説明）
+- 期待ゲインは決定論モデル（タスク特性から固定・文書化）
+- **「OS が推論を管理する」ことを外から見える形にする強いデモ**
 
 ## Validation E — External Benchmarks（Phase 4.1 Real Benchmark Suite）
 

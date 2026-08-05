@@ -71,7 +71,9 @@ import { SCIENTIFIC_CORPUS, modeQuality, runReasoningBenchmark, runLongContextVa
 import { ALL_BENCH_SUITES, runExternalBenchmarks, overallAccuracy } from '../bench/run.js';
 import { configQuality } from '../bench/types.js';
 import { osOverheadProfile, allOverheadProfiles } from '../bench/overhead.js';
-import { buildJsonReport, buildCsvReport, buildMarkdownReport, writeReports } from '../bench/report.js';
+import { buildJsonReport, buildCsvReport, buildMarkdownReport, writeReports, VALIDATION_KIND } from '../bench/report.js';
+import { explainExecutive, renderExplanation } from '../attachments/explain.js';
+import { runRealDeviceBenchmark, renderRealDeviceBenchmark } from '../bench/real-device.js';
 import type { AttachmentContext } from '../attachments/attachment.js';
 import type { Hypothesis } from './reasoning.js';
 
@@ -1151,13 +1153,32 @@ const ovDeep69 = osOverheadProfile('qwen-deep');
 const llmOf = (p: { components: { component: string; cpuPct: number }[] }): number => p.components.filter((c) => c.component.includes('LLM')).reduce((s, c) => s + c.cpuPct, 0);
 check('OS オーバーヘッド: 単体は LLM 100%、OS を増やすほど LLM 割合が下がる', osOverheadProfile('qwen').components[0].cpuPct === 100 && llmOf(ovFast69) > llmOf(ovDeep69) && llmOf(ovDeep69) > 0, `fast LLM=${llmOf(ovFast69)}% deep LLM=${llmOf(ovDeep69)}%`);
 check('OS オーバーヘッド: CPU/レイテンシは 100% に収束', ovFast69.components.reduce((s, c) => s + c.cpuPct, 0) === 100 && ovDeep69.components.reduce((s, c) => s + c.latencyPct, 0) === 100);
-const json69 = JSON.parse(buildJsonReport(rows69, allOverheadProfiles())) as { version: string; overall: unknown[] };
-check('report.json: バージョン + 全体結果', json69.version === '1.0.0' && json69.overall.length === 5);
+const json69 = JSON.parse(buildJsonReport(rows69, allOverheadProfiles())) as { version: string; overall: unknown[]; kind: string };
+check('report.json: バージョン + 全体結果', json69.version === '1.1.0' && json69.overall.length === 5 && json69.kind === 'simulation');
 check('report.csv: ヘッダ + 30 行', buildCsvReport(rows69).split('\n').length === 31 && buildCsvReport(rows69).startsWith('suite,suite_name'));
 check('report.md: ベンチ表 + OS オーバーヘッド', buildMarkdownReport(rows69, allOverheadProfiles()).includes('| gsm8k |') && buildMarkdownReport(rows69, allOverheadProfiles()).includes('OS Overhead'));
 const files69 = await writeReports('reports/.selftest', rows69, allOverheadProfiles());
 check('writeReports: json/csv/md を書き出す', files69.length === 3 && files69.every((f) => f.endsWith('.json') || f.endsWith('.csv') || f.endsWith('.md')));
 await rm('reports/.selftest', { recursive: true, force: true });
+
+// [70] Decision Explanation + Simulation/Real 分離
+console.log('\n[70] Decision Explanation / Real Device');
+const boot70 = (await import('./expert-runtime.js')).boot();
+const exp70 = await explainExecutive('新しいアルゴリズムを考えて', boot70, { mode: 'auto', budgetMs: 1000 });
+check('Explain: 高複雑度で 4 Attachment を選択（planning/debate/creativity/reflection）', exp70.mode === 'auto' && ['planning', 'debate', 'creativity', 'reflection'].every((id) => exp70.choices.some((c) => c.id === id)), exp70.choices.map((c) => c.id).join(','));
+const gain70 = (id: string): number => exp70.choices.find((c) => c.id === id)!.expectedGain;
+check('Explain: 期待ゲイン（planning .31 / debate .22 / creativity .28 / reflection .19）', Math.abs(gain70('planning') - 0.31) < 1e-9 && Math.abs(gain70('debate') - 0.22) < 1e-9 && Math.abs(gain70('creativity') - 0.28) < 1e-9 && Math.abs(gain70('reflection') - 0.19) < 1e-9);
+check('Explain: 総合期待向上 +34%（最有力 + 相乗効果 3%）', Math.abs(exp70.totalExpectedGain - 0.34) < 1e-9, `${(exp70.totalExpectedGain * 100).toFixed(0)}%`);
+check('Explain: 予算と使用時間を表示', exp70.budgetMs === 1000 && exp70.usedMs === 1000);
+const expTriv70 = await explainExecutive('2+2を計算して', boot70, { mode: 'auto' });
+check('Explain: 2+2 → 選択なし（Fast Runtime）', expTriv70.choices.length === 0 && expTriv70.modeReason.includes('Fast'));
+check('renderExplanation が理由・ゲイン・予算を表示', renderExplanation(exp70).includes('Expected Gain : +34%') && renderExplanation(exp70).includes('planning'));
+const rd70 = await runRealDeviceBenchmark();
+check('Real Device: 未接続なら数値を偽造しない（not-connected）', rd70.status === 'not-connected' && rd70.rows.length === 0 && rd70.note.includes('偽装'));
+const rd70b = await runRealDeviceBenchmark({ devices: ['iPhone'], measure: () => ({ latencyMs: 1200, powerMw: 1500, temperatureC: 38, accuracy: 0.7 }) });
+check('Real Device: 実測コールバックで measured 行を生成', rd70b.status === 'connected' && rd70b.rows.length === 6 * 5 && rd70b.rows.every((r) => r.status === 'measured' && r.latencyMs === 1200));
+check('renderRealDeviceBenchmark が Status を表示', renderRealDeviceBenchmark(rd70).includes('not-connected'));
+check('Validation 分離: report.json は kind=simulation', (JSON.parse(buildJsonReport(rows69, allOverheadProfiles())) as { kind: string }).kind === 'simulation' && VALIDATION_KIND === 'simulation');
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

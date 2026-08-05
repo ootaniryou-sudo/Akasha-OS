@@ -10,14 +10,19 @@ import type { BenchResultRow } from './run.js';
 import { overallAccuracy } from './run.js';
 import type { OverheadProfile } from './overhead.js';
 
-export const REPORT_VERSION = '1.0.0';
+export const REPORT_VERSION = '1.1.0';
 export const REPORT_CORPUS = 'GSM8K/MATH500/HumanEval/MBPP/MMLU/LiveCodeBench (deterministic subset)';
+
+export const VALIDATION_KIND = 'simulation';
+export const VALIDATION_NOTE = '設計上の評価モデル（決定論・再現可能）。実機実測は Real Device Benchmark（bench/real-device.ts）と区別する。';
 
 /** JSON レポート（機械可読・追試可能） */
 export function buildJsonReport(rows: BenchResultRow[], overhead: OverheadProfile[]): string {
   return JSON.stringify(
     {
       version: REPORT_VERSION,
+      kind: VALIDATION_KIND,
+      note: VALIDATION_NOTE,
       corpus: REPORT_CORPUS,
       configs: [...new Set(rows.map((r) => r.configName))],
       overall: overallAccuracy(rows),
@@ -45,6 +50,7 @@ export function buildMarkdownReport(rows: BenchResultRow[], overhead: OverheadPr
   lines.push(`# ArcAsha Benchmark Report`);
   lines.push('');
   lines.push(`- version: ${REPORT_VERSION}`);
+  lines.push(`- kind: ${VALIDATION_KIND}（${VALIDATION_NOTE}）`);
   lines.push(`- corpus: ${REPORT_CORPUS}`);
   lines.push('');
   lines.push(`## External Benchmarks (Validation E)`);

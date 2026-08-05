@@ -1,6 +1,7 @@
 # ArcAsha Benchmark Report
 
-- version: 1.0.0
+- version: 1.1.0
+- kind: simulation（設計上の評価モデル（決定論・再現可能）。実機実測は Real Device Benchmark（bench/real-device.ts）と区別する。）
 - corpus: GSM8K/MATH500/HumanEval/MBPP/MMLU/LiveCodeBench (deterministic subset)
 
 ## External Benchmarks (Validation E)
