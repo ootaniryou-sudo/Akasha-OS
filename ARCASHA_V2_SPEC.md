@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.30** |
+| Status | **Draft v0.31** |
 | Date | 2026-08-06 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価）, `AI_REASONING.md`（Reasoning Runtime）, `AI_ATTACHMENTS.md`（プラグイン層） |
@@ -519,6 +519,8 @@ v0.28（Phase 2.9）では **Expert Evolution** を追加 — 「Expert Ecosyste
 v0.29（Phase 3.0）では **Intelligence Attachments** を追加 — **「AI OS = 小さく安定 / Advanced Intelligence = Attachment」**。Core はこれ以上複雑にせず、高度な知能をすべてプラグイン層（`src/arcasha/attachments/`）として実装（Linux のオプションカーネルモジュールと同様の思想）。`Attachment` インターフェース（id/name/version/enabled/supports/run + Thinking Budget: estimatedCost/Latency/Accuracy）、`AttachmentManager`（register/unregister/enable/disable/**load(遅延)**/unload/execute/executeParallel/executeMerged）、`attachmentScheduler`（Executive が予算で選択: 優先度 = accuracy − cost×0.5 − latency/10000）、`AttachmentMonitor`（Timeline/Cost/Latency/Accuracy/Calls を AI Monitor 拡張として表示）。組み込み 7 種: **Reflection**（Answer→Reflect→Score→Revise）、**Debate**（A/B/C→Judge→Consensus = Reasoning Search Runtime 再利用）、**Planning**（Goal→SubGoals→Plan→Schedule = AILSM Plan SSA）、**Search**（BFS/DFS/Beam/BestFirst/MCTS = Search Runtime）、**Creativity**（Hypothesis SSA で複数新規仮説）、**Simulation**（What-if 分岐→統合 = merge）、**Coding**（解析→パッチ→レビュー→コンパイル→リトライ）。ベンチ: なし（Fast 60ms/q0.50）vs Reflection（150ms/q0.87）vs Debate vs Planning vs All（並列 500ms/q0.82）。**デュアルモード**: Fast Runtime（デフォルト、議論なし = ロボット/リアルタイム制御向け）と Deliberation Runtime（オプション、CIR 等をプラグインロード = 研究/長時間推論向け）。Collective Intelligence Runtime は OS 本体に入れず Attachment として設計（`AI_ATTACHMENTS.md`）。
 
 v0.30（Phase 3.1）では **Thinking Modes** を追加 — 他 AI モデルの「Thinking ON/OFF」はブラックボックスだが、ArcAsha は**同じ OS の上で実行パイプラインだけを変え**、どの Attachment が何 ms 使ったかを可視化する（`modes.ts`）。**4 モード**: **Fast**（Kernel→Expert→Answer、Attachment なし = ロボット/リアルタイム）、**Auto**（Executive がタスクから自動選択: 2+2→Fast / 批判的レビュー→Reflection+Debate / 新しいアルゴリズム→Planning+Debate+Creativity = Meta Executive の estimateBudget と連携）、**Deep**（Planning→Debate→Reflection→Simulation を積極利用）、**Custom**（手動選択）。**Intelligence Scheduler**（`intelligenceScheduler(attachments, budgetMs)` = CPU スケジューラではなく知能スケジューラ）が**時間予算（Thinking Budget）**内で優先度順に配分（budget=200ms→reflection だけ / budget=1000ms→4 つ）。**Thinking Budget 可視化**: `Reflection 150ms / Debate 400ms / TOTAL 550ms`（他モデルにない透明性）。モード比較ベンチ: Fast（0ms/q0.50）< Auto（550ms/q0.90）≤ Deep（800ms/q0.90）、予算遵守は `usedMs ≤ budgetMs` で検証。統合品質は**最良を採用**（`mergeResults` を max に変更）。UI はチェックボックス（Fast デフォルト + Reflection/Debate/Planning/... の ON/OFF）にできる（`AI_ATTACHMENTS.md` v1.1）。
+
+v0.31（Phase 3.2）では **Attachment Validation（実証）** を追加 — 「機能を増やすより、アーキテクチャが有効である根拠を示す」。`validation.ts` で 3 つの実験: ① **モード実測**（Fast 0ms/q0.50/10mW < Auto 550ms/q0.90/1210mW < Deep 800ms/q0.90/1765mW、電力は決定論近似）② **Ablation Study**（Attachment ごとの効果: baseline 0.50 → +reflection **+76%** → +coding **+80%** → ALL +80%。「Reflection だけで何%向上するか」を定量化）③ **ロボットモード**（Camera 8ms+Vision 12ms+Planner 5ms+Motor 8ms=33ms の閉ループで Fast は **30.3fps 達成 ✓** / Auto も制御タスクを高速に保つ ✓ / Deep は **833ms=1.2fps 破綻 ✗** で成功率 0.95→0.20）。**リアルタイム制御では議論している暇がない**ことを定量比較（`AI_ATTACHMENTS.md` v1.2）。
 
 ## ロードマップ（Expert Evolution の先）
 

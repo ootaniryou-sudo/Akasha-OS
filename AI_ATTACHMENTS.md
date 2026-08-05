@@ -135,7 +135,53 @@ Deep      800ms     52   0.90
 
 **「必要なときだけ高度な推論を起動する」設計が有効**であることを示す（Fast は最速・最安、Auto/Deep は品質向上、予算遵守は `usedMs ≤ budgetMs` で検証）。
 
-## 7. Observability（Attachment Monitor）
+## 7. Validation（Phase 3.2）— アーキテクチャの有効性を実証
+
+「Attachment を追加したから便利になった」ではなく **「必要なときだけ高度な推論を起動する設計が有効である」** を定量で示す実験（`validation.ts`）。
+
+### 7.1 Fast vs Auto vs Deep 実測（レイテンシ・電力・品質）
+
+```
+=== Mode Validation（Fast vs Auto vs Deep）===
+mode   latency  quality  tokens  power
+Fast        0ms   0.50       8   10mW
+Auto      550ms   0.90      27  1210mW
+Deep      800ms   0.90      52  1765mW
+```
+
+- Fast は最速・最安・最低品質 / Auto は必要分だけ / Deep は最高品質（電力はレイテンシ・呼び出し・コストから決定論近似）
+
+### 7.2 Ablation Study（Attachment ごとの効果）
+
+```
+=== Attachment Ablation（効果測定）===
+config        quality  delta    latency  tokens
+なし（Fast）     0.50   +   0%       0ms      8
++reflection  0.88   +  76%     150ms     20
++debate      0.85   +  70%     400ms      6
++planning    0.75   +  50%     250ms     25
++creativity  0.80   +  60%     200ms     16
++search      0.80   +  60%     350ms      5
++simulation  0.80   +  60%     300ms     16
++coding      0.90   +  80%     500ms     31
+ALL（並列）      0.90   +  80%     500ms    119
+```
+
+**Reflection だけで +76%、Coding で +80%、ALL で +80%** — 各 Attachment の効果を単体で定量化できる（「どの Attachment が何に効くか」の根拠）。
+
+### 7.3 ロボットモード（閉ループ 30fps）
+
+```
+=== Robot Mode（閉ループ 30fps）===
+mode  loop    fps   30fps   success  reason
+Fast     33ms  30.3  ✓      0.95   閉ループ制御（Attachment なし）— 30fps 維持
+Auto     33ms  30.3  ✓      0.93   Auto は制御タスクを高速に保つ（Attachment 不要と判断）
+Deep    833ms   1.2  ✗      0.20   議論を閉ループに混ぜると 30fps を破綻（1.2fps で対象を見失う）
+```
+
+**リアルタイム制御では議論している暇がない**ことを定量比較。Camera(8ms)+Vision(12ms)+Planner(5ms)+Motor(8ms)=33ms の閉ループを、Deep は 833ms に破綻させる。
+
+## 8. Observability（Attachment Monitor）
 
 AI Monitor を拡張し、Attachment ごとに **Timeline / Cost / Latency / Accuracy / Calls** を表示（`observability.ts` — Core には触れないオプションの観測器）。
 
@@ -146,7 +192,7 @@ AI Monitor を拡張し、Attachment ごとに **Timeline / Cost / Latency / Acc
   t=0 reflection lat=150ms q=0.88 ...
 ```
 
-## 8. ベンチマーク
+## 9. ベンチマーク
 
 ```
 === Attachment Benchmark ===
@@ -161,7 +207,7 @@ BEST QUALITY : Reflection (quality=0.87)
 
 **なし（Fast）は最速・最安、Attachment は品質を向上**（レイテンシとトレードオフ）。
 
-## 9. デュアルモード（Fast / Deliberation）
+## 10. デュアルモード（Fast / Deliberation）
 
 | モード | 構成 | 用途 |
 |--------|------|------|
@@ -170,23 +216,25 @@ BEST QUALITY : Reflection (quality=0.87)
 
 ロボットでは Collective Runtime を無効化、研究用途では有効化 — 用途ごとに切り替えられる。
 
-## 10. Collective Intelligence Runtime（将来の Attachment）
+## 11. Collective Intelligence Runtime（将来の Attachment）
 
 「複数の AI がどう協調して考えるか」を OS の上位レイヤとして実装する方向（Debate / Consensus / Voting / Minority Report / Critic / Reviewer）。**OS 本体には入れず**、必要時だけロードする Attachment として設計する（推論品質は上がるが、レイテンシが増えるためリアルタイム制御では無効化）。
 
-## 11. 要件
+## 12. 要件
 
 - ✅ 後方互換（Core に破壊的変更なし）
 - ✅ プラグインアーキテクチャ / 遅延ロード
-- ✅ 独立テスト（selftest [65]-[66]）/ 可視化 / ドキュメント
+- ✅ 独立テスト（selftest [65]-[67]）/ 可視化 / ドキュメント
 - ✅ Kernel は最小限・知能は Attachment の分離
 - ✅ Thinking モード（Fast/Auto/Deep/Custom）+ 時間予算の可視化
+- ✅ 実証（モード実測 / Ablation / ロボット 30fps）
 
-## 12. 将来（ロードマップ）
+## 13. 将来（ロードマップ）
 
 - **Attachment Ecosystem**: Attachment 自身も Split / Merge / Retire（Expert Evolution の基準を再利用）
 - **Collective Intelligence Runtime**: Debate / Consensus / Voting / Minority Report / Critic / Reviewer を Attachment として実装
-- **実験**: Fast vs Reflection vs Debate（レイテンシ・正答率）/ Scheduler ON/OFF（予算遵守率）/ ロボットタスク（制御周期・成功率）
+- **Attachment Store**: 公式 + サードパーティ製 Attachment の配布・評価（Reflection ★5 / Scientific Reasoner ★4 等）
+- **実機実測**: 電力モデルを Phase 1 の Device Runtime（iPhone/iPad）と統合して実測
 
 ---
 

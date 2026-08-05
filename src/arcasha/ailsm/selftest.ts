@@ -65,6 +65,7 @@ import { registerBuiltinAttachments } from '../attachments/builtin.js';
 import { attachmentScheduler } from '../attachments/scheduler.js';
 import { runAttachmentBenchmark } from '../attachments/benchmark.js';
 import { resolvePipeline, intelligenceScheduler, runThinking, renderThinking, runThinkingBenchmark } from '../attachments/modes.js';
+import { runModeValidation, runAblation, runRobotSimulation, estimatePower, renderModeValidation, renderAblation, renderRobotSimulation } from '../attachments/validation.js';
 import type { AttachmentContext } from '../attachments/attachment.js';
 import type { Hypothesis } from './reasoning.js';
 
@@ -1067,6 +1068,36 @@ const deepQ66 = tb66.find((r) => r.mode === 'Deep')!.quality;
 const autoQ66 = tb66.find((r) => r.mode === 'Auto')!.quality;
 const fastQ66 = tb66.find((r) => r.mode === 'Fast')!.quality;
 check('品質: Deep ≥ Auto > Fast（必要なときだけ高度推論）', deepQ66 >= autoQ66 && autoQ66 > fastQ66, `fast=${fastQ66.toFixed(2)} auto=${autoQ66.toFixed(2)} deep=${deepQ66.toFixed(2)}`);
+
+// [67] Attachment Validation（アーキテクチャの有効性を実証する実験）
+console.log('\n[67] Attachment Validation');
+check('電力モデル（決定論近似）: 多いほど高い', estimatePower(0, 0, 0.1) < estimatePower(550, 3, 0.5) && estimatePower(550, 3, 0.5) < estimatePower(800, 4, 0.9));
+const mode67 = await runModeValidation();
+const f67 = mode67.find((r) => r.mode === 'Fast')!;
+const a67 = mode67.find((r) => r.mode === 'Auto')!;
+const d67 = mode67.find((r) => r.mode === 'Deep')!;
+check('実測: レイテンシ Fast < Auto < Deep', f67.latencyMs < a67.latencyMs && a67.latencyMs < d67.latencyMs, `fast=${f67.latencyMs} auto=${a67.latencyMs} deep=${d67.latencyMs}`);
+check('実測: 品質 Auto ≥ Fast（高度推論が品質を向上）', a67.quality >= f67.quality && d67.quality >= a67.quality, `fast=${f67.quality.toFixed(2)} auto=${a67.quality.toFixed(2)} deep=${d67.quality.toFixed(2)}`);
+check('実測: 電力 Fast < Auto < Deep（議論は電力も消費）', f67.powerMw < a67.powerMw && a67.powerMw < d67.powerMw, `${f67.powerMw}→${a67.powerMw}→${d67.powerMw}mW`);
+const abl67 = await runAblation();
+check('Ablation: baseline + 7 Attachment + ALL = 9 行', abl67.length === 9);
+check('Ablation: baseline = 0.50', abl67[0].config.includes('なし') && abl67[0].quality === 0.5);
+const refl67 = abl67.find((r) => r.config === '+reflection')!;
+check('Ablation: Reflection だけで品質 +50% 以上', refl67.deltaPct > 50, `+${refl67.deltaPct.toFixed(0)}%`);
+const all67 = abl67.find((r) => r.config === 'ALL（並列）')!;
+check('Ablation: ALL ≥ 単体の最良（効果が足し算で悪化しない）', all67.quality >= Math.max(...abl67.filter((r) => r.config.startsWith('+')).map((r) => r.quality)), `ALL=${all67.quality.toFixed(2)}`);
+check('Ablation: 全 Attachment で +70% 以上', all67.deltaPct > 70, `+${all67.deltaPct.toFixed(0)}%`);
+const rob67 = runRobotSimulation();
+const rFast67 = rob67.find((r) => r.mode === 'Fast')!;
+const rAuto67 = rob67.find((r) => r.mode === 'Auto')!;
+const rDeep67 = rob67.find((r) => r.mode === 'Deep')!;
+check('ロボット: Fast は 30fps 達成（33ms 閉ループ）', rFast67.meets30fps && rFast67.loopMs <= 34, `${rFast67.loopMs}ms / ${rFast67.fps}fps`);
+check('ロボット: Auto は制御タスクを高速に保つ', rAuto67.meets30fps && rAuto67.loopMs === rFast67.loopMs);
+check('ロボット: Deep は 30fps 破綻（議論を閉ループに混ぜない）', rDeep67.meets30fps === false && rDeep67.fps < 5, `${rDeep67.fps}fps`);
+check('ロボット: 成功率 Fast > Deep（リアルタイムの価値）', rFast67.successRate > rDeep67.successRate, `${rFast67.successRate} vs ${rDeep67.successRate}`);
+check('renderModeValidation が表示', renderModeValidation(mode67).includes('power'));
+check('renderAblation が delta 表示', renderAblation(abl67).includes('+76%') || renderAblation(abl67).includes('delta'));
+check('renderRobotSimulation が 30fps 判定表示', renderRobotSimulation(rob67).includes('30.3') && renderRobotSimulation(rob67).includes('✗'));
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');
