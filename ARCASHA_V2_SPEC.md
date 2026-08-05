@@ -5,10 +5,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.28** |
+| Status | **Draft v0.29** |
 | Date | 2026-08-06 |
 | Owner | ArcAsha Core Team |
-| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価）, `AI_REASONING.md`（Reasoning Runtime） |
+| 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価）, `AI_REASONING.md`（Reasoning Runtime）, `AI_ATTACHMENTS.md`（プラグイン層） |
 
 ---
 
@@ -516,6 +516,8 @@ v0.27（Phase 2.7）では **Meta Executive** を追加 — **「Executive 自�
 
 v0.28（Phase 2.9）では **Expert Evolution** を追加 — 「Expert Ecosystem（Expert が自分で進化する世界）」。Expert は固定されたルーティング単位ではなく **Expert Health**（Accuracy/Latency/Cost/Novelty/Confidence/Memory/Battery/GPU/Temperature + Utilization/Overlap）を持ち、**客観的基準**（`expert-evolution.ts`: `computeHealth` / `shouldSplit` / `shouldMerge` / `shouldRetire`）で進化する: **SPLIT**（util>0.6 かつ acc>0.8 かつ nov>0.7 かつ cost>0.5 = 忙しい+高精度+高新規性+高コスト → 専門化）/ **MERGE**（overlap>0.7 かつ 両者 health<0.7 = 機能重複 → 一般化）/ **RETIRE**（health<0.4 かつ util<0.2）。`expert-evolution-runtime.ts`（`runExpertEvolution`: 各ラウンドで Health 計測 → SPLIT/MERGE/RETIRE を決定・適用、SPLIT>MERGE>RETIRE 優先、未観測 Expert は判定しない）。新ノード `Expert#N`（X プレフィックス）+ `specializes` / `mergesInto` エッジ。デモ「数学エコシステムの進化」: math → {geometry,algebra,calculus,statistics} → geometry → {triangle,circle,coordinate,graph} → graph → {bfs,dfs,shortestpath,flow} まで自動細分化 + statistics+algebra → math-general（統合）+ calculus（health0.16）引退。**MoE との最大の違い** = Gate の先の Expert は固定、ArcAsha は Expert 自体が分裂・統合・引退する（OS というより AI の生態系）（`AI_REASONING.md` v0.5）。AILSM_IR は v1.8（expert / specializes / mergesInto）。
 
+v0.29（Phase 3.0）では **Intelligence Attachments** を追加 — **「AI OS = 小さく安定 / Advanced Intelligence = Attachment」**。Core はこれ以上複雑にせず、高度な知能をすべてプラグイン層（`src/arcasha/attachments/`）として実装（Linux のオプションカーネルモジュールと同様の思想）。`Attachment` インターフェース（id/name/version/enabled/supports/run + Thinking Budget: estimatedCost/Latency/Accuracy）、`AttachmentManager`（register/unregister/enable/disable/**load(遅延)**/unload/execute/executeParallel/executeMerged）、`attachmentScheduler`（Executive が予算で選択: 優先度 = accuracy − cost×0.5 − latency/10000）、`AttachmentMonitor`（Timeline/Cost/Latency/Accuracy/Calls を AI Monitor 拡張として表示）。組み込み 7 種: **Reflection**（Answer→Reflect→Score→Revise）、**Debate**（A/B/C→Judge→Consensus = Reasoning Search Runtime 再利用）、**Planning**（Goal→SubGoals→Plan→Schedule = AILSM Plan SSA）、**Search**（BFS/DFS/Beam/BestFirst/MCTS = Search Runtime）、**Creativity**（Hypothesis SSA で複数新規仮説）、**Simulation**（What-if 分岐→統合 = merge）、**Coding**（解析→パッチ→レビュー→コンパイル→リトライ）。ベンチ: なし（Fast 60ms/q0.50）vs Reflection（150ms/q0.87）vs Debate vs Planning vs All（並列 500ms/q0.82）。**デュアルモード**: Fast Runtime（デフォルト、議論なし = ロボット/リアルタイム制御向け）と Deliberation Runtime（オプション、CIR 等をプラグインロード = 研究/長時間推論向け）。Collective Intelligence Runtime は OS 本体に入れず Attachment として設計（`AI_ATTACHMENTS.md`）。
+
 ## ロードマップ（Expert Evolution の先）
 
 | Phase | 内容 |
@@ -523,9 +525,10 @@ v0.28（Phase 2.9）では **Expert Evolution** を追加 — 「Expert Ecosyste
 | **2.8 Distributed Reasoning** | 仮説ごとに複数デバイスへ並列実行（iPhone・iPad・Mac で同時探索、Executive が結果を統合） |
 | **3.0 Self-Organizing Expert Ecosystem** | Expert 群が自己組織化（進化 + タスク分布の学習） |
 | **4.0 Self-Improving AI OS** | Meta Executive と Expert Evolution を統合し、OS 全体が継続的に自己改善 |
+| **Collective Intelligence Runtime** | Debate/Consensus/Voting/Minority Report 等を Attachment として実装（議論が必要なタスクだけ起動） |
 | Tool Calling | Web 検索・コード実行・DB・API を Expert 化（ユーザー指定により未実装のまま） |
 
-> 位置づけ: ArcAsha は「MoE の代替」ではなく **「ニューラルモデルの上で動く AI オペレーティングシステム」**。研究の価値は「Executive があることで Transformer/MoE では難しい何ができるか」を実験で示すこと（探索途中の戦略切替 / 推論予算の管理 / Expert の自動細分化 / 複数デバイスへの動的仮説分散実行）。
+> 位置づけ: ArcAsha は「MoE の代替」ではなく **「ニューラルモデルの上で動く AI オペレーティングシステム」**。Core は高速・決定論・安定を保ち、知能は Attachment として必要時だけロードする。研究の価値は「Executive があることで Transformer/MoE では難しい何ができるか」を実験で示すこと（探索途中の戦略切替 / 推論予算の管理 / Expert の自動細分化 / 複数デバイスへの動的仮説分散実行）。
 
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 

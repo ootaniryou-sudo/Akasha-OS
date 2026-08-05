@@ -59,6 +59,12 @@ import { metaExecutive, updateMetaExecutive, metaExecutiveOf, metaExecutivesOf, 
 import { runMetaExecutiveDemo, renderMetaExecutive } from './meta-executive-runtime.js';
 import { expert, expertsOf, expertOf, computeHealth, shouldSplit, shouldMerge, shouldRetire, splitExpert, mergeExperts, retireExpert } from './expert-evolution.js';
 import { runExpertEvolutionDemo, renderExpertEvolution } from './expert-evolution-runtime.js';
+import { AttachmentManager } from '../attachments/manager.js';
+import { AttachmentMonitor } from '../attachments/observability.js';
+import { registerBuiltinAttachments } from '../attachments/builtin.js';
+import { attachmentScheduler } from '../attachments/scheduler.js';
+import { runAttachmentBenchmark } from '../attachments/benchmark.js';
+import type { AttachmentContext } from '../attachments/attachment.js';
 import type { Hypothesis } from './reasoning.js';
 
 let failed = 0;
@@ -967,6 +973,59 @@ check('進化後のプールに専門化先が含まれる', ['bfs', 'dfs', 'sho
 check('客観的理由が数値で説明される', ops64.every((o) => /util=|overlap=|health=/.test(o.reason)));
 check('Expert Health が記録される', Object.keys(r64.healthByExpert).length > 0 && r64.healthByExpert.math?.health > 0);
 check('renderExpertEvolution が進化ツリー表示', renderExpertEvolution(r64).includes('=== Expert Evolution') && renderExpertEvolution(r64).includes('SPLIT'));
+
+// [65] Intelligence Attachments（Kernel 最小・知能はプラグイン）
+console.log('\n[65] Intelligence Attachments');
+const mon65 = new AttachmentMonitor();
+const mgr65 = new AttachmentManager(mon65);
+registerBuiltinAttachments(mgr65);
+check('登録は遅延（load 前は実体なし）', mgr65.isRegistered('reflection') === true && mgr65.get('reflection') === undefined);
+await mgr65.load('reflection');
+check('load で実体が生成される', mgr65.get('reflection')?.id === 'reflection');
+const boot65 = (await import('./expert-runtime.js')).boot();
+const ctx65: AttachmentContext = { text: 'この論文を批判的に評価して', booted: boot65, attach: (id) => mgr65.execute(id, ctx65) };
+const refl65 = await mgr65.execute('reflection', ctx65);
+check('Reflection: Answer→Reflect→Revise（品質向上）', refl65.quality > 0.7 && refl65.text.includes('再考済み') && refl65.detail.some((d) => d.startsWith('REFLECT')));
+await mgr65.load('debate');
+const deb65 = await mgr65.execute('debate', ctx65);
+check('Debate: 立場を議論して合意（Judge=ACCEPT）', deb65.text.includes('中立的に統合する'), deb65.text);
+await mgr65.load('planning');
+const pl65 = await mgr65.execute('planning', ctx65);
+check('Planning: Goal→SubGoals→Plan→Schedule（AILSM Plan）', pl65.detail.some((d) => d.includes('PLAN')) && pl65.detail.some((d) => d.includes('SCHEDULE')));
+const ctx65b: AttachmentContext = { text: '新しいアイデアを考えて', booted: boot65, attach: (id) => mgr65.execute(id, ctx65b) };
+await mgr65.load('creativity');
+const cre65 = await mgr65.execute('creativity', ctx65b);
+check('Creativity: Hypothesis SSA で複数新規仮説', (cre65.text.match(/ /g) ?? []).length >= 2 && cre65.detail.some((d) => d.startsWith('EXPAND')));
+const ctx65c: AttachmentContext = { text: '情報を探して', booted: boot65, attach: (id) => mgr65.execute(id, ctx65c) };
+await mgr65.load('search');
+const s65 = await mgr65.execute('search', ctx65c);
+check('Search: Search Runtime で最良経路を採用', s65.text.includes('有望な経路'), s65.text);
+const ctx65d: AttachmentContext = { text: 'もし失敗したら想定して', booted: boot65, attach: (id) => mgr65.execute(id, ctx65d) };
+await mgr65.load('simulation');
+const sim65 = await mgr65.execute('simulation', ctx65d);
+check('Simulation: 分岐実行→統合', sim65.text.includes('前提A') && sim65.detail.some((d) => d.startsWith('MERGE')));
+const ctx65e: AttachmentContext = { text: 'コードを実装して', booted: boot65, attach: (id) => mgr65.execute(id, ctx65e) };
+await mgr65.load('coding');
+const cod65 = await mgr65.execute('coding', ctx65e);
+check('Coding: 解析→パッチ→レビュー→コンパイル', cod65.detail.some((d) => d.startsWith('ANALYZE')) && cod65.detail.some((d) => d.startsWith('COMPILE')) && cod65.ok);
+const supports65 = (task: string): string => mgr65.list().filter((a) => a.enabled && a.supports(task)).map((a) => a.id).sort().join(',');
+check('supports: 批判的評価 → reflection+debate', supports65('この論文を批判的に評価して') === 'debate,reflection');
+check('supports: 実装 → coding', supports65('コードを実装して') === 'coding');
+check('supports: 計画 → planning', supports65('どうやって進めるか計画して') === 'planning');
+const sched65 = attachmentScheduler(mgr65, 'この論文を批判的に評価して', { budget: 0.6 });
+check('Executive が予算で Attachment を選択', sched65.length >= 1 && sched65.every((s) => s.budget <= 0.6) && sched65[0].priority > 0);
+await mgr65.load('simulation');
+const par65 = await mgr65.executeMerged(['reflection', 'debate'], ctx65, 'par');
+check('並列実行 + 統合（品質は平均）', par65.ok && par65.quality > 0 && par65.detail[0].startsWith('MERGE(par)'));
+check('Monitor に Timeline/Cost/Latency/Accuracy/Calls', mon65.totals().calls >= 4 && mon65.render().includes('=== Attachment Monitor ===') && mon65.timeline().includes('Attachment Timeline'));
+await mgr65.disable('debate');
+check('disable で参加しなくなる', attachmentScheduler(mgr65, 'この論文を批判的に評価して', { budget: 1.0 }).every((s) => s.id !== 'debate'));
+await mgr65.enable('debate');
+const bm65 = await runAttachmentBenchmark();
+check('Benchmark: 5 モード（なし/Reflection/Debate/Planning/All）', bm65.length === 5);
+check('Benchmark: Attachment で品質が上がる', bm65[1].quality > bm65[0].quality && bm65[2].quality > bm65[0].quality);
+const best65 = bm65.reduce((a, b) => (b.quality > a.quality ? b : a), bm65[0]);
+check('Benchmark: 最良品質を報告', best65.quality > 0.8, `best=${best65.mode} q=${best65.quality.toFixed(2)}`);
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');
