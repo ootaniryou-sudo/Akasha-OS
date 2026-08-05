@@ -64,6 +64,7 @@ import { AttachmentMonitor } from '../attachments/observability.js';
 import { registerBuiltinAttachments } from '../attachments/builtin.js';
 import { attachmentScheduler } from '../attachments/scheduler.js';
 import { runAttachmentBenchmark } from '../attachments/benchmark.js';
+import { resolvePipeline, intelligenceScheduler, runThinking, renderThinking, runThinkingBenchmark } from '../attachments/modes.js';
 import type { AttachmentContext } from '../attachments/attachment.js';
 import type { Hypothesis } from './reasoning.js';
 
@@ -1016,7 +1017,7 @@ const sched65 = attachmentScheduler(mgr65, 'この論文を批判的に評価し
 check('Executive が予算で Attachment を選択', sched65.length >= 1 && sched65.every((s) => s.budget <= 0.6) && sched65[0].priority > 0);
 await mgr65.load('simulation');
 const par65 = await mgr65.executeMerged(['reflection', 'debate'], ctx65, 'par');
-check('並列実行 + 統合（品質は平均）', par65.ok && par65.quality > 0 && par65.detail[0].startsWith('MERGE(par)'));
+check('並列実行 + 統合（品質は最良を採用）', par65.ok && par65.quality > 0 && par65.detail[0].startsWith('MERGE(par)'));
 check('Monitor に Timeline/Cost/Latency/Accuracy/Calls', mon65.totals().calls >= 4 && mon65.render().includes('=== Attachment Monitor ===') && mon65.timeline().includes('Attachment Timeline'));
 await mgr65.disable('debate');
 check('disable で参加しなくなる', attachmentScheduler(mgr65, 'この論文を批判的に評価して', { budget: 1.0 }).every((s) => s.id !== 'debate'));
@@ -1026,6 +1027,46 @@ check('Benchmark: 5 モード（なし/Reflection/Debate/Planning/All）', bm65.
 check('Benchmark: Attachment で品質が上がる', bm65[1].quality > bm65[0].quality && bm65[2].quality > bm65[0].quality);
 const best65 = bm65.reduce((a, b) => (b.quality > a.quality ? b : a), bm65[0]);
 check('Benchmark: 最良品質を報告', best65.quality > 0.8, `best=${best65.mode} q=${best65.quality.toFixed(2)}`);
+
+// [66] Thinking Modes（Fast / Auto / Deep / Custom + Intelligence Scheduler）
+console.log('\n[66] Thinking Modes');
+const mgr66 = new AttachmentManager();
+registerBuiltinAttachments(mgr66);
+await Promise.all((['reflection', 'debate', 'planning', 'creativity', 'search', 'simulation', 'coding'] as const).map((id) => mgr66.load(id)));
+const plFast66 = await resolvePipeline('fast', mgr66, 'この論文を批判的にレビューして');
+check('Fast: Attachment なし（Kernel→Expert→Answer）', plFast66.length === 0);
+const plTrivial66 = await resolvePipeline('auto', mgr66, '2+2を計算して');
+check('Auto: 2+2 → Fast Runtime のみ', plTrivial66.length === 0);
+const plCrit66 = await resolvePipeline('auto', mgr66, 'この論文を批判的にレビューして');
+check('Auto: 批判的レビュー → Reflection+Debate を自動起動', plCrit66.includes('reflection') && plCrit66.includes('debate'), plCrit66.join(','));
+const plHigh66 = await resolvePipeline('auto', mgr66, '新しいアルゴリズムを設計して', { budgetMs: 1500 });
+check('Auto: 難しいタスク → Planning+Debate+Creativity を自動起動', plHigh66.includes('planning') && plHigh66.includes('debate') && plHigh66.includes('creativity'), plHigh66.join(','));
+const plDeep66 = await resolvePipeline('deep', mgr66, 'この論文を批判的にレビューして', { budgetMs: 2000 });
+check('Deep: Planning→Debate→Reflection→Simulation を積極利用', ['planning', 'debate', 'reflection', 'simulation'].every((id) => plDeep66.includes(id)), plDeep66.join(','));
+const plCustom66 = await resolvePipeline('custom', mgr66, 'この論文を批判的にレビューして', { attachments: ['reflection'] });
+check('Custom: ユーザー指定の Attachment のみ', plCustom66.length === 1 && plCustom66[0] === 'reflection');
+const pool66 = mgr66.list();
+const sched200_66 = intelligenceScheduler(pool66, 200);
+const sched1000_66 = intelligenceScheduler(pool66, 1000);
+check('Intelligence Scheduler: 時間予算内（sum ≤ budget）', sched200_66.reduce((s, x) => s + x.budgetMs, 0) <= 200 && sched1000_66.reduce((s, x) => s + x.budgetMs, 0) <= 1000);
+check('Intelligence Scheduler: 予算が小さいと Attachment が減る', sched1000_66.length > sched200_66.length, `200ms→${sched200_66.length} / 1000ms→${sched1000_66.length}`);
+const boot66 = (await import('./expert-runtime.js')).boot();
+const thFast66 = await runThinking('この論文を批判的にレビューして', boot66, { mode: 'fast' });
+check('runThinking(Fast): 実行なし・品質は基底', thFast66.pipeline.length === 0 && thFast66.result.quality === 0.5);
+const thAuto66 = await runThinking('この論文を批判的にレビューして', boot66, { mode: 'auto' });
+check('runThinking(Auto): 内訳が可視化（Reflection+Debate の ms）', thAuto66.breakdown.some((b) => b.id === 'reflection' && b.latencyMs > 0) && thAuto66.breakdown.some((b) => b.id === 'debate') && thAuto66.usedMs === thAuto66.breakdown.reduce((s, b) => s + b.latencyMs, 0));
+check('runThinking(Auto): 品質が Fast より高い', thAuto66.result.quality > 0.7, thAuto66.result.quality.toFixed(2));
+const thCustom66 = await runThinking('この論文を批判的にレビューして', boot66, { mode: 'custom', attachments: ['reflection'] });
+check('runThinking(Custom): 指定 Attachment だけ実行', thCustom66.pipeline.join(',') === 'reflection');
+const thBudget66 = await runThinking('この論文を批判的にレビューして', boot66, { mode: 'auto', budgetMs: 200 });
+check('Thinking Budget 遵守（budget=200ms → usedMs ≤ 200）', thBudget66.usedMs <= 200, `used=${thBudget66.usedMs}ms`);
+check('renderThinking が内訳（TOTAL）表示', renderThinking(thAuto66).includes('TOTAL') && renderThinking(thFast66).includes('Attachment なし'));
+const tb66 = await runThinkingBenchmark();
+check('モード比較ベンチ: Fast/Auto/Deep の 3 行', tb66.length === 3);
+const deepQ66 = tb66.find((r) => r.mode === 'Deep')!.quality;
+const autoQ66 = tb66.find((r) => r.mode === 'Auto')!.quality;
+const fastQ66 = tb66.find((r) => r.mode === 'Fast')!.quality;
+check('品質: Deep ≥ Auto > Fast（必要なときだけ高度推論）', deepQ66 >= autoQ66 && autoQ66 > fastQ66, `fast=${fastQ66.toFixed(2)} auto=${autoQ66.toFixed(2)} deep=${deepQ66.toFixed(2)}`);
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

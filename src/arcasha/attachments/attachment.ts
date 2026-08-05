@@ -65,16 +65,16 @@ export function makeResult(
   return { ok: true, text, quality: Math.min(1, Math.max(0, quality)), latencyMs, calls, tokens: tokens ?? estimateTokens(text), detail };
 }
 
-/** 複数 Attachment の結果を統合（並列実行後のマージ） */
+/** 複数 Attachment の結果を統合（並列実行後のマージ）— 品質は最良の成果を採用 */
 export function mergeResults(id: string, results: AttachmentResult[], sep = ' '): AttachmentResult {
   const texts = results.filter((r) => r.ok).map((r) => r.text);
   return {
     ok: results.length > 0 && results.every((r) => r.ok),
     text: texts.join(sep),
-    quality: results.reduce((s, r) => s + r.quality, 0) / Math.max(1, results.length),
+    quality: results.reduce((m, r) => Math.max(m, r.quality), 0),
     latencyMs: Math.max(0, ...results.map((r) => r.latencyMs)),
     calls: results.reduce((s, r) => s + r.calls, 0),
     tokens: results.reduce((s, r) => s + r.tokens, 0),
-    detail: [`MERGE(${id}): ${results.length} 結果を統合`, ...results.flatMap((r) => r.detail)],
+    detail: [`MERGE(${id}): ${results.length} 結果を統合（最良品質 ${results.reduce((m, r) => Math.max(m, r.quality), 0).toFixed(2)}）`, ...results.flatMap((r) => r.detail)],
   };
 }

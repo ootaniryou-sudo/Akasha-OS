@@ -87,9 +87,55 @@ Executive は「どの Attachment を / いつ / どれだけの予算で / ど�
 
 ## 5. 並列実行
 
-Reflection / Debate / Planning 等を **Promise.all で同時実行**し、`mergeResults` で統合（品質は平均、レイテンシは最大、コストは合計）。
+Reflection / Debate / Planning 等を **Promise.all で同時実行**し、`mergeResults` で統合（品質は**最良を採用**、レイテンシは最大、コストは合計）。
 
-## 6. Observability（Attachment Monitor）
+## 6. Thinking Modes（Phase 3.1）— Fast / Auto / Deep / Custom
+
+他 AI モデルの「Thinking ON/OFF」はブラックボックス（内部で何か長く考えるだけ）。ArcAsha は**同じ OS の上で実行パイプラインだけを変え**、どの Attachment がどれだけ時間を使ったかを可視化する（`modes.ts`）。
+
+### 6.1 4 モード
+
+| モード | パイプライン | 用途 |
+|--------|--------------|------|
+| **Fast**（デフォルト） | Kernel → Expert Runtime → Answer（Attachment なし） | ロボット・リアルタイム制御・2+2 |
+| **Auto** | Executive がタスクから自動選択 | 一般利用（2+2 → Fast / 批判的レビュー → Reflection+Debate / 新しいアルゴリズム → Planning+Debate+Creativity） |
+| **Deep** | Planning → Debate → Reflection → Simulation（積極利用） | 研究・科学・長時間推論 |
+| **Custom** | ユーザーが手動で Attachment を選択 | 細かい制御 |
+
+- **Auto の自動選択**: `estimateBudget`（Meta Executive の Thinking Budget）で 2+2 → Reasoning 禁止 → Fast。難しいタスク（high）なら Planning + Debate + Creativity も自動起動。
+
+### 6.2 Intelligence Scheduler（時間予算）
+
+CPU スケジューラではなく**知能スケジューラ**。`intelligenceScheduler(attachments, budgetMs)` が**時間予算（Thinking Budget）**内で優先度順に配分:
+
+```
+優先度 = estimatedAccuracy − estimatedCost×0.5 − estimatedLatency/10000
+budget=200ms  → reflection(150ms) だけ
+budget=1000ms → reflection(150ms) + creativity(200ms) + debate(400ms) + planning(250ms)
+```
+
+### 6.3 Thinking Budget の可視化（他モデルにはない透明性）
+
+```
+=== Thinking (auto) budget=1000ms used=550ms ===
+  reflection   150ms
+  debate       400ms
+  TOTAL       550ms / quality=0.90
+```
+
+### 6.4 モード比較ベンチ
+
+```
+=== Thinking Benchmark ===
+mode  latency  tokens  quality
+Fast        0ms      8   0.50
+Auto      550ms     27   0.90
+Deep      800ms     52   0.90
+```
+
+**「必要なときだけ高度な推論を起動する」設計が有効**であることを示す（Fast は最速・最安、Auto/Deep は品質向上、予算遵守は `usedMs ≤ budgetMs` で検証）。
+
+## 7. Observability（Attachment Monitor）
 
 AI Monitor を拡張し、Attachment ごとに **Timeline / Cost / Latency / Accuracy / Calls** を表示（`observability.ts` — Core には触れないオプションの観測器）。
 
@@ -100,7 +146,7 @@ AI Monitor を拡張し、Attachment ごとに **Timeline / Cost / Latency / Acc
   t=0 reflection lat=150ms q=0.88 ...
 ```
 
-## 7. ベンチマーク
+## 8. ベンチマーク
 
 ```
 === Attachment Benchmark ===
@@ -115,7 +161,7 @@ BEST QUALITY : Reflection (quality=0.87)
 
 **なし（Fast）は最速・最安、Attachment は品質を向上**（レイテンシとトレードオフ）。
 
-## 8. デュアルモード（Fast / Deliberation）
+## 9. デュアルモード（Fast / Deliberation）
 
 | モード | 構成 | 用途 |
 |--------|------|------|
@@ -124,16 +170,23 @@ BEST QUALITY : Reflection (quality=0.87)
 
 ロボットでは Collective Runtime を無効化、研究用途では有効化 — 用途ごとに切り替えられる。
 
-## 9. Collective Intelligence Runtime（将来の Attachment）
+## 10. Collective Intelligence Runtime（将来の Attachment）
 
 「複数の AI がどう協調して考えるか」を OS の上位レイヤとして実装する方向（Debate / Consensus / Voting / Minority Report / Critic / Reviewer）。**OS 本体には入れず**、必要時だけロードする Attachment として設計する（推論品質は上がるが、レイテンシが増えるためリアルタイム制御では無効化）。
 
-## 10. 要件
+## 11. 要件
 
 - ✅ 後方互換（Core に破壊的変更なし）
 - ✅ プラグインアーキテクチャ / 遅延ロード
-- ✅ 独立テスト（selftest [65]）/ 可視化 / ドキュメント
+- ✅ 独立テスト（selftest [65]-[66]）/ 可視化 / ドキュメント
 - ✅ Kernel は最小限・知能は Attachment の分離
+- ✅ Thinking モード（Fast/Auto/Deep/Custom）+ 時間予算の可視化
+
+## 12. 将来（ロードマップ）
+
+- **Attachment Ecosystem**: Attachment 自身も Split / Merge / Retire（Expert Evolution の基準を再利用）
+- **Collective Intelligence Runtime**: Debate / Consensus / Voting / Minority Report / Critic / Reviewer を Attachment として実装
+- **実験**: Fast vs Reflection vs Debate（レイテンシ・正答率）/ Scheduler ON/OFF（予算遵守率）/ ロボットタスク（制御周期・成功率）
 
 ---
 
