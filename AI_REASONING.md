@@ -4,10 +4,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v0.3（Phase 2.6 実装済み）** |
+| Status | **Spec v0.4（Phase 2.7 実装済み）** |
 | Date | 2026-08-06 |
-| 実装 | `reasoning.ts`, `reasoning-runtime.ts`, `search.ts`, `reasoning-search.ts`, `executive.ts`, `executive-runtime.ts` |
-| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.6）, `AILSA_RUNTIME.md`, `AI_VIRTUAL_MEMORY.md`, `AI_EVALUATION.md` |
+| 実装 | `reasoning.ts`, `reasoning-runtime.ts`, `search.ts`, `reasoning-search.ts`, `executive.ts`, `executive-runtime.ts`, `meta-executive.ts`, `meta-executive-runtime.ts` |
+| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.7）, `AILSA_RUNTIME.md`, `AI_VIRTUAL_MEMORY.md`, `AI_EVALUATION.md` |
 
 ---
 
@@ -194,20 +194,72 @@ FINAL : 統計的に検証する + 位相で一般化する（統合仮説）
 
 > **Transformer/MoE との差**: ニューラル内部で探索を固定したまま進めるのに対し、ArcAsha は OS レベルで**探索の途中に戦略自体を動的に変えられる**。これが Executive Runtime の実験テーマ。
 
-## 6. 4 本柱
+## 6. Meta Executive（Phase 2.7）— Executive を学習する Executive
+
+**「Executive 自身はどう賢くなるの？」** に答える層。Executive の探索方法はルールベース（`if stagnation: beam += 2`）のままでは限界がある。Meta Executive は **Executive policy → 実行 → 評価 → 改善** のオンライン学習ループで Executive の設定自体を最適化する。
+
+```
+Task ──manages──▶ Meta Executive ──manages──▶ Executive ──manages──▶ Process
+```
+
+### 6.1 Thinking Budget（推論予算）—「そもそも今考えるべきか？」
+
+`estimateBudget(text, {battery})` がタスクの複雑さと資源から予算を決定する（決定論）:
+
+| 入力 | 予算 | 理由 |
+|------|------|------|
+| `2+2を計算して` | **Reasoning 禁止**（予算 0、直接計算） | trivial |
+| `新しい数学の理論を考える` | 大予算（maxExpansions=8 / depth=10 / 全 Expert） | high |
+| Battery 8% + 難しいタスク | **Reasoning 禁止**（Easy Expert だけ / GPU 不使用） | battery |
+| Battery 20% | 軽い推論のみ（maxExpansions=2 / math+reasoning） | battery-low |
+
+> 人間の「そもそも今考えるべきか？」を OS が管理する — Transformer にはない層。CPU / Memory / Battery / Time / Network / **Reasoning** Budget は Executive が管理する資源。
+
+### 6.2 学習ループ（meta-executive-runtime.ts）
+
+各 candidate（Search Policy / Beam / Explore / Expert 編成）で `runExecutive` を試行:
+
+```
+metaScore = accuracy − latency/10000 − cost×0.02
+```
+
+- 精度（採用仮説の最大 score）/ レイテンシ（決定論）/ コスト（EXPAND 数）を計測
+- 設定 → 結果 を蓄積（visits / meanAccuracy / bestAccuracy）
+- 最良 metaScore の設定を **推奨**（`◀ 推奨`）
+- **Search Policy 自体を切り替え**（beam → best-first → mcts → dfs）
+
+### 6.3 デモ（数学の新理論を考える）
+
+```
+=== Meta Executive (数学の新理論を考える) ===
+BUDGET : high allowReasoning=true maxExpansions=8 beam=4 depth=10 battery=100%
+T1 beam       beam=2 explore=0.4 experts=[math,reasoning,search] → acc=0.00 lat=1660ms cost=1 meta=-0.186
+T2 best-first beam=1 explore=0.2 experts=[math]                   → acc=0.71 lat=1400ms cost=3 meta=0.510 ◀ 推奨
+T3 mcts       beam=2 explore=0.5 experts=[math,reasoning]         → acc=0.00 lat=1660ms cost=1 meta=-0.186
+POLICY : beam→best-first → best-first→mcts
+FINAL  : 統計的に検証する + 位相で一般化する（統合仮説）
+```
+
+- **T1/T3 失敗**: 探索が強すぎる（explore=0.4/0.5）と有望な仮説（計算 0.45）を KILL してしまう → acc=0
+- **T2 成功**: best-first / explore=0.2 が停滞を検知して探索へ切替 → 統合仮説 acc=0.71
+- **学習結果**: beam1 / explore0.2 / **search 不要**（編成から外れた）を推奨
+- これは Transformer にない「**推論戦略・探索予算・資源配分を学習して改善する**」層
+
+## 7. 4 本柱
 
 | 柱 | 成果 |
 |----|------|
-| AI Operating IR | AILSM（v1.6: hypothesis / expands / executive） |
+| AI Operating IR | AILSM（v1.7: hypothesis / expands / executive / metaexecutive） |
 | AI Virtual Memory | AVM（Context / Page / Slice / Cache / TLB / Tier） |
 | AI Kernel | Kernel / Process / Thread / Syscall / Namespace |
-| **AI Reasoning Runtime** | **Hypothesis SSA + Reasoning Graph + Search + Executive（本仕様）** |
+| **AI Reasoning Runtime** | **Hypothesis SSA + Reasoning Graph + Search + Executive + Meta Executive（本仕様）** |
 
-## 7. 今後の拡張（ロードマップ）
+## 8. 今後の拡張（ロードマップ）
 
-- **Phase 2.7 Meta Executive**: Executive 自身の自己改善 — Beam 幅 / 探索深さ / Reflection 閾値のオンライン最適化（ODAR を Routing だけでなく Search Policy / Beam / Threshold / Scheduler まで拡張）
 - **Phase 2.8 Distributed Reasoning**: 仮説ごとに複数デバイスへ並列実行（iPhone・iPad・Mac で同時探索、Executive が結果を統合）
 - **Phase 3 Expert Ecosystem**: 数十〜数百の Sub-Expert の動的ロード・アンロード + Capability 継続学習
+- **Tool Calling**: Web 検索・コード実行・DB・API を Expert 化（ユーザー指定により未実装のまま）
+- **Expert 細分化**: 数学 → 図形・統計・代数など
 - 実験: 「探索の途中で戦略を切り替える」「複数デバイスへの動的仮説分散実行」= MoE では難しい ArcAsha 独自のテーマ
 
 ---

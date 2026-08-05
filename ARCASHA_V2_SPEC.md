@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.26** |
+| Status | **Draft v0.27** |
 | Date | 2026-08-06 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価）, `AI_REASONING.md`（Reasoning Runtime） |
@@ -512,15 +512,18 @@ v0.25（Phase 2.5）では **Reasoning Search Runtime** を追加 — **推論�
 
 v0.26（Phase 2.6）では **Executive Runtime** を追加 — Reasoning Graph のさらに上位に **「誰が全体を指揮するのか」** を司る **Executive（指揮官）** を置く。`executive.ts`（新ノード `Executive#N`: goal / policy / beam / explore / temperature / experts / rounds / accepts / kills / switches、`task manages executive` / `executive manages process`）と `executive-runtime.ts`（`runExecutive`: READY → EXPAND → EVALUATE → REFLECT → **EXECUTIVE（戦略切替）** → 次ラウンド）。`defaultDecide(ctx)` が**探索の途中で戦略を切替える**（差し替え可）: 停滞（accept=0）→ 探索へ（policy/beam/explore 切替 + Expert 追加）/ 成功+淘汰 → 活用へ微調整 + 弱い Expert を編成から外す / 収束 → 活用へ。デモ「数学の新理論を考える」: 活用（best-first/beam1/explore0.2）で停滞 → **R0 探索へ切替**（beam3/explore0.6/+search+reasoning）→ R1 新規性0.90 の「統計」ACCEPT + 新規性0.05「鵜呑み」KILL + **remove search** → R2「位相」ACCEPT → 最終 MERGE「統計的に検証する + 位相で一般化する（統合仮説）」。**Transformer/MoE との差** = ニューラル内部で探索を固定するのではなく、OS レベルで**探索の途中に戦略自体を動的に変えられる**（`AI_REASONING.md` v0.3）。AILSM_IR は v1.6（executive / manages）。
 
-## ロードマップ（Executive の先）
+v0.27（Phase 2.7）では **Meta Executive** を追加 — **「Executive 自身はどう賢くなるの？」** に答える、Executive を学習する Executive。`meta-executive.ts`（新ノード `MetaExecutive#N`: goal / policy / beam / explore / experts / trials / bestAccuracy / bestLatency、`task manages metaexecutive` / `metaexecutive manages executive`）と **Thinking Budget**（`estimateBudget(text, {battery})`: 2+2 → Reasoning 禁止 / 新理論 → 大予算(beam4/depth10/全Expert) / Battery 8% → Reasoning 禁止 / 低バッテリ → 軽い推論のみ）を実装。`meta-executive-runtime.ts`（`runMetaExecutive`: **Executive policy → 実行 → 評価 → 改善** のオンライン学習ループ）。各 candidate で `runExecutive` を試行し `metaScore = accuracy − latency/10000 − cost×0.02` で最良設定を学習・推奨、**Search Policy 自体を切替**（beam → best-first → mcts）。デモ「数学の新理論を考える」: T1(beam2/explore0.4)と T3(mcts/explore0.5)は探索が強すぎて有望仮説を KILL し acc=0 / T2(best-first/explore0.2)が停滞→探索切替で統合仮説 acc=0.71 → **推奨: beam1/explore0.2/search 不要**。Transformer にない「推論戦略・探索予算・資源配分を学習して改善する層」（`AI_REASONING.md` v0.4）。AILSM_IR は v1.7（metaexecutive）。
+
+## ロードマップ（Meta Executive の先）
 
 | Phase | 内容 |
 |-------|------|
-| **2.7 Meta Executive** | Executive 自身の自己改善 — Beam 幅 / 探索深さ / Reflection 閾値のオンライン最適化（ODAR を Routing だけでなく Search Policy / Beam / Threshold / Scheduler まで拡張 = 真のオンライン学習） |
 | **2.8 Distributed Reasoning** | 仮説ごとに複数デバイスへ並列実行（iPhone・iPad・Mac で同時探索、Executive が結果を統合） |
 | **3 Expert Ecosystem** | 数十〜数百の Sub-Expert の動的ロード・アンロード + Capability 継続学習 |
+| Tool Calling | Web 検索・コード実行・DB・API を Expert 化（ユーザー指定により未実装のまま） |
+| Expert 細分化 | 数学 → 図形・統計・代数など |
 
-> 位置づけ: ArcAsha は「MoE の代替」ではなく **「ニューラルモデルの上で動く AI オペレーティングシステム」**。研究の価値は「Executive があることで Transformer/MoE では難しい何ができるか」を実験で示すこと（探索途中の戦略切替 / 複数デバイスへの動的仮説分散実行）。
+> 位置づけ: ArcAsha は「MoE の代替」ではなく **「ニューラルモデルの上で動く AI オペレーティングシステム」**。研究の価値は「Executive があることで Transformer/MoE では難しい何ができるか」を実験で示すこと（探索途中の戦略切替 / 推論予算の管理 / 複数デバイスへの動的仮説分散実行）。
 
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 

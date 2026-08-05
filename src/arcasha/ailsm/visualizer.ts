@@ -38,6 +38,7 @@ function nodeIdOf(n: AilsmNode): string {
     : n.kind === 'frame' ? 'Fr'
     : n.kind === 'hypothesis' ? 'H'
     : n.kind === 'executive' ? 'E'
+    : n.kind === 'metaexecutive' ? 'ME'
     : 'Ns'; // namespace
   return `${prefix}${n.id}`;
 }
@@ -93,6 +94,7 @@ export function toMermaid(g: AilsmGraph): string {
     else if (n.kind === 'frame') lines.push(`  ${id}/"${label}"/`); // 平行四辺形（推論フレーム）
     else if (n.kind === 'hypothesis') lines.push(`  ${id}("${label}")`); // 円（仮説）
     else if (n.kind === 'executive') lines.push(`  ${id}{"${label}"}`); // 菱形（指揮官）
+    else if (n.kind === 'metaexecutive') lines.push(`  ${id}{("${label}")}`); // 菱形+丸（Meta 指揮官）
     else lines.push(`  ${id}(["${label}"])`); // スタジアム（namespace）
   }
   const idByNode = new Map(g.nodes.map((n) => [n.id, nodeIdOf(n)]));
@@ -129,6 +131,7 @@ export function toDot(g: AilsmGraph): string {
     frame: 'component',
     hypothesis: 'component',
     executive: 'diamond',
+    metaexecutive: 'doubleoctagon',
   };
   const lines = ['digraph AILSM {', '  node [fontname="Helvetica"];'];
   for (const n of g.nodes) {

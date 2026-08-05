@@ -30,7 +30,8 @@ export type NodeKind =
   | 'span'
   | 'frame'
   | 'hypothesis'
-  | 'executive';
+  | 'executive'
+  | 'metaexecutive';
 
 export interface AilsmNode {
   id: number;
@@ -75,6 +76,7 @@ const KIND_LABEL: Record<NodeKind, string> = {
   frame: 'Frame',
   hypothesis: 'Hypothesis',
   executive: 'Executive',
+  metaexecutive: 'MetaExecutive',
 };
 
 export function nodeKindLabel(kind: NodeKind): string {

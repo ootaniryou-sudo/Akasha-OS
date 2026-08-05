@@ -55,6 +55,8 @@ import { selectionScore, BeamSearchPolicy, BestFirstPolicy, DFSPolicy, BFSPolicy
 import { runSearchDemo, renderSearch } from './reasoning-search.js';
 import { executive, executivesOf, executiveOf, updateExecutive } from './executive.js';
 import { runExecutiveDemo, renderExecutive, defaultDecide } from './executive-runtime.js';
+import { metaExecutive, updateMetaExecutive, metaExecutiveOf, metaExecutivesOf, estimateBudget } from './meta-executive.js';
+import { runMetaExecutiveDemo, renderMetaExecutive } from './meta-executive-runtime.js';
 import type { Hypothesis } from './reasoning.js';
 
 let failed = 0;
@@ -897,6 +899,38 @@ check('ラウンド数 ≥ 3（戦略切替が複数回）', r62.rounds.length >
 check('最終 MERGE（統合仮説）', r62.finalText !== null && r62.finalText.includes('統合仮説'), String(r62.finalText));
 check('renderExecutive がツリー + 戦略切替ログ表示', renderExecutive(r62).includes('=== Executive Runtime') && renderExecutive(r62).includes('EXECUTIVE(R0)'));
 check('defaultDecide: 停滞→探索 / 成功→活用', defaultDecide({ round: 0, config: { policy: 'best-first', beam: 1, weights: { explore: 0.2, costPenalty: 0.3 }, temperature: 0.2, experts: ['math'] }, expanded: 1, accepted: 0, killed: 0, pending: 1, totalAccepted: 0, killByExpert: new Map(), expertPool: ['search'] })?.changes.weights?.explore === 0.6);
+
+// [63] Meta Executive（Executive を学習する Executive + Thinking Budget）
+console.log('\n[63] Meta Executive');
+const b63 = new AilsmBuilder();
+const t63 = b63.addNode('task', 'meta', 'unknown', { domain: 'reasoning', intent: 'unknown' });
+const me63 = metaExecutive(b63.graph(), t63, '数学の新理論を考える');
+check('Meta Executive ノードが生成される', me63.graph.nodes.some((n) => n.kind === 'metaexecutive'));
+check('task manages metaexecutive エッジ', me63.graph.edges.some((e) => e.rel === 'manages' && e.from === t63 && me63.graph.nodes.find((n) => n.id === e.to)?.kind === 'metaexecutive'));
+const up63 = updateMetaExecutive(me63.graph, me63.id, { policy: 'mcts', beam: 3, explore: 0.6, trials: 2 });
+const me63b = metaExecutiveOf(up63.graph, me63.id);
+check('設定を in-place 更新（ID 不変）', me63b?.policy === 'mcts' && me63b?.beam === 3 && me63b?.trials === 2 && me63b?.id === me63.id);
+check('metaExecutivesOf が列挙', metaExecutivesOf(up63.graph, t63).length === 1);
+
+const b2_63 = estimateBudget('2+2を計算して');
+check('Thinking Budget: 2+2 → Reasoning 禁止（trivial）', b2_63.allowReasoning === false && b2_63.reason === 'trivial');
+const bHard63 = estimateBudget('新しい数学の理論を考える');
+check('Thinking Budget: 新理論 → 大予算（high）', bHard63.allowReasoning === true && bHard63.reason === 'high' && bHard63.maxExpansions >= 8 && bHard63.depth >= 10 && bHard63.experts.length >= 4);
+const bBat63 = estimateBudget('新しい数学の理論を考える', { battery: 0.08 });
+check('Thinking Budget: Battery 8% → Reasoning 禁止', bBat63.allowReasoning === false && bBat63.reason === 'battery');
+const bBat63b = estimateBudget('新しい数学の理論を考える', { battery: 0.2 });
+check('Thinking Budget: 低バッテリ → 軽い推論のみ', bBat63b.allowReasoning === true && bBat63b.reason === 'battery-low' && bBat63b.maxExpansions === 2);
+
+const r63 = await runMetaExecutiveDemo();
+check('学習ループが回る（3 試行）', r63.trials.length === 3, `trials=${r63.trials.length}`);
+check('Search Policy を切替（beam→best-first→mcts）', r63.policySwitches.length >= 2, r63.policySwitches.join(' → '));
+check('学習: 探索が強すぎる設定は失敗（beam2/explore0.4 → acc=0）', r63.trials[0].outcome.accuracy === 0 && r63.trials[0].metaScore < 0);
+check('学習: 最良設定が推奨される（best-first が ◀ 推奨）', r63.trials.find((t) => t.recommended)?.policy === 'best-first', String(r63.trials.find((t) => t.recommended)?.policy));
+check('推奨設定から不要 Expert が外れる（search なし）', r63.recommendedConfig !== null && !r63.recommendedConfig.experts.includes('search'), r63.recommendedConfig?.experts.join(',') ?? '');
+check('精度・レイテンシ・コストを計測', r63.trials.every((t) => t.outcome.latencyMs > 0 && t.outcome.cost >= 0));
+check('推奨設定で統合仮説に到達', r63.finalText !== null && r63.finalText.includes('統合仮説'), String(r63.finalText));
+check('Meta Executive が Executive を管理（manages エッジ）', r63.graph.edges.some((e) => e.rel === 'manages' && r63.graph.nodes.find((n) => n.id === e.from)?.kind === 'metaexecutive' && r63.graph.nodes.find((n) => n.id === e.to)?.kind === 'executive'));
+check('renderMetaExecutive が Budget + 学習テーブル表示', renderMetaExecutive(r63).includes('BUDGET') && renderMetaExecutive(r63).includes('◀ 推奨'));
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');
