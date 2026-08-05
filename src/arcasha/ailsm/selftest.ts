@@ -4,6 +4,7 @@
  * 実行: npx tsx src/arcasha/ailsm/selftest.ts
  */
 
+import { rm } from 'node:fs/promises';
 import { Slot, Task } from '../ailsa/vocab.js';
 import { MathOpcode } from '../ailsa/dialect.js';
 import { Opcode, SyscallOpcode } from '../ailsa/opcode.js';
@@ -67,6 +68,10 @@ import { runAttachmentBenchmark } from '../attachments/benchmark.js';
 import { resolvePipeline, intelligenceScheduler, runThinking, renderThinking, runThinkingBenchmark } from '../attachments/modes.js';
 import { runModeValidation, runAblation, runRobotSimulation, estimatePower, renderModeValidation, renderAblation, renderRobotSimulation } from '../attachments/validation.js';
 import { SCIENTIFIC_CORPUS, modeQuality, runReasoningBenchmark, runLongContextValidation, runRobotValidation, runExecutiveValidation, runModelComparison } from '../attachments/scientific.js';
+import { ALL_BENCH_SUITES, runExternalBenchmarks, overallAccuracy } from '../bench/run.js';
+import { configQuality } from '../bench/types.js';
+import { osOverheadProfile, allOverheadProfiles } from '../bench/overhead.js';
+import { buildJsonReport, buildCsvReport, buildMarkdownReport, writeReports } from '../bench/report.js';
 import type { AttachmentContext } from '../attachments/attachment.js';
 import type { Hypothesis } from './reasoning.js';
 
@@ -1126,6 +1131,33 @@ const mcLast = sciF68[sciF68.length - 1];
 const mcFast = sciF68[1];
 check('Flagship: 同じモデルでも OS 構成で能力が変わる', mc0.config.includes('Qwen') && mcLast.quality > mc0.quality && mcLast.latencyMs > mc0.latencyMs, `q=${mc0.quality}→${mcLast.quality}`);
 check('Flagship: Fast は最速・低電力（AVM の効果）', mcFast.latencyMs < mc0.latencyMs && mcFast.powerMw < mc0.powerMw);
+
+// [69] Real Benchmark Suite（Validation E: 外部ベンチ + レポート自動生成）
+console.log('\n[69] Real Benchmark Suite');
+check('外部ベンチ 6 種（各 10 問）', ALL_BENCH_SUITES.length === 6 && ALL_BENCH_SUITES.every((s) => s.samples.length === 10));
+check('カテゴリ: math/coding/knowledge', ['gsm8k', 'math500'].every((id) => ALL_BENCH_SUITES.find((s) => s.id === id)?.category === 'math') && ['human_eval', 'mbpp', 'livecodebench'].every((id) => ALL_BENCH_SUITES.find((s) => s.id === id)?.category === 'coding') && ALL_BENCH_SUITES.find((s) => s.id === 'mmlu')?.category === 'knowledge');
+check('品質モデル: qwen < fast < auto < deep（単調）', configQuality('qwen', 0.5) < configQuality('qwen-fast', 0.5) && configQuality('qwen-fast', 0.5) < configQuality('qwen-auto', 0.5) && configQuality('qwen-auto', 0.5) < configQuality('qwen-deep', 0.5));
+check('品質モデル: Thinking は単体より高い', configQuality('qwen-thinking', 0.5) > configQuality('qwen', 0.5));
+const rows69 = runExternalBenchmarks();
+check('Validation E: 6 スイート × 5 構成 = 30 行', rows69.length === 30);
+const overall69 = overallAccuracy(rows69);
+const acc69 = (c: string): number => overall69.find((o) => o.config === c)!.accuracy;
+check('全体正答率: qwen < fast < auto < deep（単調増加）', acc69('qwen') < acc69('qwen-fast') && acc69('qwen-fast') < acc69('qwen-auto') && acc69('qwen-auto') < acc69('qwen-deep'), overall69.map((o) => `${o.config}=${(o.accuracy * 100).toFixed(0)}%`).join(' '));
+const he69 = rows69.filter((r) => r.suite === 'human_eval');
+const heAcc = (c: string): number => he69.find((r) => r.config === c)!.accuracy;
+check('Qwen Thinking vs ArcAsha: human_eval で thinking(50%) > fast(40%) かつ deep(100%) > thinking', heAcc('qwen-thinking') > heAcc('qwen-fast') && heAcc('qwen-deep') > heAcc('qwen-thinking'), he69.map((r) => `${r.config}=${(r.accuracy * 100).toFixed(0)}%`).join(' '));
+const ovFast69 = osOverheadProfile('qwen-fast');
+const ovDeep69 = osOverheadProfile('qwen-deep');
+const llmOf = (p: { components: { component: string; cpuPct: number }[] }): number => p.components.filter((c) => c.component.includes('LLM')).reduce((s, c) => s + c.cpuPct, 0);
+check('OS オーバーヘッド: 単体は LLM 100%、OS を増やすほど LLM 割合が下がる', osOverheadProfile('qwen').components[0].cpuPct === 100 && llmOf(ovFast69) > llmOf(ovDeep69) && llmOf(ovDeep69) > 0, `fast LLM=${llmOf(ovFast69)}% deep LLM=${llmOf(ovDeep69)}%`);
+check('OS オーバーヘッド: CPU/レイテンシは 100% に収束', ovFast69.components.reduce((s, c) => s + c.cpuPct, 0) === 100 && ovDeep69.components.reduce((s, c) => s + c.latencyPct, 0) === 100);
+const json69 = JSON.parse(buildJsonReport(rows69, allOverheadProfiles())) as { version: string; overall: unknown[] };
+check('report.json: バージョン + 全体結果', json69.version === '1.0.0' && json69.overall.length === 5);
+check('report.csv: ヘッダ + 30 行', buildCsvReport(rows69).split('\n').length === 31 && buildCsvReport(rows69).startsWith('suite,suite_name'));
+check('report.md: ベンチ表 + OS オーバーヘッド', buildMarkdownReport(rows69, allOverheadProfiles()).includes('| gsm8k |') && buildMarkdownReport(rows69, allOverheadProfiles()).includes('OS Overhead'));
+const files69 = await writeReports('reports/.selftest', rows69, allOverheadProfiles());
+check('writeReports: json/csv/md を書き出す', files69.length === 3 && files69.every((f) => f.endsWith('.json') || f.endsWith('.csv') || f.endsWith('.md')));
+await rm('reports/.selftest', { recursive: true, force: true });
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

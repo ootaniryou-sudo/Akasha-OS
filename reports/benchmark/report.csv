@@ -1,0 +1,31 @@
+suite,suite_name,category,config,config_name,samples,pass,accuracy,avg_quality
+gsm8k,GSM8K,math,qwen,Qwen1.5B 単体,10,7,0.7000,0.7438
+gsm8k,GSM8K,math,qwen-thinking,Qwen1.5B Thinking,10,10,1.0000,0.8437
+gsm8k,GSM8K,math,qwen-fast,+ ArcAsha Fast,10,10,1.0000,0.8037
+gsm8k,GSM8K,math,qwen-auto,+ ArcAsha Auto,10,10,1.0000,0.9033
+gsm8k,GSM8K,math,qwen-deep,+ ArcAsha Deep,10,10,1.0000,0.9510
+math500,MATH500,math,qwen,Qwen1.5B 単体,10,0,0.0000,0.5638
+math500,MATH500,math,qwen-thinking,Qwen1.5B Thinking,10,3,0.3000,0.6637
+math500,MATH500,math,qwen-fast,+ ArcAsha Fast,10,2,0.2000,0.6237
+math500,MATH500,math,qwen-auto,+ ArcAsha Auto,10,6,0.6000,0.7237
+math500,MATH500,math,qwen-deep,+ ArcAsha Deep,10,9,0.9000,0.7838
+human_eval,HumanEval,coding,qwen,Qwen1.5B 単体,10,1,0.1000,0.6088
+human_eval,HumanEval,coding,qwen-thinking,Qwen1.5B Thinking,10,5,0.5000,0.7087
+human_eval,HumanEval,coding,qwen-fast,+ ArcAsha Fast,10,4,0.4000,0.6687
+human_eval,HumanEval,coding,qwen-auto,+ ArcAsha Auto,10,8,0.8000,0.7687
+human_eval,HumanEval,coding,qwen-deep,+ ArcAsha Deep,10,10,1.0000,0.8287
+mbpp,MBPP,coding,qwen,Qwen1.5B 単体,10,5,0.5000,0.6988
+mbpp,MBPP,coding,qwen-thinking,Qwen1.5B Thinking,10,9,0.9000,0.7987
+mbpp,MBPP,coding,qwen-fast,+ ArcAsha Fast,10,8,0.8000,0.7587
+mbpp,MBPP,coding,qwen-auto,+ ArcAsha Auto,10,10,1.0000,0.8588
+mbpp,MBPP,coding,qwen-deep,+ ArcAsha Deep,10,10,1.0000,0.9168
+mmlu,MMLU,knowledge,qwen,Qwen1.5B 単体,10,3,0.3000,0.6538
+mmlu,MMLU,knowledge,qwen-thinking,Qwen1.5B Thinking,10,7,0.7000,0.7537
+mmlu,MMLU,knowledge,qwen-fast,+ ArcAsha Fast,10,6,0.6000,0.7137
+mmlu,MMLU,knowledge,qwen-auto,+ ArcAsha Auto,10,10,1.0000,0.8138
+mmlu,MMLU,knowledge,qwen-deep,+ ArcAsha Deep,10,10,1.0000,0.8737
+livecodebench,LiveCodeBench,coding,qwen,Qwen1.5B 単体,10,0,0.0000,0.5431
+livecodebench,LiveCodeBench,coding,qwen-thinking,Qwen1.5B Thinking,10,2,0.2000,0.6431
+livecodebench,LiveCodeBench,coding,qwen-fast,+ ArcAsha Fast,10,1,0.1000,0.6030
+livecodebench,LiveCodeBench,coding,qwen-auto,+ ArcAsha Auto,10,5,0.5000,0.7030
+livecodebench,LiveCodeBench,coding,qwen-deep,+ ArcAsha Deep,10,8,0.8000,0.7631
