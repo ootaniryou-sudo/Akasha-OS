@@ -53,6 +53,8 @@ import { hypothesize, activate, evaluate, accept, merge, hypothesesOf, hypothesi
 import { runReasoning, runReasoningDemo, defaultHypothesisGenerator } from './reasoning-runtime.js';
 import { selectionScore, BeamSearchPolicy, BestFirstPolicy, DFSPolicy, BFSPolicy, MctsPolicy } from './search.js';
 import { runSearchDemo, renderSearch } from './reasoning-search.js';
+import { executive, executivesOf, executiveOf, updateExecutive } from './executive.js';
+import { runExecutiveDemo, renderExecutive, defaultDecide } from './executive-runtime.js';
 import type { Hypothesis } from './reasoning.js';
 
 let failed = 0;
@@ -869,6 +871,32 @@ check('新規性で低スコア仮説が生き残る（探索）', r61.acceptedT
 check('低新規性仮説は KILL（淘汰）', r61.killedCount === 1);
 check('採用仮説を最終 MERGE（統合）', r61.finalText !== null && r61.finalText.includes('統合仮説'), String(r61.finalText));
 check('renderSearch がツリー表示', renderSearch(r61).includes('=== Reasoning Search') && renderSearch(r61).includes('FINAL'));
+
+// [62] Executive Runtime（Executive が探索の途中で戦略を切替える）
+console.log('\n[62] Executive Runtime');
+const b62 = new AilsmBuilder();
+const t62 = b62.addNode('task', 'exec', 'unknown', { domain: 'reasoning', intent: 'unknown' });
+const ex62 = executive(b62.graph(), t62, '数学の新理論を考える', { policy: 'best-first', beam: 1, experts: ['math'] });
+check('Executive がゴールを管理（task manages executive）', ex62.graph.edges.some((e) => e.rel === 'manages' && e.from === t62));
+const exec62 = executiveOf(ex62.graph, ex62.id);
+check('Executive の初期設定（beam=1 / explore=0.2）', exec62?.beam === 1 && exec62?.explore === 0.2 && exec62?.experts.includes('math') === true);
+const up62 = updateExecutive(ex62.graph, ex62.id, { beam: 3, explore: 0.6, switches: 1 });
+const exec62b = executiveOf(up62.graph, ex62.id);
+check('設定を in-place 更新（ID 不変）', exec62b?.beam === 3 && exec62b?.explore === 0.6 && exec62b?.switches === 1 && exec62b?.id === ex62.id);
+check('executivesOf が列挙', executivesOf(up62.graph, t62).length === 1);
+
+const r62 = await runExecutiveDemo();
+check('Executive ノードが生成される', r62.executiveId > 0);
+check('探索途中の戦略切替（R0: best-first→beam / beam 1→3 / explore 増）', r62.configChanges.length >= 3 && r62.configChanges[0].action.includes('beam') && r62.configChanges[0].action.includes('explore 0.2→0.6'), r62.configChanges.map((c) => c.action).join(' | '));
+check('停滞検知（accept=0）で探索へ切替', r62.configChanges[0]?.reason.includes('停滞'), r62.configChanges[0]?.reason ?? '');
+check('Expert 追加（+search+reasoning）', r62.configChanges[0]?.action.includes('+search') && r62.configChanges[0]?.action.includes('+reasoning'));
+check('弱い Expert を削除（remove search）', r62.configChanges.some((c) => c.action.includes('remove search')));
+check('探索で新規性仮説が ACCEPT（低スコア0.55・新規性0.90）', r62.acceptedTexts.some((t) => t.includes('統計')), r62.acceptedTexts.join('|'));
+check('低新規性仮説は KILL（淘汰）', r62.killedCount === 1);
+check('ラウンド数 ≥ 3（戦略切替が複数回）', r62.rounds.length >= 3, `rounds=${r62.rounds.length}`);
+check('最終 MERGE（統合仮説）', r62.finalText !== null && r62.finalText.includes('統合仮説'), String(r62.finalText));
+check('renderExecutive がツリー + 戦略切替ログ表示', renderExecutive(r62).includes('=== Executive Runtime') && renderExecutive(r62).includes('EXECUTIVE(R0)'));
+check('defaultDecide: 停滞→探索 / 成功→活用', defaultDecide({ round: 0, config: { policy: 'best-first', beam: 1, weights: { explore: 0.2, costPenalty: 0.3 }, temperature: 0.2, experts: ['math'] }, expanded: 1, accepted: 0, killed: 0, pending: 1, totalAccepted: 0, killByExpert: new Map(), expertPool: ['search'] })?.changes.weights?.explore === 0.6);
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

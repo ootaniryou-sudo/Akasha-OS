@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.25** |
+| Status | **Draft v0.26** |
 | Date | 2026-08-06 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価）, `AI_REASONING.md`（Reasoning Runtime） |
@@ -509,6 +509,18 @@ v0.23（Phase 2.3）では **「既存AIにできるタスクの全てを任せ�
 v0.24（Phase 2.4）では **AI Reasoning Runtime（第4の柱）** を追加。創発的知能は「Expert 同士の循環」で生まれる — MoE が Transformer 内部で暗黙に行う探索を、OS レベルで明示化する。**Hypothesis SSA**（新ノード: text/confidence/state/expert/score + `task hypothesizes hypothesis`）と **Reasoning Graph Runtime**（`reasoning.ts` / `reasoning-runtime.ts`: SPAWN → EVALUATE（各仮説 = 独立 Process = OS 並列）→ REFLECTION（ACCEPT / KILL / MERGE）→ 収束）。デモ x^2=9: x=3 / x=-3 を並列評価 → 両方 ACCEPT → MERGE「x=±3」/ 低評価は KILL（`AI_REASONING.md`）。AILSM_IR は v1.4。
 
 v0.25（Phase 2.5）では **Reasoning Search Runtime** を追加 — **推論そのものを OS のスケジューリング対象にする**。① **探索ポリシーのプラグイン化**（`search.ts`: Beam / BestFirst / DFS / BFS / MCTS(UCB1)、`SearchPolicy` インターフェース + `SEARCH_POLICIES` ファクトリ）② **Reasoning Tree**（`reasoning.ts`: `expand` で子仮説を生成 + `expands` エッジ + depth/parentIds、`markExpanded`/`childrenOf`）③ **マルチシグナル評価**（score / novelty / diversity / cost / consistency の `EvaluationSignals`）④ **探索 vs 活用**（`selectionScore = score×(1−explore) + novelty×explore − cost×costPenalty` — 低スコアでも新規性が高ければ生き残る）⑤ **Reasoning Search Runtime**（`reasoning-search.ts`: ラウンドループ = READY（Hypothesis Queue）→ EXPAND（各子仮説に Process を生成）→ EVALUATE → REFLECT → 最終 MERGE。デモ: 新しい数学の理論を考える → 枠組み H2 → {統計 0.55/新規性0.90 を探索で採用、幾何 0.80 → 位相 0.70/0.95 へ再展開、文献を鵜呑み 0.05 を KILL} → MERGE「統計的に検証する + 位相で一般化する（統合仮説）」）。OS 対応: Expert=実行資源 / Hypothesis=プロセス / Reflection=スケジューラ FB / Reasoning Graph=実行グラフ / Kernel=探索全体の管理者（`AI_REASONING.md` v0.2）。AILSM_IR は v1.5（`expands` 追加）。
+
+v0.26（Phase 2.6）では **Executive Runtime** を追加 — Reasoning Graph のさらに上位に **「誰が全体を指揮するのか」** を司る **Executive（指揮官）** を置く。`executive.ts`（新ノード `Executive#N`: goal / policy / beam / explore / temperature / experts / rounds / accepts / kills / switches、`task manages executive` / `executive manages process`）と `executive-runtime.ts`（`runExecutive`: READY → EXPAND → EVALUATE → REFLECT → **EXECUTIVE（戦略切替）** → 次ラウンド）。`defaultDecide(ctx)` が**探索の途中で戦略を切替える**（差し替え可）: 停滞（accept=0）→ 探索へ（policy/beam/explore 切替 + Expert 追加）/ 成功+淘汰 → 活用へ微調整 + 弱い Expert を編成から外す / 収束 → 活用へ。デモ「数学の新理論を考える」: 活用（best-first/beam1/explore0.2）で停滞 → **R0 探索へ切替**（beam3/explore0.6/+search+reasoning）→ R1 新規性0.90 の「統計」ACCEPT + 新規性0.05「鵜呑み」KILL + **remove search** → R2「位相」ACCEPT → 最終 MERGE「統計的に検証する + 位相で一般化する（統合仮説）」。**Transformer/MoE との差** = ニューラル内部で探索を固定するのではなく、OS レベルで**探索の途中に戦略自体を動的に変えられる**（`AI_REASONING.md` v0.3）。AILSM_IR は v1.6（executive / manages）。
+
+## ロードマップ（Executive の先）
+
+| Phase | 内容 |
+|-------|------|
+| **2.7 Meta Executive** | Executive 自身の自己改善 — Beam 幅 / 探索深さ / Reflection 閾値のオンライン最適化（ODAR を Routing だけでなく Search Policy / Beam / Threshold / Scheduler まで拡張 = 真のオンライン学習） |
+| **2.8 Distributed Reasoning** | 仮説ごとに複数デバイスへ並列実行（iPhone・iPad・Mac で同時探索、Executive が結果を統合） |
+| **3 Expert Ecosystem** | 数十〜数百の Sub-Expert の動的ロード・アンロード + Capability 継続学習 |
+
+> 位置づけ: ArcAsha は「MoE の代替」ではなく **「ニューラルモデルの上で動く AI オペレーティングシステム」**。研究の価値は「Executive があることで Transformer/MoE では難しい何ができるか」を実験で示すこと（探索途中の戦略切替 / 複数デバイスへの動的仮説分散実行）。
 
 ### 3.1 Hierarchical Reasoning（木構造による問題分解）
 

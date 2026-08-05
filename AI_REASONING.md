@@ -4,10 +4,10 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v0.2（Phase 2.5 実装済み）** |
+| Status | **Spec v0.3（Phase 2.6 実装済み）** |
 | Date | 2026-08-06 |
-| 実装 | `src/arcasha/ailsm/reasoning.ts`, `reasoning-runtime.ts`, `search.ts`, `reasoning-search.ts` |
-| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.5）, `AILSA_RUNTIME.md`, `AI_VIRTUAL_MEMORY.md`, `AI_EVALUATION.md` |
+| 実装 | `reasoning.ts`, `reasoning-runtime.ts`, `search.ts`, `reasoning-search.ts`, `executive.ts`, `executive-runtime.ts` |
+| 関連 | `ARCASHA_V2_SPEC.md`, `AILSM_IR.md`（v1.6）, `AILSA_RUNTIME.md`, `AI_VIRTUAL_MEMORY.md`, `AI_EVALUATION.md` |
 
 ---
 
@@ -133,21 +133,82 @@ FINAL : 統計的に検証する + 位相で一般化する（統合仮説）
 - **淘汰**: 低新規性（0.05）の H6 は KILL
 - **統合**: H4 + H10 → MERGE「統合仮説」
 
-## 5. 4 本柱
+## 5. Executive Runtime（Phase 2.6）— 推論全体を指揮する Executive
+
+Reasoning Graph の**さらに上位**に Executive を置く。
+
+```
+Goal → Executive → Reasoning Runtime → Search Runtime → Experts
+```
+
+**「誰が全体を指揮するのか」** — Executive だけが ゴール保持 / 優先順位変更 / Expert 編成 / Search Policy 変更 / Beam 幅変更 / 温度変更 / Memory 再構成 を行える。人間の「考える→違う→別方向→戻る→試す→失敗→もっと単純化→また考える」を司るのは LLM ではなく **Executive**。
+
+### 5.1 Executive SSA（`executive.ts`）
+
+新ノード種別 `Executive#N`（設定 = コントロールレジスタ相当）:
+
+```
+Executive #2 { goal, policy, beam, explore, temperature, experts[], rounds, accepts, kills, switches }
+Task ──manages──▶ Executive ──manages──▶ Process（各仮説プロセス）
+```
+
+- `executive(g, taskId, goal, cfg)` — 起動（task manages executive）
+- `updateExecutive(g, id, patch)` — 設定を in-place 更新（**ID 不変** = レジスタ書換）
+- `executivesOf` / `executiveOf` — 列挙・取得
+
+### 5.2 Executive Runtime（`executive-runtime.ts`）
+
+ループ: READY → EXPAND → EVALUATE → REFLECT → **EXECUTIVE（戦略切替）** → 次ラウンド
+
+`defaultDecide(ctx)` がラウンド結果から戦略を切替える（差し替え可能）:
+
+| 検知 | 条件 | Executive の行動 |
+|------|------|------------------|
+| **停滞** | accept=0 かつ expand>0 | 探索へ: best-first→beam / beam+2 / explore+0.4 / Expert 追加 |
+| **成功+淘汰** | accept>0 かつ kill>0 | 活用へ微調整 + 弱い Expert を編成から外す |
+| **収束** | accept>0 | 活用へ: beam-1 / explore-0.2 |
+| **淘汰のみ** | kill>0 | 探索を収束させる |
+
+### 5.3 デモ（数学の新理論を考える）— 探索の途中で戦略を切替える
+
+```
+=== Executive Runtime (数学の新理論を考える) ===
+H3 [reasoning] "既存の枠組みを疑う"
+  H5 [math] "計算を重ねる"      score=0.45 nov=0.10
+    H7 [math] "統計的に検証する" score=0.55 nov=0.90 🔀
+      H15 [?] "統計的に検証する + 位相で一般化する（統合仮説）" ✅
+    H8 [math] "幾何学的に解釈する" score=0.80 nov=0.40
+      H13 [reasoning] "位相で一般化する" score=0.70 nov=0.95 🔀
+    H9 [search] "文献を鵜呑みにする" score=0.30 nov=0.05 ❌
+EXPAND=3 EVAL=5 ACCEPT=1 KILL=1
+  EXECUTIVE(R0): 停滞（accept=0）→ 探索へ切替: best-first→beam, beam 1→3, explore 0.2→0.6, +search+reasoning
+  EXECUTIVE(R1): 探索成功（accept=1）→ 活用へ: beam 3→2, explore 0.6→0.4, remove search
+  EXECUTIVE(R2): 収束（accept=1）→ 活用へ: beam 2→1, explore 0.4→0.2
+FINAL : 統計的に検証する + 位相で一般化する（統合仮説）
+```
+
+- **R0 停滞**: 活用（best-first/beam1/explore0.2）では accept が出ない → Executive が**探索へ切替**（beam3 / explore0.6 / Expert 追加）
+- **R1 探索**: 新規性 0.90 の「統計」を ACCEPT、新規性 0.05 の「鵜呑み」を KILL → **弱い search を編成から外す**
+- **R2 収束**: 「幾何 → 位相」を ACCEPT → 活用へ戻す
+- **最終 MERGE**: 「統計的に検証する + 位相で一般化する（統合仮説）」
+
+> **Transformer/MoE との差**: ニューラル内部で探索を固定したまま進めるのに対し、ArcAsha は OS レベルで**探索の途中に戦略自体を動的に変えられる**。これが Executive Runtime の実験テーマ。
+
+## 6. 4 本柱
 
 | 柱 | 成果 |
 |----|------|
-| AI Operating IR | AILSM（v1.5: hypothesis / expands 追加） |
+| AI Operating IR | AILSM（v1.6: hypothesis / expands / executive） |
 | AI Virtual Memory | AVM（Context / Page / Slice / Cache / TLB / Tier） |
 | AI Kernel | Kernel / Process / Thread / Syscall / Namespace |
-| **AI Reasoning Runtime** | **Hypothesis SSA + Reasoning Graph + Reasoning Search（本仕様）** |
+| **AI Reasoning Runtime** | **Hypothesis SSA + Reasoning Graph + Search + Executive（本仕様）** |
 
-## 6. 今後の拡張
+## 7. 今後の拡張（ロードマップ）
 
-- **並列実行**: 仮説ごとの真の並列（Promise.all）→ 実機複数台で Math A/B/C を分散
-- **Reflection の学習**: スコアリングを ODAR（LearnedCapability）と統合
-- **探索の深化**: ポリシー組み合わせ / 予算適応 / マルチシグナル重み学習
-- 論文: 「MoE の暗黙的探索を OS で明示化した実行モデル」
+- **Phase 2.7 Meta Executive**: Executive 自身の自己改善 — Beam 幅 / 探索深さ / Reflection 閾値のオンライン最適化（ODAR を Routing だけでなく Search Policy / Beam / Threshold / Scheduler まで拡張）
+- **Phase 2.8 Distributed Reasoning**: 仮説ごとに複数デバイスへ並列実行（iPhone・iPad・Mac で同時探索、Executive が結果を統合）
+- **Phase 3 Expert Ecosystem**: 数十〜数百の Sub-Expert の動的ロード・アンロード + Capability 継続学習
+- 実験: 「探索の途中で戦略を切り替える」「複数デバイスへの動的仮説分散実行」= MoE では難しい ArcAsha 独自のテーマ
 
 ---
 

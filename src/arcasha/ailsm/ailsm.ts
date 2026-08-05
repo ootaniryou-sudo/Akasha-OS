@@ -29,7 +29,8 @@ export type NodeKind =
   | 'chunk'
   | 'span'
   | 'frame'
-  | 'hypothesis';
+  | 'hypothesis'
+  | 'executive';
 
 export interface AilsmNode {
   id: number;
@@ -73,6 +74,7 @@ const KIND_LABEL: Record<NodeKind, string> = {
   span: 'Span',
   frame: 'Frame',
   hypothesis: 'Hypothesis',
+  executive: 'Executive',
 };
 
 export function nodeKindLabel(kind: NodeKind): string {
