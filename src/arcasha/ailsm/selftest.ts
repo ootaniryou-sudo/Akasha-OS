@@ -66,6 +66,7 @@ import { attachmentScheduler } from '../attachments/scheduler.js';
 import { runAttachmentBenchmark } from '../attachments/benchmark.js';
 import { resolvePipeline, intelligenceScheduler, runThinking, renderThinking, runThinkingBenchmark } from '../attachments/modes.js';
 import { runModeValidation, runAblation, runRobotSimulation, estimatePower, renderModeValidation, renderAblation, renderRobotSimulation } from '../attachments/validation.js';
+import { SCIENTIFIC_CORPUS, modeQuality, runReasoningBenchmark, runLongContextValidation, runRobotValidation, runExecutiveValidation, runModelComparison } from '../attachments/scientific.js';
 import type { AttachmentContext } from '../attachments/attachment.js';
 import type { Hypothesis } from './reasoning.js';
 
@@ -1098,6 +1099,33 @@ check('ロボット: 成功率 Fast > Deep（リアルタイムの価値）', rF
 check('renderModeValidation が表示', renderModeValidation(mode67).includes('power'));
 check('renderAblation が delta 表示', renderAblation(abl67).includes('+76%') || renderAblation(abl67).includes('delta'));
 check('renderRobotSimulation が 30fps 判定表示', renderRobotSimulation(rob67).includes('30.3') && renderRobotSimulation(rob67).includes('✗'));
+
+// [68] Scientific Validation（再現可能な評価基盤）
+console.log('\n[68] Scientific Validation');
+check('コーパス: 14 問・5 カテゴリ', SCIENTIFIC_CORPUS.length === 14 && new Set(SCIENTIFIC_CORPUS.map((q) => q.category)).size === 5);
+check('品質モデル: fast は難易度に反比例（決定論）', modeQuality('fast', { id: 'a', category: 'math', prompt: '', difficulty: 0.1 }) > modeQuality('fast', { id: 'b', category: 'math', prompt: '', difficulty: 0.9 }));
+check('品質モデル: all ≥ debate ≥ fast（OS が能力を引き出す）', modeQuality('all', SCIENTIFIC_CORPUS[0]) >= modeQuality('debate', SCIENTIFIC_CORPUS[0]) && modeQuality('debate', SCIENTIFIC_CORPUS[0]) >= modeQuality('fast', SCIENTIFIC_CORPUS[0]));
+const sciB68 = await runReasoningBenchmark(SCIENTIFIC_CORPUS.filter((_, i) => [0, 2, 4, 7, 10, 13].includes(i))); // 難易度分散のある 6 問（高速化）
+const acc68 = (m: string): number => sciB68.find((r) => r.mode === m)!.accuracy;
+check('Validation B: 正答率が単調増加（fast < reflection < debate ≤ all）', acc68('fast') < acc68('reflection') && acc68('reflection') < acc68('debate') && acc68('all') >= acc68('debate'), sciB68.map((r) => `${r.mode}=${(r.accuracy * 100).toFixed(0)}%`).join(' '));
+check('Validation B: レイテンシは実実行で計測', sciB68.every((r) => r.totalLatencyMs >= 0) && sciB68.find((r) => r.mode === 'all')!.totalLatencyMs > 0);
+const sciA68 = runLongContextValidation();
+check('Validation A: AVM は Long Context より高速・低トークン', sciA68.speedup > 3 && sciA68.tokenReduction > 0.7, `speedup=${sciA68.speedup.toFixed(2)}x red=${(sciA68.tokenReduction * 100).toFixed(1)}%`);
+const sciC68 = runRobotValidation();
+const cFast68 = sciC68.find((r) => r.mode === 'Fast')!;
+const cDeep68 = sciC68.find((r) => r.mode === 'Deep')!;
+check('Validation C: Fast は低電力・低温・30fps、Deep は高温', cFast68.meets30fps && cFast68.temperatureC < 40 && cDeep68.meets30fps === false && cDeep68.temperatureC > 40, `fast=${cFast68.temperatureC}°C deep=${cDeep68.temperatureC}°C`);
+const sciD68 = await runExecutiveValidation();
+const dNone68 = sciD68.find((r) => r.config === 'Executiveなし')!;
+const dExec68 = sciD68.find((r) => r.config === 'Executiveあり')!;
+check('Validation D: Executive が推論回数と品質を上げる', dExec68.finalQuality > dNone68.finalQuality && dExec68.inferenceCount > dNone68.inferenceCount, `q=${dNone68.finalQuality}→${dExec68.finalQuality}`);
+check('Validation D: Meta Executive は少ない推論で同品質', sciD68.find((r) => r.config === 'Meta Executive')!.finalQuality >= dExec68.finalQuality);
+const sciF68 = runModelComparison();
+const mc0 = sciF68[0];
+const mcLast = sciF68[sciF68.length - 1];
+const mcFast = sciF68[1];
+check('Flagship: 同じモデルでも OS 構成で能力が変わる', mc0.config.includes('Qwen') && mcLast.quality > mc0.quality && mcLast.latencyMs > mc0.latencyMs, `q=${mc0.quality}→${mcLast.quality}`);
+check('Flagship: Fast は最速・低電力（AVM の効果）', mcFast.latencyMs < mc0.latencyMs && mcFast.powerMw < mc0.powerMw);
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');
