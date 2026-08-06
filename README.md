@@ -1,5 +1,5 @@
 # ArcAsha (Akasha-OS)
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21755612.svg)](https://doi.org/10.5281/zenodo.21755612)
 > **An AI Operating System for Modular Reasoning and Runtime Intelligence**
 
 ArcAsha is **not a model**. It is an **operating system that runs on top of neural models** — it configures, controls, measures, and **explains** AI reasoning at the OS level.
