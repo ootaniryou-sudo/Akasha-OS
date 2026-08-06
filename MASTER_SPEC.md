@@ -161,6 +161,7 @@ AI_*.md               Specifications (see below)
 | `AILSM_IR.md` | Semantic IR (SSA) v1.8 |
 | `AILSM_COMPILER.md` | IR compiler |
 | `AI_ABI.md` | ABI / Driver / DeviceTree |
+| `AI_IR_MODEL.md` | IR とモデルの関係（IR は OS の内部バス / モデルは IR を知らない / 蒸留・IR ネイティブ化） |
 | `AI_VIRTUAL_MEMORY.md` | AVM |
 | `AI_OBSERVABILITY.md` | AI Monitor / instrumentation |
 | `AI_RUNTIME_PHASE1.md` | Realtime device runtime |
