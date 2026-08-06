@@ -1,0 +1,10 @@
+{
+  "name": "akasha-plugin-math",
+  "version": "1.0.0",
+  "description": "Akasha-OS Math Expert Plugin — example implementation",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "keywords": ["akasha", "plugin", "math", "expert", "ai"],
+  "license": "MIT"
+}

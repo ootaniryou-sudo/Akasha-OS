@@ -177,7 +177,7 @@ curl http://localhost:9090/metrics
 
 ## 🔬 7.5 Research Progress — Phase 1〜4 (Jul 2026)
 
-> Full details: [`experiments/qwen3_0.6b/README.md`](akasha-master/experiments/qwen3_0.6b/README.md) | Conclusions: [`CONCLUSIONS.md`](akasha-master/experiments/qwen3_0.6b/CONCLUSIONS.md) | Framework: [`RESEARCH_FRAMEWORK.md`](akasha-master/experiments/qwen3_0.6b/RESEARCH_FRAMEWORK.md)
+> Full details: [`experiments/qwen3_0.6b/README.md`](experiments/qwen3_0.6b/README.md) | Conclusions: [`CONCLUSIONS.md`](experiments/qwen3_0.6b/CONCLUSIONS.md) | Framework: [`RESEARCH_FRAMEWORK.md`](experiments/qwen3_0.6b/RESEARCH_FRAMEWORK.md)
 
 ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 **「分散LLMにおけるルーティング戦略を、多目的最適化・数値安定性・信頼度推定を用いて体系化する」**
@@ -218,7 +218,7 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | **Relay Node** | ❌ | iPhone 12 mini | Connectivity, forwarding, health |
 | **Hybrid Node** | ✅ | Future iPhone 15 Pro | Expert + Relay combined |
 
-### Phase 3 ✅ — Intelligent Routing (EXP-0002C〜0002E.2)
+### Phase 3 ✅ — Intelligent Routing (EXP-0002C〜0002E.3)
 
 | # | Experiment | Result | Key Finding |
 |---|-----------|:---:|------|
@@ -228,25 +228,58 @@ ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
 | 0002E | Composite Score Routing | ✅ | Under equal capability, **Stability dominates** (FP16 10/10, BF16 0/10) |
 | 0002E.1 | Decision Boundary | ✅ | **critical w_stab = 0.0 / 0.185 / 0.351.** Stability = secondary objective |
 | 0002E.2 | Pareto Routing | ✅ | Scalarization hides dominance. **Two-stage: Pareto Filter → Composite Score** |
+| 0002E.3 | **Adaptive Weight Learning** | ✅ | **3-way比較: Fixed 86% vs Manual 96% vs Adaptive 96%.** w_stab 0.30→0.70 を Belief から学習. ドリフト 8/8・Recovery 8/8 |
 
-### Phase 4 ⏳ — Adaptive State Routing (EXP-0002F〜)
+### Phase 4 ✅ — Adaptive State Routing (EXP-0002F〜0002E.3)
 
 | # | Experiment | Result | Key Finding |
 |---|-----------|:---:|------|
 | 0002F | Shadow Expert Feedback | ✅ | 閉ループ実装. Same-runtime 100% agree (EXP-0001.8 と整合) |
 | 0002F.1 | **Cross-Backend Shadow** | ✅ | **ONNX vs PyTorch MPS: 88.6% overlap, FLAG=1 (45%). Stability 0.992→0.743** — Belief Update 実証 |
-| 0002F.2 | Stability Recovery | 📐 | Drift + Recovery 両検出（環境変化への追従） |
-| 0002E.3 | Adaptive Weight Learning | 📐 | 実データで重みを自己最適化 |
+| 0002F.2 | **Recovery Dynamics & Hysteresis** | ✅ | **非対称α (deg=0.3/recover=0.9). Drift 1.0→0.91 → Recovery 0.91→0.961. Hysteresis 0.567 (保守的). Half-life 7reqs. Time-to-95% 未到達. FalseRecovery 0%.** |
+| 0002E.3 | **Adaptive Weight Learning** | ✅ | **3-way比較: Adaptive 96% ≥ Fixed 86%.** w_stab 0.30→0.70 が Belief に追従. ドリフト/Recovery 8/8. **事前知識ゼロで Manual と同等** — 二重適応の実証 |
+| 0003 | **Heterogeneous Experts** | ✅ | **Qwen3-0.6B / SmolLM2-360M / Gemma-3-1B.** Belief(Node)→Belief(Node,Task) 拡張. **Belief 60% > Fixed 20%.** SmolLM coding最強, Gemma math最強 |
+| 0003B | **Cost-Aware Routing** | ✅ | **Quality+Latency+Cost の総合ルーティング. QPC (Quality-per-Cost) 1.91x. コスト -43% で Accuracy 50%→60%.** 「安くて十分良い」を選ぶ |
+| 0003A | **Dynamic Node State Estimation** | ✅ | **State(t)={Cap,Lat,Cost,Stab}. Router は状態推定器. Regret を導入し Adaptive vs Static で -75.7%.** Capability jump (モデル更新) 追従を実証 |
+| 0003C | **Policy Learning** | ⚠️ | **Q[state][node] を報酬から学習 (State→Policy→Action). 負の結果: 少サンプルでは Fixed 優位 (1.6 vs 4.2).** **Learning Depth Hypothesis を提案** — 学習対象が深いほど Sample Complexity が急増 |
+| 0003C.1 | **Contextual Bandit (UCB)** | ✅ | **UCB/Thompson は Q-Learning より2-3倍サンプル効率 (16.5 vs 7.2/5.4).** Contextual Bandit 定式化の妥当性を確認. ただし60サンプルでは Fixed 未達 → **Empirical Observation 1 (学習深度) 支持** |
+| 0003C.2 | **Sample Complexity Estimation** | ✅ | **実測 (N=5..120) を冪則フィット: Fixed b=0.75 < 全学習器 (0.83〜0.94) → N* = NEVER (漸近).** **フィードバック非対称性を発見: Fixed=フル情報 (オラクル) vs バンディット=部分情報.** Shadow (0002F) との統合が次の動機 |
+| 0003C.3 | **Shadow Feedback (Full-Info Bandit)** | ✅ | **2×2 (UCB/Thompson × partial/shadow). シャドウ実行で UCB のギャップ 94% 解消 (9.58→0.60), Thompson の N* が 6.2倍高速化 (5,456→885). フィードバック構造が支配要因と実証. 残差は重みキャリブレーション → LinUCB** |
+| 0003C.4 | **LinUCB (7-dim features)** | ✅ | **LinUCB-Shadow が初めて Fixed を上回る (gap=-0.40, regret 6.5%減).** **学習重みがメカニズムを実証: gemma latency=0.379 (>Fixed 0.20). 0003C.3 の残差 0.60 を解消し逆転.** Observation→State→Belief→Confidence→Features→Routing パイプライン完成 |
+| 0003D | **Statistical Validation** | ✅ | **30 seeds: LinUCB-S vs Fixed 有意 (p=0.020, d=-0.49, 平均11%低). 部分FB 有意に悪い (p<0.001). UCB-S は同等 (p=0.41). LinUCB-S vs UCB-S p<0.001 (d=-1.10). 10→30 seed で p 0.77→0.02 = 検出力の実証.** |
+| 0003E | **Benchmark Expansion** | ✅ | **Set B (Qwen2.5-Coder-0.5B/SmolLM2-135M/Llama-3.2-1B) + reasoning で LinUCB-S > Fixed が再現 (p<0.001, d=-0.88, 効果量増大). Set B では UCB-S は有意に悪い (p<0.001) → 素朴な報酬最大化は品質分散下で危険、特徴量学習が必須. モデル・タスク一般化を確立.** |
+| 0003F | **Feature Ablation** | ✅ | **LinUCB の capability (信念からの能力推定) を除去すると Regret +37.6% 悪化 (p<0.001). 他の特徴はほぼ無影響. → LinUCB 優位のメカニズムは「観測→信念→能力推定」にあり、Observation-Driven Routing の本質を解明.** |
 
-> **Phase 4 の中核**: 「良いノードを選ぶ」→「**観測結果に応じてノードの信頼性を更新し、次の意思決定へ反映する**」
-> `Static Knowledge → Observed Evidence → Belief Update → Routing`
+> **Phase 4 完了**: `Static Knowledge → Observed Evidence → Belief Update → Weight Learning → Routing` の閉ループが実データで成立。
+> 「観測に応じて Belief を更新し、その Belief に応じて Weight を学習することで、未知の環境変化にも適応できる」— 中心仮説に実験的裏付け。
+> **EXP-0003 で異種モデルでも成立** — 単一モデル向けの工夫ではなく、一般的な分散LLMルーティングの枠組みとして機能。
 
 ### Roadmap
 
 ```
-Phase 5 📐 Emergent Routing（ルールなし，Policy 生成）
-Phase 6 📐 Multi-Agent Collaboration / Distributed Frontier AI
+📜 論文凍結 ✅ Zenodo DOI 10.5281/zenodo.21755612 (Observation-Driven Routing)
+ArcAsha v0.1 ✅ src/arcasha/ — 検証済みパイプラインを内部エンジンとして製品化
+Phase 5 🚧 Emergent Controller (Task → Planner → Router → Verifier → Memory) ← 進行中
+EXP-0005A ✅ Task Decomposition (RuleBasedPlanner)
+EXP-0005B ✅ LLM Planner (フォールバック付き, 実ノード検証済み)
+EXP-0005C ✅ Dynamic Expert Assignment (topK コミット + 並列実行)
+EXP-0005D ✅ Verifier (閾値 + 拒否語 + 統合)
+EXP-0005E ✅ EpisodeMemory
+Vector Memory ✅ n-gram Embedding + cosine で類似エピソード検索
+EXP-0005F ✅ Emergent Controller (End-to-End デモ実証)
+Tree Search ✅ 複数プラン → Beam 枝刈り → Verifier 選抜 → 最弱展開 (search/tree.ts)
+Self Reflection ✅ 失敗を Belief (μ, n) から診断 → re-route/committee/re-decompose (reflect/reflector.ts)
+Long-term Memory ✅ 類似エピソード → 事前信念 μ₀ 初期化 (Closed Bayesian Loop)
+EXP-0003C.5 📐 Neural Bandit
+MCTS 📐 PUCT によるプラン空間探索 (Belief を PUCT prior に)
+Multi-Agent Debate 📐 専門エキスパートによる議論
+Phase 6 📐 Distributed Frontier AI
 ```
+
+> **ArcAsha v0.1**: 研究で検証した Observation→Belief→Confidence→Features→LinUCB-Shadow→Routing の
+> パイプラインを `src/arcasha/` に実装。実ノード 3 台 (Qwen3-0.6B / SmolLM2-360M / Gemma-3-1B) で
+> エンドツーエンド動作を確認。詳細: [`src/arcasha/README.md`](src/arcasha/README.md) |
+> 統一理論: [`src/arcasha/FRAMEWORK.md`](src/arcasha/FRAMEWORK.md)
 
 ### Apple Backend Architecture
 
@@ -261,7 +294,7 @@ ArcAsha Runtime
         └── Asha Metal Kernel Lab (Custom Shaders)
 ```
 
-See [`APPLE_BACKEND_DESIGN.md`](akasha-master/experiments/qwen3_0.6b/APPLE_BACKEND_DESIGN.md).
+See [`APPLE_BACKEND_DESIGN.md`](experiments/qwen3_0.6b/APPLE_BACKEND_DESIGN.md).
 
 ---
 
