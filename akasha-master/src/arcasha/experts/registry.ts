@@ -27,10 +27,33 @@ export function paramsOf(modelId: string): number {
   return m ? Math.round(parseFloat(m[1]) * 1000) : 500;
 }
 
+/** ノードの動作メトリクス（給電・回線速度）。実測が無い場合は決定論シミュレーション（source:'sim'）。 */
+export interface NodeMetric {
+  batteryPct: number; // 0-100 給電（バッテリー）残量
+  rttMs: number;      // 回線速度（往復遅延）
+  powerMw: number;    // 推定消費電力
+  connectedAt: number;
+  lastSeenAt: number;
+  source: 'real' | 'sim';
+}
+
+/** nodeId から決まる決定論シミュレーション値（毎回同じ → 再現可能）。実機は register 情報で上書き。 */
+function simMetric(nodeId: string): { batteryPct: number; rttMs: number; powerMw: number } {
+  let h = 0;
+  for (let i = 0; i < nodeId.length; i++) h = (h * 31 + nodeId.charCodeAt(i)) >>> 0;
+  return {
+    batteryPct: 40 + (h % 61),   // 40-100%
+    rttMs: 5 + (h % 76),         // 5-80ms
+    powerMw: 500 + (h % 1500),   // 0.5-2.0W
+  };
+}
+
 export class ExpertHub {
   readonly experts: ExpertInfo[] = [];
   /** register 時に送られた生のノード情報 (platform/backend/precision/settings等) */
   readonly nodeDetails = new Map<string, Record<string, any>>();
+  /** ノードごとの動作メトリクス（給電・回線速度） */
+  readonly nodeMetrics = new Map<string, NodeMetric>();
   private sockets = new Map<string, WebSocket>();
   private cache = new Map<string, EvalResult>();
   private genCache = new Map<string, string>();
@@ -56,6 +79,18 @@ export class ExpertHub {
           const modelId = msg.node.model_id || 'unknown';
           const params = paramsOf(modelId);
           this.nodeDetails.set(nodeId, msg.node);
+          const now = Date.now();
+          const det = (msg.node as Record<string, any>) ?? {};
+          const realBattery = typeof det.battery_pct === 'number' ? det.battery_pct : null;
+          const sim = simMetric(nodeId);
+          this.nodeMetrics.set(nodeId, {
+            batteryPct: realBattery ?? sim.batteryPct,
+            rttMs: sim.rttMs,
+            powerMw: sim.powerMw,
+            connectedAt: now,
+            lastSeenAt: now,
+            source: realBattery !== null ? 'real' : 'sim',
+          });
           this.experts.push({
             nodeId,
             modelId,
@@ -69,6 +104,15 @@ export class ExpertHub {
           console.log(`  ✅ expert ${nodeId} (${modelId}, ${params}M)`);
           if (this.experts.length >= minNodes) onReady();
         } else if (msg.type === 'ping') {
+          // 回線速度（RTT）計測 — ノードの ping に往復遅延を記録
+          const m = this.nodeMetrics.get(nodeId);
+          if (m) {
+            const t = typeof msg.t === 'number' ? msg.t : Date.now();
+            const rtt = Math.max(1, Date.now() - t);
+            // 移動平均で安定化（急激な変化を滑らかに）
+            m.rttMs = Math.round(m.rttMs * 0.7 + rtt * 0.3);
+            m.lastSeenAt = Date.now();
+          }
           ws.send(JSON.stringify({ type: 'pong', t: msg.t }));
         }
       });
@@ -137,6 +181,60 @@ export class ExpertHub {
         type: 'compute', request_id: requestId, prompt,
         max_new_tokens: maxTokens, temperature: 0, top_p: 1, chat,
       }));
+    });
+  }
+
+  /** 特定ノードを切断（モニターの端末操作） */
+  disconnect(nodeId: string): boolean {
+    const ws = this.sockets.get(nodeId);
+    if (!ws) return false;
+    ws.close();
+    this.sockets.delete(nodeId);
+    const idx = this.experts.findIndex((e) => e.nodeId === nodeId);
+    if (idx >= 0) this.experts.splice(idx, 1);
+    this.nodeDetails.delete(nodeId);
+    this.nodeMetrics.delete(nodeId);
+    return true;
+  }
+
+  /** 全ノードのメトリクス + 担当ロール（モニター表示用） */
+  metrics(): Array<{
+    nodeId: string;
+    modelId: string;
+    paramsM: number;
+    family: string;
+    batteryPct: number;
+    rttMs: number;
+    powerMw: number;
+    source: 'real' | 'sim';
+    connectedAt: number;
+    lastSeenAt: number;
+    roles: string[];
+  }> {
+    return this.experts.map((e) => {
+      const m = this.nodeMetrics.get(e.nodeId);
+      const det = this.nodeDetails.get(e.nodeId) ?? {};
+      const caps = det.capabilities;
+      // capabilities は配列（ロール名）またはオブジェクト（ロール → スコア）の両対応
+      let roles: string[] = [];
+      if (Array.isArray(caps)) {
+        roles = caps.map((c: unknown) => String(c));
+      } else if (caps && typeof caps === 'object') {
+        roles = Object.keys(caps).filter((k) => (caps as Record<string, unknown>)[k] !== 0);
+      }
+      return {
+        nodeId: e.nodeId,
+        modelId: e.modelId,
+        paramsM: e.paramsM,
+        family: e.family,
+        batteryPct: m?.batteryPct ?? 50,
+        rttMs: m?.rttMs ?? 20,
+        powerMw: m?.powerMw ?? 1000,
+        source: m?.source ?? 'sim',
+        connectedAt: m?.connectedAt ?? 0,
+        lastSeenAt: m?.lastSeenAt ?? 0,
+        roles,
+      };
     });
   }
 

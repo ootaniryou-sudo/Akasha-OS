@@ -32,6 +32,16 @@ for (let i = 0; i < args.length; i++) {
 const hub = new ExpertHub();
 hub.start(WS_PORT, 1, () => {});
 
+// ノードをラウンドロビンで選択（複数端末に分散 → 役職の偏りが可視化される）
+let rrCursor = 0;
+function nextNodeId(): string | undefined {
+  const nodes = hub.experts;
+  if (nodes.length === 0) return undefined;
+  const n = nodes[rrCursor % nodes.length];
+  rrCursor++;
+  return n.nodeId;
+}
+
 // ─── AI OS 本体（Phase 1.2: Hub が AI OS の init になる）────────────────
 const aios = initAiOs({
   listNodes: () => hub.experts.map((e) => ({ nodeId: e.nodeId, modelId: e.modelId, paramsM: e.paramsM })),
@@ -350,6 +360,14 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ─── 端末操作 API（モニターの接続端末操作）────────────────────────
+  const nodeMatch = url.pathname.match(/^\/api\/node\/([^/]+)\/disconnect$/);
+  if (nodeMatch && req.method === 'POST') {
+    const ok = hub.disconnect(decodeURIComponent(nodeMatch[1]));
+    sendJson(200, { ok, nodeId: decodeURIComponent(nodeMatch[1]) });
+    return;
+  }
+
   // ─── AI OS Monitor API（Phase 2.1）────────────────────────────────
   if (url.pathname === '/api/monitor') {
     syncAiOs(aios);
@@ -359,6 +377,8 @@ const server = http.createServer((req, res) => {
       recent: recentExecs,
       scaling: monitorData().scaling,
       comparison: monitorData().comparison,
+      nodes: hub.metrics(),
+      roles: aios.learner.all(),
     });
     return;
   }
@@ -382,7 +402,8 @@ const server = http.createServer((req, res) => {
       try {
         const { text, deviceId } = JSON.parse(body);
         if (!text) { sendJson(400, { error: 'text required' }); return; }
-        const ex = await aiosExecute(aios, String(text), deviceId ? String(deviceId) : undefined);
+        const targetId = deviceId ? String(deviceId) : nextNodeId();
+        const ex = await aiosExecute(aios, String(text), targetId);
         pushRecent({
           text: String(text),
           driverId: ex.driverId,

@@ -35,6 +35,20 @@
   pre { white-space:pre-wrap; background:#0e141b; border:1px solid var(--line); border-radius:8px; padding:10px; font-size:11px; line-height:1.5; margin-top:8px; }
   #status { color:var(--mute); font-size:11px; margin-top:8px; min-height:14px; }
   .row { display:flex; justify-content:space-between; align-items:center; }
+  /* power / roles / device control */
+  .kv { display:flex; justify-content:space-between; padding:3px 0; font-size:12px; border-bottom:1px solid #1a232e; }
+  .kv:last-child { border-bottom:none; }
+  .kv span { color:var(--mute); }
+  .kv b { font-weight:700; }
+  .tag { font-size:9px; padding:1px 5px; border-radius:4px; vertical-align:middle; margin-left:6px; }
+  .tag-real { background:rgba(47,206,122,.15); color:var(--go); border:1px solid rgba(47,206,122,.4); }
+  .tag-sim { background:rgba(224,184,74,.12); color:var(--busy); border:1px solid rgba(224,184,74,.35); }
+  .batt { height:5px; border-radius:3px; background:#0e141b; overflow:hidden; margin-top:4px; max-width:220px; }
+  .batt-fill { height:100%; border-radius:3px; transition:width .3s; }
+  .btn-kill { background:transparent; color:var(--bad); border:1px solid rgba(224,90,79,.5); border-radius:6px; font-size:10px; padding:3px 8px; cursor:pointer; margin-top:4px; }
+  .btn-kill:hover { background:rgba(224,90,79,.15); }
+  .role { padding:4px 0; }
+  .role-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
 </style>
 </head>
 <body>
@@ -49,8 +63,18 @@
   </div>
 
   <div class="card">
-    <h2>Device Tree</h2>
+    <h2>Power &amp; Network（給電・回線）</h2>
+    <div id="power"><div class="mute">waiting…</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Device Tree（端末管理）</h2>
     <div id="devices"><div class="mute">waiting…</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Role Distribution（役職の偏り）</h2>
+    <div id="roles"><div class="mute">waiting…</div></div>
   </div>
 
   <div class="card">
@@ -93,6 +117,95 @@ function renderDevices(nodes) {
   }).join('');
 }
 
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/** 給電・回線のサマリー */
+function renderPower(nodes) {
+  const el = $('power');
+  if (!nodes.length) { el.innerHTML = '<div class="mute">no device connected</div>'; return; }
+  const avgBatt = nodes.reduce((s, n) => s + (n.batteryPct ?? 0), 0) / nodes.length;
+  const avgRtt = nodes.reduce((s, n) => s + (n.rttMs ?? 0), 0) / nodes.length;
+  const maxRtt = Math.max(...nodes.map(n => n.rttMs ?? 0));
+  const totalPower = nodes.reduce((s, n) => s + (n.powerMw ?? 0), 0);
+  const real = nodes.filter(n => n.source === 'real').length;
+  const lowestBatt = Math.min(...nodes.map(n => n.batteryPct ?? 0));
+  const battWarn = lowestBatt < 25 ? '<span class="bad">⚠ ' + lowestBatt.toFixed(0) + '%</span>' : lowestBatt.toFixed(0) + '%';
+  el.innerHTML =
+    '<div class="kv"><span>端末数</span><b>' + nodes.length + '</b></div>' +
+    '<div class="kv"><span>平均バッテリー</span><b>' + avgBatt.toFixed(0) + '%</b></div>' +
+    '<div class="kv"><span>最低バッテリー</span><b>' + battWarn + '</b></div>' +
+    '<div class="kv"><span>平均 RTT（回線速度）</span><b>' + avgRtt.toFixed(0) + 'ms</b></div>' +
+    '<div class="kv"><span>最大 RTT</span><b>' + maxRtt + 'ms</b></div>' +
+    '<div class="kv"><span>総消費電力</span><b>' + (totalPower / 1000).toFixed(2) + 'W</b></div>' +
+    '<div class="kv"><span>実測 / 推定（sim）</span><b>' + real + ' / ' + (nodes.length - real) + '</b></div>';
+}
+
+/** 端末一覧（バッテリー・回線速度・担当ロール・切断操作） */
+function renderDevices(nodes) {
+  const el = $('devices');
+  if (!nodes.length) { el.innerHTML = '<div class="mute">no device connected</div>'; return; }
+  el.innerHTML = nodes.map(n => {
+    const role = n.nodeId.includes('ipad') ? 'iPad' : n.nodeId.includes('iphone') ? 'iPhone' : 'Mac';
+    const batt = Math.max(0, Math.min(100, n.batteryPct ?? 50));
+    const battColor = batt > 50 ? 'var(--go)' : batt > 20 ? 'var(--busy)' : 'var(--bad)';
+    const rtt = n.rttMs ?? 20;
+    const rttClass = rtt < 30 ? 'go' : rtt < 80 ? 'busy' : 'bad';
+    const roles = (n.roles && n.roles.length) ? n.roles.join(', ') : 'general';
+    return '<div class="node"><span class="dot"></span>' +
+      '<div style="flex:1">' +
+        '<div><span class="id">' + esc(n.nodeId) + '</span>' +
+          '<span class="tag ' + (n.source === 'real' ? 'tag-real' : 'tag-sim') + '">' + (n.source === 'real' ? 'REAL' : 'SIM') + '</span>' +
+          '<span class="meta">' + esc(n.modelId) + ' · ' + n.paramsM + 'M</span></div>' +
+        '<div class="meta">' + role + ' · role: ' + esc(roles) + '</div>' +
+        '<div class="batt"><div class="batt-fill" style="width:' + batt + '%;background:' + battColor + '"></div></div>' +
+      '</div>' +
+      '<div class="meta" style="text-align:right">' +
+        '<div><span class="' + rttClass + '">' + rtt + 'ms</span> RTT</div>' +
+        '<div>' + batt + '% batt</div>' +
+        '<div>' + (n.powerMw / 1000).toFixed(2) + 'W</div>' +
+        '<button class="btn-kill" onclick="disconnectNode(\'' + String(n.nodeId).replace(/[^\w.-]/g, '') + '\')">切断</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/** 役職（Expert ロール）の偏り — 利用サンプルの集中度と精度分布 */
+function renderRoles(roles) {
+  const el = $('roles');
+  if (!roles.length) { el.innerHTML = '<div class="mute">no role observations yet（AI OS 実行で学習が始まります）</div>'; return; }
+  const total = roles.reduce((s, r) => s + r.samples, 0) || 1;
+  const maxSamples = Math.max(...roles.map(r => r.samples), 1);
+  const minSamples = Math.min(...roles.map(r => r.samples));
+  const concentration = (Math.max(...roles.map(r => r.samples)) / total * 100).toFixed(0);
+  const imbalance = minSamples > 0 ? (maxSamples / minSamples).toFixed(1) : '∞';
+  const rows = roles.map(r => {
+    const w = Math.max(2, Math.round((r.samples / maxSamples) * 100));
+    const acc = (r.accuracy * 100).toFixed(0);
+    return '<div class="role">' +
+      '<div class="role-head"><span class="id">' + esc(r.expert) + '</span>' +
+      '<span class="meta">n=' + r.samples + ' · acc ' + acc + '% · ' + r.latencyMs.toFixed(0) + 'ms</span></div>' +
+      '<div class="bar" style="max-width:100%"><div style="width:' + w + '%;background:var(--go)"></div></div>' +
+    '</div>';
+  }).join('');
+  el.innerHTML =
+    '<div class="row" style="margin-bottom:8px">' +
+      '<span class="meta">集中度（最大ロールの利用割合）: <b class="' + (Number(concentration) > 60 ? 'bad' : 'go') + '">' + concentration + '%</b></span>' +
+      '<span class="meta">不均等（max/min 比）: <b class="' + (Number(imbalance) > 5 ? 'bad' : 'go') + '">' + imbalance + '</b></span>' +
+    '</div>' + rows;
+}
+
+/** 端末の切断（接続端末の操作） */
+async function disconnectNode(nodeId) {
+  try {
+    const r = await fetch('/api/node/' + encodeURIComponent(nodeId) + '/disconnect', { method: 'POST' });
+    const d = await r.json();
+    $('status').textContent = d.ok ? ('🔌 切断: ' + d.nodeId) : ('❌ 切断失敗: ' + d.nodeId);
+    tick();
+  } catch (e) {
+    $('status').textContent = '❌ ' + e;
+  }
+}
+
 function renderLearner(learner) {
   const el = $('learner');
   if (!learner.length) { el.innerHTML = '<div class="mute">no observations yet</div>'; return; }
@@ -123,8 +236,10 @@ async function tick() {
     const r = await fetch('/api/monitor');
     const d = await r.json();
     renderPipe(d.recent && d.recent[0] ? d.recent[0].steps : []);
-    renderDevices(d.devices);
+    renderPower(d.nodes ?? []);
+    renderDevices(d.nodes ?? []);
     renderLearner(d.learner);
+    renderRoles(d.roles ?? []);
     renderRecent(d.recent);
     $('bench').textContent =
       '■ Fault スケーリング実験\n' + (d.scaling ?? '') +
