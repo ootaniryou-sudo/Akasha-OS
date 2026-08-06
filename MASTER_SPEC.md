@@ -192,10 +192,15 @@ This is a training axis orthogonal to Transformer pretraining — the OS-level a
 
 ## 10. Roadmap
 
-1. **Real Device validation** — connect Mac / iPhone 15 Pro / iPad M4 via the Hub and replace simulation numbers with measured latency / power / temperature / accuracy.
-2. **Model integration** — broader small-model support (Qwen family, etc.) on the Fast Runtime.
-3. **Policy scaling** — deepen OS Policy Learning (multi-objective, cross-session transfer).
-4. **Tool calling** — attachments gain real tool / compiler / search access (Coding `COMPILE` becomes a real compile).
+Prioritized execution order — **prove "many phones acting as one AI" first, then layer OS-level learning and IR-native models.** Each step produces a working artifact before the next begins.
+
+1. **Distributed phone execution (100–300 devices)** — DeviceTree + Caravan + task dispatch + real-device benchmark. The demo every reviewer / investor wants to see: "N phones actually act as one inference system." (Foundations exist: Hub / DeviceTree / Caravan / Device Monitor; real multi-device proof is next.)
+2. **AI Pool / dynamic team composition** — floating experts + Caravan assembling a temporary team per task (type-chain wiring, shared memory + IR). Core runtime is **implemented** (`src/arcasha/cognitive/`, selftest [75], Validation G); the next step is running it over real distributed devices.
+3. **Oasis (Lesson Memory) sharing** — share task experience across Caravans **without weight updates** (OS-level learning orthogonal to Transformer pretraining). Implemented as simulation (Validation G); scale to cross-session / cross-device transfer.
+4. **IR-native specialist models** — distill Math / Coding / Planning experts that speak AILSA directly (Phase 4–5 distillation; `training/finetune.py` is the base).
+5. **IR-native General model** — eventually the General model also speaks IR, completing the Control IR / Domain IR vision (`AI_IR_MODEL.md`).
+
+This ordering keeps the risk low while accumulating demonstrable value: distributed execution → dynamic composition → OS-level learning → IR-native specialists → full IR-native stack.
 
 ---
 
