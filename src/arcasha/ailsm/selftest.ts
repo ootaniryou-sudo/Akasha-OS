@@ -74,6 +74,8 @@ import { osOverheadProfile, allOverheadProfiles } from '../bench/overhead.js';
 import { buildJsonReport, buildCsvReport, buildMarkdownReport, writeReports, VALIDATION_KIND } from '../bench/report.js';
 import { explainExecutive, renderExplanation } from '../attachments/explain.js';
 import { runRealDeviceBenchmark, renderRealDeviceBenchmark } from '../bench/real-device.js';
+import { DecisionLog, learnGains, explainWithPolicy, runPolicyLearningDemo } from '../attachments/decision-log.js';
+import { runCli } from '../cli.js';
 import type { AttachmentContext } from '../attachments/attachment.js';
 import type { Hypothesis } from './reasoning.js';
 
@@ -1179,6 +1181,33 @@ const rd70b = await runRealDeviceBenchmark({ devices: ['iPhone'], measure: () =>
 check('Real Device: 実測コールバックで measured 行を生成', rd70b.status === 'connected' && rd70b.rows.length === 6 * 5 && rd70b.rows.every((r) => r.status === 'measured' && r.latencyMs === 1200));
 check('renderRealDeviceBenchmark が Status を表示', renderRealDeviceBenchmark(rd70).includes('not-connected'));
 check('Validation 分離: report.json は kind=simulation', (JSON.parse(buildJsonReport(rows69, allOverheadProfiles())) as { kind: string }).kind === 'simulation' && VALIDATION_KIND === 'simulation');
+
+// [71] OS Policy Learning + arcasha CLI（v1.0 リリース）
+console.log('\n[71] OS Policy Learning / CLI');
+const log71 = new DecisionLog();
+check('DecisionLog: 記録と集計', log71.size() === 0);
+for (let i = 0; i < 10; i++) {
+  log71.append({ task: 't', mode: 'auto', choices: ['planning', 'debate', 'creativity', 'reflection'], expectedGain: 0.22, outcomeQuality: 0.9, outcomeLatencyMs: 1000 });
+}
+check('DecisionLog: 10 件蓄積・byAttachment', log71.size() === 10 && log71.byAttachment('debate').length === 10);
+const gains71 = learnGains(log71);
+const debateGain71 = gains71.get('debate')!;
+check('ポリシー学習: EMA で期待ゲインが実測値に収束（~0.40）', Math.abs(debateGain71.gain - 0.4) < 0.01 && debateGain71.samples === 10, `gain=${debateGain71.gain.toFixed(3)}`);
+check('ポリシー学習: 未観測 Attachment はデータなし', gains71.has('search') === false);
+const boot71 = (await import('./expert-runtime.js')).boot();
+const before71 = await explainExecutive('新しいアルゴリズムを考えて', boot71, { mode: 'auto', budgetMs: 1000 });
+const after71 = await explainWithPolicy('新しいアルゴリズムを考えて', boot71, log71, { mode: 'auto', budgetMs: 1000 });
+const gb = (e: { choices: { id: string; expectedGain: number }[] }, id: string): number => e.choices.find((c) => c.id === id)!.expectedGain;
+check('Decision Explanation が学習を反映（debate +22% → +40%）', Math.abs(gb(before71, 'debate') - 0.22) < 1e-9 && Math.abs(gb(after71, 'debate') - 0.4) < 1e-9, `before=${(gb(before71, 'debate') * 100).toFixed(0)}% after=${(gb(after71, 'debate') * 100).toFixed(0)}%`);
+check('総合期待向上がポリシーで上昇（+34% → +43%）', after71.totalExpectedGain > before71.totalExpectedGain, `before=${(before71.totalExpectedGain * 100).toFixed(0)}% after=${(after71.totalExpectedGain * 100).toFixed(0)}%`);
+const pol71 = await runPolicyLearningDemo();
+check('policy デモ: 学習前→学習後の説明が出力される', pol71.includes('学習前: debate') && pol71.includes('学習後: debate'));
+const cliHelp71 = await runCli(['help']);
+check('arcasha CLI: help が v1.0.0 と usage を表示', cliHelp71.includes('ArcAsha v1.0.0') && cliHelp71.includes('arcasha <command>') && cliHelp71.includes('benchmark'));
+const cliPol71 = await runCli(['policy']);
+check('arcasha CLI: policy がポリシー学習デモを実行', cliPol71.includes('OS Policy Learning'));
+const cliVer71 = await runCli(['version']);
+check('arcasha CLI: version', cliVer71 === 'ArcAsha v1.0.0');
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

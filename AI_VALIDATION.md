@@ -4,10 +4,38 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.2（Phase 4.2 実装済み）** |
+| Status | **Spec v1.3（v1.0 リリース / OS Policy Learning 実装済み）** |
 | Date | 2026-08-06 |
-| 実装 | `src/arcasha/attachments/scientific.ts`, `src/arcasha/bench/`（Real Benchmark Suite）, `src/arcasha/attachments/explain.ts`（Decision Explanation）, `src/arcasha/bench/real-device.ts`（実機ハーネス） |
-| 方針 | 新機能 2 割・実験と検証 8 割。**Simulation と Real Device を分離**（数値を偽装しない） |
+| 実装 | `src/arcasha/attachments/scientific.ts`, `src/arcasha/bench/`, `src/arcasha/attachments/explain.ts`, `src/arcasha/attachments/decision-log.ts`, `src/arcasha/cli.ts` |
+| 方針 | 新機能 2 割・実験と検証 8 割。**Simulation と Real Device を分離**（数値を偽装しない）。v1.0 以降は v1.1/v1.2/v2 のバージョン開発 |
+
+---
+
+## OS Policy Learning（v1.0）— Decision Explanation を学習データにする
+
+「なぜ Reflection/Planning/Debate を使ったのか」を OS が説明できる（Attention Weight より人間に理解しやすい）— その Decision を**学習データ**にして Meta Executive のポリシーを更新する（`decision-log.ts`）:
+
+```
+Task → Executive → Decision → Outcome（100 万件の蓄積で Meta Executive 自身を学習可能）
+```
+
+- **DecisionLog**: `{ task, mode, choices, expectedGain, outcomeQuality, outcomeLatencyMs }` を蓄積
+- **learnGains**: 各 Attachment の成果品質からベースラインを差し引いた増分を EMA で学習
+- **explainWithPolicy**: 学習済みゲインを Decision Explanation に反映
+
+```
+=== OS Policy Learning（Decision Explanation を学習データにする）===
+観測: debate を含む Decision の成果品質 0.9 × 10 件
+学習前: debate の期待ゲイン = +22%（静的）
+学習後: debate の期待ゲイン = +40%（実測 EMA）
+総合期待向上: +34% → +43%
+```
+
+これは Transformer の事前学習とは別軸の **「OS ポリシー学習」**。`npx arcasha policy` で体感できます。
+
+## CLI（v1.0 リリース）
+
+`npm install arcasha` → `arcasha benchmark` / `arcasha policy` / `arcasha version` が動く（package.json `bin`）。`examples/quickstart.ts` で 5 分体験。
 
 ---
 

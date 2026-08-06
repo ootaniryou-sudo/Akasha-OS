@@ -1,10 +1,13 @@
 {
   "name": "akasha-os",
   "version": "1.0.0",
-  "description": "Akasha — ultra-low-latency distributed AI orchestrator OS",
+  "description": "Akasha — AI Operating System for Modular Reasoning and Runtime Intelligence",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "arcasha": "dist/arcasha/cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "build:edge": "esbuild src/edge/worker-inference.ts --bundle --outfile=public/worker-inference.js --format=esm --target=es2022 --platform=browser",
@@ -22,7 +25,8 @@
     "ailsm:selftest": "tsx src/arcasha/ailsm/selftest.ts",
     "ailsm:golden": "tsx src/arcasha/ailsm/golden.ts",
     "ailsm:visualize": "tsx src/arcasha/ailsm/visualize.ts",
-    "benchmark": "tsx src/arcasha/bench/cli.ts"
+    "benchmark": "tsx src/arcasha/bench/cli.ts",
+    "arcasha": "tsx src/arcasha/cli.ts"
   },
   "engines": {
     "node": ">=20.0.0"

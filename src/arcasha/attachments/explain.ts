@@ -75,7 +75,7 @@ function modeReasonOf(mode: ThinkingMode, b: ReturnType<typeof estimateBudget>):
 export async function explainExecutive(
   text: string,
   booted: BootResult,
-  opts: { mode?: ThinkingMode; budgetMs?: number; attachments?: string[] } = {},
+  opts: { mode?: ThinkingMode; budgetMs?: number; attachments?: string[]; learnedGains?: Map<string, number> } = {},
 ): Promise<DecisionExplanation> {
   const mode = opts.mode ?? 'auto';
   const budgetMs = opts.budgetMs ?? 1000;
@@ -90,7 +90,9 @@ export async function explainExecutive(
   const choices: AttachmentChoice[] = pipeline.map((id) => {
     const a = manager.get(id)!;
     const g = gainOf(id, text);
-    return { id, expectedGain: g.gain, expectedLatencyMs: a.estimatedLatency, reason: g.reason };
+    // 学習済みゲインがあればそれを使う（OS ポリシー学習）
+    const learned = opts.learnedGains?.get(id);
+    return { id, expectedGain: learned ?? g.gain, expectedLatencyMs: a.estimatedLatency, reason: g.reason };
   });
   const usedMs = choices.reduce((s, c) => s + c.expectedLatencyMs, 0);
   // 総合期待向上 = 最有力 Attachment の効果 + 相乗効果 3%（重複を考慮した保守的見積もり）

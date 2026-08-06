@@ -5,7 +5,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Draft v0.34** |
+| Status | **Draft v0.35（ArcAsha v1.0 リリース）** |
 | Date | 2026-08-06 |
 | Owner | ArcAsha Core Team |
 | 関連文書 | `MASTER_SPEC.md`（v1 全体像）, `PROTOCOL.md`（バイナリ配線）, `NAMING.md`（世界観命名）, `AILSA_ISA.md`（命令セット仕様）, `AILSM_IR.md`（中間表現仕様）, `AILSM_COMPILER.md`（コンパイラ仕様）, `AILSA_RUNTIME.md`（実行基盤仕様）, `AI_TOOLCHAIN.md`（ツールチェーン仕様）, `AI_ABI.md`（ABI/Driver/DeviceTree 仕様）, `AI_VIRTUAL_MEMORY.md`（AVM 仕様）, `AI_OBSERVABILITY.md`（計測器仕様）, `AI_RUNTIME_PHASE1.md`（実機実行系）, `AI_EVALUATION.md`（評価）, `AI_REASONING.md`（Reasoning Runtime）, `AI_ATTACHMENTS.md`（プラグイン層）, `AI_VALIDATION.md`（再現可能な評価） |
@@ -527,6 +527,8 @@ v0.32（Phase 4.0）では **Scientific Validation（再現可能な評価基盤
 v0.33（Phase 4.1）では **Real Benchmark Suite** を追加 — 「実装できた」と「証明できた」は別。`src/arcasha/bench/` に **Validation E: 外部ベンチ**（GSM8K / MATH500 / HumanEval / MBPP / MMLU / LiveCodeBench、各 10 問・固定）を実装し、Qwen1.5B（単体 / Thinking / +Fast / +Auto / +Deep）で評価: **全体正答率 27% → 95%**（Qwen 単体 → +Deep）。**Qwen Thinking vs ArcAsha**（human_eval: Qwen Thinking 50% > +Fast 40% だが +Deep 100% > Thinking 50% — 難しいタスクではモデル内思考より OS のルーティング + Attachment が上）。**OS Overhead**（`overhead.ts`: Kernel / Scheduler / AVM / Executive / Attachment の CPU・Token・Memory・Latency 内訳 — Fast で LLM 85%、Deep でも LLM 40% = OS を増やしてもオーバーヘッドは小さい）。**`npm run benchmark`** 一発で全項目（Long Context / Reasoning / Coding / Math / Knowledge / Robot / Power / Temperature）+ **`reports/benchmark/report.{json,csv,md}` 自動生成**（機械可読・追試可能・バージョン付き）。品質モデルは決定論（`qwen=0.89−0.45×難易度` / `+Fast=0.95−0.45×難易度` / 能力増分）、実機実測は Device Runtime と差し替え可能（`AI_VALIDATION.md` v1.1）。
 
 v0.34（Phase 4.2）では **Validation の 2 本立て + Decision Explanation** を追加。① **Simulation と Real Device を分離** — 現在の数値は `kind: 'simulation'`（設計上の評価モデル・決定論）として report.json に明示ラベル付けし、`bench/real-device.ts`（Real Device ハーネス）は実機未接続時 `not-connected` を返して**数値を偽造しない**（iPhone/iPad/Mac 接続時は Hub 経由で実測し latency/power/temp/accuracy を記録）。② **Decision Explanation**（`attachments/explain.ts`）— **「Why did Executive choose this?」**: Executive がなぜそのモード・Attachment 構成を選んだかを、構成ごとの期待ゲイン（Planning +31% / Debate +22% / Creativity +28% / Reflection +19%）、コスト（ms）、理由（タスク特性から固定・文書化）で説明。総合期待向上 +34%（最有力 + 相乗効果 3%）。`2+2` は「trivial → Fast Runtime のみ（考える必要なし）」と説明。多くの LLM では見えない「OS が推論を管理する」ことを外から見える形にする強いデモ（`AI_VALIDATION.md` v1.2）。
+
+v0.35（**ArcAsha v1.0 リリース**）— Phases 0-4 を **AI OS 第一世代（v1）完成** と位置付け、以後は Phase 追加ではなく **v1.1 / v1.2 / v2 のバージョン開発** に移行。この段階の追加: ① **OS Policy Learning**（`attachments/decision-log.ts`）— Decision Explanation を学習データにして Meta Executive のポリシーを更新する（`Task → Executive → Decision → Outcome` の DecisionLog 蓄積 + EMA で期待ゲインを学習）。デモ: debate の期待ゲインが静的 +22% → 実測 +40% に更新され、総合期待向上 +34% → +43%。**Transformer の事前学習とは別軸の「OS ポリシー学習」**。② **`arcasha` CLI**（`cli.ts` + package.json `bin`）— `npm install arcasha` → `arcasha benchmark` / `arcasha policy` / `arcasha version`。③ **examples/quickstart.ts** + **CHANGELOG.md**（v1.0.0）。selftest [1]-[71]。ロードマップ: **v1.1** 実機ベンチ（iPhone/iPad/Mac 同一ベンチ実測）/ **v1.2** ポリシー改善（Decision Log 大規模学習）/ **v2.0** 分散推論・自己改善機構。
 
 ## ロードマップ（Expert Evolution の先）
 
