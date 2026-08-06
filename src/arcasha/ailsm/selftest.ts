@@ -73,8 +73,9 @@ import { configQuality } from '../bench/types.js';
 import { osOverheadProfile, allOverheadProfiles } from '../bench/overhead.js';
 import { buildJsonReport, buildCsvReport, buildMarkdownReport, writeReports, VALIDATION_KIND } from '../bench/report.js';
 import { explainExecutive, renderExplanation } from '../attachments/explain.js';
-import { runRealDeviceBenchmark, renderRealDeviceBenchmark } from '../bench/real-device.js';
+import { runRealDeviceBenchmark, renderRealDeviceBenchmark, renderRealDevicePlan, REAL_DEVICE_PROFILE } from '../bench/real-device.js';
 import { DecisionLog, learnGains, explainWithPolicy, runPolicyLearningDemo } from '../attachments/decision-log.js';
+import { captureReplay, renderReplay, renderReplayStep, replayStepCount } from '../attachments/replay.js';
 import { runCli } from '../cli.js';
 import type { AttachmentContext } from '../attachments/attachment.js';
 import type { Hypothesis } from './reasoning.js';
@@ -1177,8 +1178,8 @@ check('Explain: 2+2 → 選択なし（Fast Runtime）', expTriv70.choices.lengt
 check('renderExplanation が理由・ゲイン・予算を表示', renderExplanation(exp70).includes('Expected Gain : +34%') && renderExplanation(exp70).includes('planning'));
 const rd70 = await runRealDeviceBenchmark();
 check('Real Device: 未接続なら数値を偽造しない（not-connected）', rd70.status === 'not-connected' && rd70.rows.length === 0 && rd70.note.includes('偽装'));
-const rd70b = await runRealDeviceBenchmark({ devices: ['iPhone'], measure: () => ({ latencyMs: 1200, powerMw: 1500, temperatureC: 38, accuracy: 0.7 }) });
-check('Real Device: 実測コールバックで measured 行を生成', rd70b.status === 'connected' && rd70b.rows.length === 6 * 5 && rd70b.rows.every((r) => r.status === 'measured' && r.latencyMs === 1200));
+const rd70b = await runRealDeviceBenchmark({ devices: ['iPhone'], measure: () => ({ latencyMs: 1200, powerMw: 1500, temperatureC: 38, accuracy: 0.7, tokens: 500, memoryMb: 128 }) });
+check('Real Device: 実測コールバックで measured 行を生成（6 指標）', rd70b.status === 'connected' && rd70b.rows.length === 4 * 5 && rd70b.rows.every((r) => r.status === 'measured' && r.latencyMs === 1200 && r.tokens === 500 && r.memoryMb === 128));
 check('renderRealDeviceBenchmark が Status を表示', renderRealDeviceBenchmark(rd70).includes('not-connected'));
 check('Validation 分離: report.json は kind=simulation', (JSON.parse(buildJsonReport(rows69, allOverheadProfiles())) as { kind: string }).kind === 'simulation' && VALIDATION_KIND === 'simulation');
 
@@ -1208,6 +1209,19 @@ const cliPol71 = await runCli(['policy']);
 check('arcasha CLI: policy がポリシー学習デモを実行', cliPol71.includes('OS Policy Learning'));
 const cliVer71 = await runCli(['version']);
 check('arcasha CLI: version', cliVer71 === 'ArcAsha v1.0.0');
+
+// [72] Decision Replay + Real Device プラン（v1.1）
+console.log('\n[72] Decision Replay / Real Device Plan');
+const rep72 = await captureReplay('新しいアルゴリズムを考えて', boot70, { mode: 'auto', budgetMs: 1000 });
+check('Replay: 4 ステップを順に記録', replayStepCount(rep72) === 4 && rep72.steps.map((s) => s.round).join(',') === '1,2,3,4');
+check('Replay: 各ステップに理由・ゲイン・出力', rep72.steps.every((s) => s.reason.length > 0 && s.expectedGain > 0 && s.latencyMs > 0 && s.output.length > 0));
+check('Replay: 最終品質と使用時間', rep72.finalQuality > 0.7 && rep72.usedMs === rep72.steps.reduce((s, x) => s + x.latencyMs, 0));
+check('renderReplay: Round1〜4 + Final を表示', renderReplay(rep72).includes('Round1: reflection') && renderReplay(rep72).includes('Round4: planning') && renderReplay(rep72).includes('Final :'));
+check('renderReplayStep: 1 コマ再生（GUI アニメ用）', renderReplayStep(rep72, 0).includes('Round1') && renderReplayStep(rep72, 4).startsWith('END'));
+check('Real Device プラン: Mac/iPhone15 Pro/iPad M4 × 4 スイート', REAL_DEVICE_PROFILE.devices.length === 3 && REAL_DEVICE_PROFILE.suites.length === 4 && REAL_DEVICE_PROFILE.metrics.length === 6);
+check('renderRealDevicePlan が対象・指標を表示', renderRealDevicePlan().includes('iPhone 15 Pro') && renderRealDevicePlan().includes('memoryMb') && renderRealDevicePlan().includes('Simulation とは分離'));
+const cliRep72 = await runCli(['replay', 'この論文を批判的に評価して']);
+check('arcasha CLI: replay（タスク指定）', cliRep72.includes('Decision Replay') && cliRep72.includes('Round1'));
 
 // [39] AI Performance Monitor（aiperf）
 console.log('\n[39] AI Perf Monitor');

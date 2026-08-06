@@ -4,12 +4,45 @@
 
 | 項目 | 値 |
 |------|-----|
-| Status | **Spec v1.3（v1.0 リリース / OS Policy Learning 実装済み）** |
+| Status | **Spec v1.4（v1.1: Decision Replay / 実機プラン）** |
 | Date | 2026-08-06 |
-| 実装 | `src/arcasha/attachments/scientific.ts`, `src/arcasha/bench/`, `src/arcasha/attachments/explain.ts`, `src/arcasha/attachments/decision-log.ts`, `src/arcasha/cli.ts` |
-| 方針 | 新機能 2 割・実験と検証 8 割。**Simulation と Real Device を分離**（数値を偽装しない）。v1.0 以降は v1.1/v1.2/v2 のバージョン開発 |
+| 実装 | `src/arcasha/attachments/explain.ts`, `decision-log.ts`, `replay.ts`, `src/arcasha/bench/real-device.ts`, `src/arcasha/cli.ts` |
+| 方針 | 新機能 2 割・実験と検証 8 割。**Simulation と Real Device を分離**（数値を偽装しない）。v1.1 は実機ベンチ + Decision Replay 優先 |
 
 ---
+
+## Decision Replay（v1.1）—「なぜこの回答になったのか」を動画のように再生
+
+普通の LLM は「入力 → 出力」で終わり、中身を追えない。ArcAsha は実行パイプライン全体を記録・再生できる（`replay.ts`）:
+
+```
+=== Decision Replay ===
+Task : 新しいアルゴリズムを考えて
+Mode : auto (budget 1000ms / base quality 0.50)
+
+Round1: reflection (+19% / 150ms)
+  reason: 自己批判（Answer→Score→Revise）で品質を向上
+  output: 新しいアルゴリズムを考えて（再考済み: ...）
+Round2: creativity (+28% / 200ms)
+  reason: 新規仮説生成が必要（「考えて/新しい/アイデア」）
+  output: アナロジーで捉える / 逆転の発想をする / 最小構成から考える
+Round3: debate (+22% / 400ms)
+  reason: 複数視点の検討で新規性・妥当性を担保
+  output: 【合意】中立的に統合する
+Round4: planning (+31% / 250ms)
+  reason: 目標分解・実行手順が必要（高複雑度タスク）
+  output: [1] 調査・情報収集 → ...
+
+Final : quality=0.88 / used 1000ms
+```
+
+- `renderReplayStep(trace, i)` で 1 コマずつ再生（GUI アニメーションの土台）
+- `npx arcasha replay`（または `arcasha replay タスク文`）で追える
+- **Explainable Reasoning の核**: 回答に至った全ステップを理由・ゲイン・出力つきで再生できる
+
+## Real Device Benchmark プラン（v1.1）
+
+Mac / iPhone 15 Pro / iPad M4 × HumanEval / MBPP / GSM8K / MATH500 × **6 指標**（Latency / Power / Temperature / Accuracy / Tokens / Memory）を実機接続時に同一ベンチで実測。未接続時は `not-connected`（数値は偽造しない）。
 
 ## OS Policy Learning（v1.0）— Decision Explanation を学習データにする
 

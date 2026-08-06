@@ -13,7 +13,7 @@
 import { runExternalBenchmarks, renderExternalBenchmarks } from './run.js';
 import { allOverheadProfiles, renderOverhead } from './overhead.js';
 import { writeReports, VALIDATION_KIND, VALIDATION_NOTE } from './report.js';
-import { runRealDeviceBenchmark, renderRealDeviceBenchmark } from './real-device.js';
+import { runRealDeviceBenchmark, renderRealDeviceBenchmark, renderRealDevicePlan } from './real-device.js';
 import { explainExecutive, renderExplanation } from '../attachments/explain.js';
 import {
   runLongContextValidation,
@@ -57,6 +57,7 @@ export async function main(reportDir = 'reports/benchmark'): Promise<void> {
   console.log('\n' + renderExplanation(await explainExecutive('新しいアルゴリズムを考えて', booted, { mode: 'auto', budgetMs: 1000 })));
 
   // 8. Real Device Benchmark（実機実測 — Simulation と分離）
+  console.log('\n' + renderRealDevicePlan());
   console.log('\n' + renderRealDeviceBenchmark(await runRealDeviceBenchmark()));
 
   // 9. レポート生成

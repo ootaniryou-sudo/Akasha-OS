@@ -23,6 +23,15 @@ export async function runCli(argv: string[]): Promise<string> {
       const { runPolicyLearningDemo } = await import('./attachments/decision-log.js');
       return runPolicyLearningDemo();
     }
+    case 'replay': {
+      const { captureReplay, renderReplay, runReplayDemo } = await import('./attachments/replay.js');
+      if (argv[1]) {
+        const booted = (await import('./ailsm/expert-runtime.js')).boot();
+        const t = await captureReplay(argv[1], booted, { mode: 'auto', budgetMs: 1000 });
+        return renderReplay(t);
+      }
+      return runReplayDemo();
+    }
     case 'version':
       return `ArcAsha v${ARCASHA_VERSION}`;
     case 'help':
@@ -32,6 +41,7 @@ export async function runCli(argv: string[]): Promise<string> {
         '',
         'Usage: arcasha <command>',
         '  benchmark   Real Benchmark Suite（Simulation）+ Decision Explanation + Real Device + reports/ 生成',
+        '  replay      Decision Replay（なぜこの回答になったのかをステップ再生。引数でタスク指定可）',
         '  policy      OS ポリシー学習デモ（Decision Explanation を学習データにして Meta Executive のポリシーを更新）',
         '  version     version 表示',
         '  help        このヘルプ',

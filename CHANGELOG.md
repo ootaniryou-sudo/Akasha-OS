@@ -1,5 +1,12 @@
 # Changelog — ArcAsha
 
+## v1.1（2026-08-06）— Decision Replay / 実機プラン
+
+- **Decision Replay**: 「なぜこの回答になったのか」を Round1-4 のステップ再生（理由・ゲイン・出力つき）。`npx arcasha replay`
+- **Real Device プラン**: Mac / iPhone 15 Pro / iPad M4 × HumanEval/MBPP/GSM8K/MATH500 × 6 指標（未接続時は not-connected）
+- **PAPER_OUTLINE.md**: 「ArcAsha: An Explainable Runtime for AI Intelligence」
+- selftest [72]
+
 ## v1.0.0（2026-08-06）— AI OS 第一世代リリース 🎉
 
 **「LLM を作った」ではなく「AI の知能を OS レベルで構成・制御・計測できる実験基盤」を実現。**

@@ -26,8 +26,21 @@ export interface RealDeviceRow {
   powerMw: number | null;
   temperatureC: number | null;
   accuracy: number | null;
+  tokens: number | null;
+  memoryMb: number | null;
   status: DeviceStatus;
 }
+
+/** v1.1 実機ベンチの対象（Mac / iPhone 15 Pro / iPad M4 × 4 スイート × 6 指標） */
+export const REAL_DEVICE_PROFILE: {
+  devices: string[];
+  suites: string[];
+  metrics: string[];
+} = {
+  devices: ['Mac', 'iPhone 15 Pro', 'iPad M4'],
+  suites: ['human_eval', 'mbpp', 'gsm8k', 'math500'],
+  metrics: ['latencyMs', 'powerMw', 'temperatureC', 'accuracy', 'tokens', 'memoryMb'],
+};
 
 export interface RealDeviceBenchmarkResult {
   kind: 'real-device';
@@ -42,19 +55,21 @@ export type DeviceMeasure = (device: string, suite: BenchSuite, config: string) 
   powerMw: number;
   temperatureC: number;
   accuracy: number;
+  tokens: number;
+  memoryMb: number;
 };
 
 /**
  * 実機ベンチを実行する。
  *   - devices が空 → not-connected（数値を偽造しない）
- *   - devices あり → 各デバイス × スイート × 構成を measure で実測
+ *   - devices あり → 各デバイス × スイート × 構成を measure で実測（6 指標）
  *   - measure 未指定の接続時は null 実測（実機統合待ち）を返す
  */
 export async function runRealDeviceBenchmark(
   opts: { devices?: string[]; measure?: DeviceMeasure; suites?: BenchSuite[] } = {},
 ): Promise<RealDeviceBenchmarkResult> {
   const devices = opts.devices ?? [];
-  const suites = opts.suites ?? ALL_BENCH_SUITES;
+  const suites = opts.suites ?? ALL_BENCH_SUITES.filter((s) => REAL_DEVICE_PROFILE.suites.includes(s.id));
   const measure = opts.measure ?? null;
 
   if (devices.length === 0) {
@@ -63,7 +78,7 @@ export async function runRealDeviceBenchmark(
       status: 'not-connected',
       devices: [],
       rows: [],
-      note: '実機未接続。iPhone / iPad / Mac を Hub（Phase 1 Device Runtime）に接続して再実行してください。Simulation の数値を実機のものと偽装しません。',
+      note: '実機未接続。Mac / iPhone 15 Pro / iPad M4 を Hub（Phase 1 Device Runtime）に接続して再実行してください。Simulation の数値を実機のものと偽装しません。',
     };
   }
 
@@ -73,9 +88,9 @@ export async function runRealDeviceBenchmark(
       for (const config of ALL_CONFIG_IDS) {
         if (measure) {
           const m = measure(device, suite, config);
-          rows.push({ device, suite: suite.id, config, latencyMs: m.latencyMs, powerMw: m.powerMw, temperatureC: m.temperatureC, accuracy: m.accuracy, status: 'measured' });
+          rows.push({ device, suite: suite.id, config, latencyMs: m.latencyMs, powerMw: m.powerMw, temperatureC: m.temperatureC, accuracy: m.accuracy, tokens: m.tokens, memoryMb: m.memoryMb, status: 'measured' });
         } else {
-          rows.push({ device, suite: suite.id, config, latencyMs: null, powerMw: null, temperatureC: null, accuracy: null, status: 'not-connected' });
+          rows.push({ device, suite: suite.id, config, latencyMs: null, powerMw: null, temperatureC: null, accuracy: null, tokens: null, memoryMb: null, status: 'not-connected' });
         }
       }
     }
@@ -91,6 +106,18 @@ export async function runRealDeviceBenchmark(
   };
 }
 
+/** 実機測定プラン（接続時に何を測るか — 論文の Figure 用） */
+export function renderRealDevicePlan(): string {
+  const lines: string[] = [];
+  lines.push('=== Real Device Benchmark Plan（実機実測の対象）===');
+  lines.push(`Devices: ${REAL_DEVICE_PROFILE.devices.join(' / ')}`);
+  lines.push(`Suites : ${REAL_DEVICE_PROFILE.suites.join(' / ')}`);
+  lines.push(`Metrics: ${REAL_DEVICE_PROFILE.metrics.join(' / ')}`);
+  lines.push(`Configs: ${ALL_CONFIG_IDS.join(' / ')}`);
+  lines.push(`NOTE   : 実機接続時に同一ベンチを実行し、Latency / Power / Temperature / Accuracy / Tokens / Memory を実測します（Simulation とは分離して報告）。`);
+  return lines.join('\n');
+}
+
 export function renderRealDeviceBenchmark(r: RealDeviceBenchmarkResult): string {
   const lines: string[] = [];
   lines.push('=== Real Device Benchmark（実機実測・Simulation と分離）===');
@@ -98,13 +125,15 @@ export function renderRealDeviceBenchmark(r: RealDeviceBenchmarkResult): string 
   lines.push(`NOTE  : ${r.note}`);
   if (r.rows.length > 0) {
     lines.push('');
-    lines.push('device   suite           config    latency   power   temp   accuracy');
+    lines.push('device   suite           config    latency   power   temp   acc    tokens  mem');
     for (const row of r.rows) {
       const lat = row.latencyMs === null ? '  —    ' : String(row.latencyMs).padStart(5) + 'ms';
       const pwr = row.powerMw === null ? '  —   ' : String(row.powerMw).padStart(4) + 'mW';
       const tmp = row.temperatureC === null ? '  —  ' : String(row.temperatureC).padStart(3) + '°C';
-      const acc = row.accuracy === null ? '   —   ' : (row.accuracy * 100).toFixed(0) + '%';
-      lines.push(`${row.device.padEnd(8)} ${row.suite.padEnd(14)} ${row.config.padEnd(10)} ${lat} ${pwr} ${tmp} ${acc}`);
+      const acc = row.accuracy === null ? '  —    ' : (row.accuracy * 100).toFixed(0) + '%';
+      const tok = row.tokens === null ? '  —    ' : String(row.tokens).padStart(6);
+      const mem = row.memoryMb === null ? '  —  ' : String(row.memoryMb).padStart(4) + 'MB';
+      lines.push(`${row.device.padEnd(8)} ${row.suite.padEnd(14)} ${row.config.padEnd(10)} ${lat} ${pwr} ${tmp} ${acc} ${tok} ${mem}`);
     }
   }
   return lines.join('\n');
