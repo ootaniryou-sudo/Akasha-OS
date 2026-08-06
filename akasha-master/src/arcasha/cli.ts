@@ -6,6 +6,7 @@
  *   - benchmark : Real Benchmark Suite（Simulation）+ Decision Explanation + Real Device + reports/ 生成
  *   - policy    : OS ポリシー学習デモ（Decision Explanation を学習データにする）
  *   - hierarchy : Hierarchy Runtime デモ（Master → Caravan → Device → Expert が考える→判断→命令→学習）
+ *   - cognitive : Cognitive Graph Runtime デモ（タスクごとに知能の配線を動的生成・共有メモリ + IR 通信・Team Learning・Knowledge Oasis）
  *   - version   : version 表示
  *   - help      : ヘルプ
  */
@@ -38,6 +39,11 @@ export async function runCli(argv: string[]): Promise<string> {
       await runHierarchyDemoCli();
       return 'arcasha hierarchy: done';
     }
+    case 'cognitive': {
+      const { runCognitiveDemo } = await import('./cognitive/demo.js');
+      console.log(await runCognitiveDemo());
+      return 'arcasha cognitive: done';
+    }
     case 'version':
       return `ArcAsha v${ARCASHA_VERSION}`;
     case 'help':
@@ -50,6 +56,7 @@ export async function runCli(argv: string[]): Promise<string> {
         '  replay      Decision Replay（なぜこの回答になったのかをステップ再生。引数でタスク指定可）',
         '  policy      OS ポリシー学習デモ（Decision Explanation を学習データにして Meta Executive のポリシーを更新）',
         '  hierarchy   Hierarchy Runtime デモ（Master → Caravan → Device → Expert の階層が自律判断）',
+        '  cognitive   Cognitive Graph Runtime デモ（タスクごとに知能の配線を動的生成 → 共有メモリ + IR 通信 → Team Learning → Knowledge Oasis）',
         '  version     version 表示',
         '  help        このヘルプ',
       ].join('\n');

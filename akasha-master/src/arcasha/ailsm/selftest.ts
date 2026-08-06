@@ -1334,6 +1334,39 @@ check('探索コスト: キャラバン = キャラバン数+10', cb74[5].carava
 check('ホップ: フラット1 → キャラバン2', cb74[5].hopsFlat === 1 && cb74[5].hopsCaravan === 2);
 check('N が 1000x でも管理対象は 1000x 未満（圧縮）', cb74[5].caravanManaged / cb74[0].caravanManaged < 1000);
 
+// [75] Cognitive Graph Runtime（Composable Intelligence Runtime）
+console.log('\n[75] Cognitive Graph Runtime');
+const { AI_POOL } = await import('../cognitive/pool.js');
+const { composeTeam, detectRoles, canConnect } = await import('../cognitive/capability-graph.js');
+const { runCognitive } = await import('../cognitive/runtime.js');
+const { TeamLearner } = await import('../cognitive/team-learning.js');
+const { KnowledgeOasis, makeLesson } = await import('../cognitive/oasis.js');
+check('AI Pool: 8 Expert が未所属', AI_POOL.length === 8);
+const vision75 = AI_POOL.find((e) => e.id === 'vision')!;
+const physics75 = AI_POOL.find((e) => e.id === 'physics')!;
+const planning75 = AI_POOL.find((e) => e.id === 'planning')!;
+check('凸凹=データ型: vision→physics 接続可', canConnect(vision75, physics75));
+check('凸凹=データ型: planning→vision は型不一致で接続不可', !canConnect(planning75, vision75));
+check('Role 検出: ドローン設計 → planning/physics/coding を含む', (() => { const r = detectRoles('自律飛行ドローンを設計して'); return r.includes('planning') && r.includes('physics') && r.includes('coding'); })());
+check('Role 検出: 方程式 → math', detectRoles('x^2+3x+2=0を解いて').includes('math'));
+const ct75 = composeTeam(AI_POOL, '自律飛行ドローンを設計して');
+check('編成: 実行順が型チェーン（planning→vision→physics）', ct75.order[0] === 'planning' && ct75.order[1] === 'vision' && ct75.order[2] === 'physics');
+check('編成: vision→physics が直接配線（object-list）', ct75.graph.some((g) => g.from === 'vision' && g.to === 'physics' && g.via === 'object-list'));
+const cr75 = await runCognitive(ct75, '自律飛行ドローンを設計して');
+check('実行: 全 Expert が共有メモリに IR を書く', cr75.memory.length === ct75.members.length);
+check('実行: IR で会話（自然言語でない型付きデータ）', cr75.steps.every((s) => s.ir.includes(':') && s.ir.includes('[')));
+const tl75 = new TeamLearner();
+tl75.record('planning>vision>physics>coding', true, 0.95);
+tl75.record('planning>vision>physics>coding', true, 0.9);
+tl75.record('planning>vision>coding', false, 0.4);
+check('Team Learning: 成功率 100% / 0% を学習', tl75.successRate('planning>vision>physics>coding') === 1 && tl75.successRate('planning>vision>coding') === 0);
+check('Team Learning: 成功率の高いチームを推奨', tl75.recommend(['planning>vision>coding', 'planning>vision>physics>coding']) === 'planning>vision>physics>coding');
+const oasis75 = new KnowledgeOasis();
+oasis75.record({ task: 'ドローン設計', team: ['planning', 'vision', 'physics', 'coding'], graph: [], hypothesis: ['H1'], result: 'success', quality: 0.95, lesson: makeLesson('ドローン設計', ['planning', 'vision', 'physics', 'coding'], true, 0.95), confidence: 0.9, at: Date.now() });
+check('Oasis: 類似タスク検索（Runtime Knowledge Base）', oasis75.search('ドローン').length === 1);
+check('Oasis: 権限（expert は Task/Reasoning だけ・team は見えない）', (() => { const v = oasis75.view('expert', oasis75.all()[0]); return v.task !== undefined && v.team === undefined; })());
+check('Oasis: Lesson が保存される', oasis75.lessons()[0].includes('LESSON'));
+
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {
   console.log('  ✅ ALL PASS — AILSM Phase 0.5（Stage 1 決定論 + Stage 3 決定論Verifier）');

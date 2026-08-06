@@ -1,7 +1,14 @@
 # Changelog — ArcAsha
 
-## v1.2（2026-08-07）— Hierarchy Runtime / Caravan スケーラビリティ
+## v1.2（2026-08-07）— Hierarchy / Cognitive Graph / Caravan スケーラビリティ
 
+- **Cognitive Graph Runtime（Composable Intelligence Runtime）**: `src/arcasha/cognitive/`
+  - **「モデルを選ぶ」のではなく「タスクごとに知能の配線を動的生成する」**（Task-Specific Dynamic Cognitive Graph）
+  - AI Pool（未所属 Expert）→ Capability Graph（凸凹=データ型）→ 動的チーム編成
+  - **共有タスクメモリ + AILSM IR で会話**（自然言語不要）: vision が object-list を書き、physics が読んで trajectory を書く
+  - **Team Learning**: 成功率でチーム編成を学習（vision>physics>coding 95% を優先）
+  - **Knowledge Oasis**: Task/Reasoning/Team/Policy/Lesson の長期記憶 + 権限（Need-to-know）+ Runtime Knowledge Base 検索
+  - `npx arcasha cognitive` / 仕様 `AI_COGNITIVE.md` / selftest [75]
 - **Hierarchy Runtime**: 階層型知能ランタイム `src/arcasha/hierarchy/`
   - 階層: **Master → Caravan（Role 付き）→ Device → Expert**（最終形は Human → Executive → Cluster → Computer → LLM → Reasoning の 6 階層）
   - 各階層が **Decision / Policy / Budget / Memory** を持ち「**考える → 判断する → 命令する → 学習する**」を自律的に行う
