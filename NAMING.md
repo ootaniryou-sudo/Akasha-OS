@@ -2,6 +2,10 @@
 
 > Akasha-OS の全コンポーネントに与えられた世界観名（Lore Name）と正式名称（Formal Name）の対応表。
 > コードでは英語 identifier を使用し、JSDoc に世界観名を併記する。
+>
+> **v1.0 以降の扱い**: 旧 v1 の世界観名（Heart of Wisdom / Eye of Wisdom / Shadow of Wisdom など）は
+> レガシー（lore）として下記に残す。新システム（Executive / Attachments / Decision）の命名は
+> 「[Reasoning / Executive](#reasoning--executive-v10)」「[Attachments](#attachments-v10)」セクションを参照。
 
 ## Core / Central System
 
@@ -105,21 +109,53 @@
 | **Asha Neural** | Core ML / Core AI Backend | 将来実装 — Apple Neural Engine + CPU + GPU orchestration |
 | **Asha Metal Kernel Lab** | Custom Metal Shader Research | 将来実装 — Custom attention, KV cache, quantized matmul in Metal |
 
-## MoE / Specialist
+## Reasoning / Executive（v1.0+）
+
+| 世界観名 | 正式名称 | コード上の主な該当箇所 |
+|---------|---------|---------------------|
+| **Command Deck** | Executive Runtime | `src/arcasha/ailsm/executive-runtime.ts` |
+| **Conductor** | Executive | `src/arcasha/ailsm/executive.ts`（task manages executive / executive manages process） |
+| **Strategist** | Meta Executive | `src/arcasha/ailsm/meta-executive.ts` |
+| **Metamorphosis** | Expert Evolution | `src/arcasha/ailsm/expert-evolution.ts`（split / merge / retire） |
+| **Reasoning Graph** | Reasoning Graph Runtime | `src/arcasha/ailsm/reasoning.ts`（SPAWN → EVALUATE → REFLECT） |
+| **Tempo** | Thinking Modes | `src/arcasha/attachments/modes.ts`（Fast / Auto / Deep / Custom） |
+| **Intelligence Scheduler** | Thinking Budget Allocator | `modes.ts`（intelligenceScheduler, usedMs ≤ budgetMs） |
+| **Verdict** | Decision Explanation | `src/arcasha/attachments/explain.ts` |
+| **Retrospect** | Decision Replay | `src/arcasha/attachments/replay.ts` |
+| **Mentorship** | OS Policy Learning | `src/arcasha/attachments/decision-log.ts` |
+
+## Attachments（v1.0+）
+
+| 世界観名 | 正式名称 | コード上の主な該当箇所 |
+|---------|---------|---------------------|
+| **Facet** | Attachment | `src/arcasha/attachments/attachment.ts` |
+| **Facet Forge** | Attachment Manager | `src/arcasha/attachments/manager.ts` |
+| **Mirror** | Reflection | `attachments/reflection.ts` |
+| **Symposium** | Debate | `attachments/debate.ts` |
+| **Blueprint** | Planning | `attachments/planning.ts` |
+| **Expedition** | Search | `attachments/search-attachment.ts` |
+| **Genesis** | Creativity | `attachments/creativity.ts` |
+| **Simulacrum** | Simulation | `attachments/simulation.ts` |
+| **Anvil** | Coding | `attachments/coding.ts` |
+
+## MoE / Specialist（Legacy v1）
+
+> `src/plugin/`（AkashaExpertPlugin / PluginRegistry）は v1.0 で廃止され、
+> 新 Attachment 層（`src/arcasha/attachments/`）+ Executive に置き換えられた。
 
 | 世界観名 | 正式名称 | コード上の主な該当箇所 |
 |---------|---------|---------------------|
 | **Constellation Mind** | Distributed Mixture-of-Experts | 将来実装（Phase 8） |
-| **Specialist Core** | Expert Model | `src/plugin/types.ts` (AkashaExpertPlugin) |
-| **Constellation Router** | Expert Router | `PluginRegistry.route()` |
+| **Specialist Core** | Expert Model | （廃止 → Attachment を参照） |
+| **Constellation Router** | Expert Router | （廃止 → Executive / AttachmentScheduler を参照） |
 | **Core Migration** | Expert Migration | 将来実装 |
 
-## Recommended Core Set
+## Recommended Core Set（Legacy v1）
 
 ```
 ArcAsha
-├── Heart of Wisdom     (Core Orchestrator)
-├── Eye of Wisdom       (Intelligent Router)
+├── Heart of Wisdom     (Core Orchestrator)      [Legacy]
+├── Eye of Wisdom       (Intelligent Router)     [Legacy]
 ├── Mandate Weaver      (Task Scheduler)
 ├── Star Registry       (Node Registry)
 ├── Knowledge Edict     (Binary Wire Protocol)
@@ -135,19 +171,44 @@ ArcAsha
 └── Asha Neural         (Core ML/Core AI Backend)
 ```
 
+### v1.0+ Reasoning Set
+
+```
+ArcAsha (AI OS)
+├── Core                (Kernel / AVM)
+├── Thought Graph       (AILSM IR)
+├── Command Deck        (Executive Runtime)
+│   ├── Conductor       (Executive)
+│   ├── Strategist      (Meta Executive)
+│   └── Metamorphosis   (Expert Evolution)
+├── Tempo               (Thinking Modes)
+├── Facet               (Attachment)
+│   ├── Mirror          (Reflection)
+│   ├── Symposium       (Debate)
+│   ├── Blueprint       (Planning)
+│   ├── Expedition      (Search)
+│   ├── Genesis         (Creativity)
+│   ├── Simulacrum      (Simulation)
+│   └── Anvil           (Coding)
+├── Verdict             (Decision Explanation)
+├── Retrospect          (Decision Replay)
+└── Mentorship          (OS Policy Learning)
+```
+
 ## Naming Rule
 
 - すべての世界観名には、初出時に必ず正式名称を併記する
-- 例: **Heart of Wisdom (Core Orchestrator)**
-- 以後の文章では必要に応じて短縮名（Heart of Wisdom）を使用する
+- 例: **Conductor (Executive)** / **Facet (Attachment)**
+- 以後の文章では必要に応じて短縮名を使用する
+- 旧 v1 の世界観名（Heart of Wisdom 等）はレガシーとして、新規記述では使用しない
 - コードでは英語 identifier を使用し、JSDoc に世界観名を付与する
 
 ```typescript
 /**
- * Heart of Wisdom (Core Orchestrator)
+ * Conductor (Executive)
  *
- * ArcAsha 全体を統括する最上位制御系。
- * Node の登録・管理・ルーティング・フォールトトレランスを統合する。
+ * 探索を指揮し、戦略を途中で切り替える。
+ * Expert の選択・評価・統合を管理する。
  */
-export class AkashaRouter { ... }
+export class Executive { ... }
 ```

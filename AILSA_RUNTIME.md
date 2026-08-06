@@ -124,7 +124,7 @@ RETURN { task_id, result }
 AILSM 更新（result ノード追加）
 ```
 
-- ハブ（Heart of Wisdom）が Expert の選択・中継（直接通信は禁止）
+- ハブ（Master）が Expert の選択・中継（直接通信は禁止）
 - 実装: `src/arcasha/demo-web.ts` に AILSM Compiler + Executor を統合し、実機ノードへ委譲
 
 ## 4. Reasoning Runtime（設計 — Phase 2）

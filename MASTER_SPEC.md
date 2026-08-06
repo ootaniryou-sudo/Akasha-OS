@@ -1,1345 +1,207 @@
-# ArcAsha — Distributed Expert Intelligence Architecture
+# ArcAsha — An AI Operating System for Modular Reasoning and Runtime Intelligence
 
-## Master Specification for Coding / Research AI
+**Master Specification v1.1**
 
-**Project name**: ArcAsha  
-**Pronunciation**: Akasha / アーカーシャ
+| | |
+|---|---|
+| **Project** | ArcAsha (Akasha-OS / アーカーシャ) |
+| **Positioning** | An AI Operating System — not a model. It runs *above* the model. |
+| **Status** | v1.0 released / v1.1 (Decision Replay) |
+| **License** | MIT |
 
-ArcAsha is a distributed AI operating system designed to transform a heterogeneous collection of small AI models running on independent edge devices into a coordinated large-scale intelligence fabric.
+---
 
-The core idea is:
+## 1. Vision
 
-> **Do not place one gigantic model on one machine.**
+ArcAsha is **not** "a bigger model". It is an **operating system for AI intelligence**.
+
+> **Do not put the intelligence inside a bigger model.**
 >
-> **Distribute many specialized small models across many devices and let ArcAsha dynamically coordinate them as one intelligent system.**
+> **Manage reasoning, memory, planning, belief, and learning at the OS level — so that even a small model (Qwen1.5B) can be composed, controlled, and measured reproducibly.**
 
-The ultimate research target is a system with approximately:
+The OS treats reasoning as a schedulable resource (like a CPU does with processes), treats context as virtual memory (like an OS does with RAM), and treats intelligence as optional loadable modules (like Linux does with kernel modules).
 
-**~6.7 trillion total parameters**
-
-while individual models may remain relatively small, for example:
-
-**~0.6B parameters per edge model**
-
-and the number of active models / active parameters changes dynamically according to task difficulty.
+The historical v1 vision — a distributed fabric of thousands of smartphones forming a ~6.7T-parameter "Expert Fabric" — is preserved as the **research roots** (see [§11 History](#11-history)). The implemented architecture focuses on the OS layer that makes such coordination *explainable and learnable*.
 
 ---
 
-## Table of Contents
+## 2. Core Research Question
 
-1. [Core Vision](#1-core-vision)
-2. [Most Important Concept](#2-most-important-concept)
-3. [Total Parameters vs Active Parameters](#3-total-parameters-vs-active-parameters)
-4. [Parameter Scaling Target](#4-parameter-scaling-target)
-5. [Existing Model Strategy](#5-existing-model-strategy)
-6. [Expert Specialization](#6-expert-specialization)
-7. [Capability Evaluation](#7-capability-evaluation)
-8. [Task Capability Vector](#8-task-capability-vector)
-9. [Routing](#9-routing)
-10. [Master Node](#10-master-node)
-11. [ArcAsha Naming](#11-arcasha-naming)
-12. [Distributed Expert Model](#12-distributed-expert-model)
-13. [Collaboration Instead of Simple Routing](#13-collaboration-instead-of-simple-routing)
-14. [Active Expert Scaling](#14-active-expert-scaling)
-15. [Adaptive Computation](#15-adaptive-computation)
-16. [Memory Architecture](#16-memory-architecture)
-17. [Long Context](#17-long-context)
-18. [Prefix / KV Reuse](#18-prefix--kv-reuse)
-19. [Model Specialization](#19-model-specialization)
-20. [Important Distinction](#20-important-distinction)
-21. [Research Baselines](#21-research-baselines)
-22. [Scaling Experiments](#22-scaling-experiments)
-23. [Fault Tolerance](#23-fault-tolerance)
-24. [Smartphone Deployment](#24-smartphone-deployment)
-25. [Model Registry vs Node Registry](#25-model-registry-vs-node-registry)
-26. [Future ArcAsha-native Model](#26-future-arcasha-native-model)
-27. [Ultimate Architecture](#27-ultimate-architecture)
-28. [Ultimate Parameter Target](#28-ultimate-parameter-target)
-29. [Critical Research Question](#29-critical-research-question)
-30. [Implementation Strategy](#30-implementation-strategy)
-31. [What NOT to Do](#31-what-not-to-do)
-32. [Required Engineering Principle](#32-required-engineering-principle)
-33. [Required Research Record](#33-required-research-record)
-34. [Final Goal](#34-final-goal)
+> **Can an OS-level runtime make reasoning composable, controllable, and measurable — reproducibly — so that even a small model can explain *why* it chose a configuration, replay the decision step-by-step, and *learn from its own decisions*?**
+
+Three axes make this concrete:
+
+1. **Explain** — "Why did the AI use Reflection / Planning / Debate?" (Decision Explanation)
+2. **Replay** — "Show me the decision process step by step." (Decision Replay)
+3. **Learn** — "Turn decisions into training data for the Meta Executive." (OS Policy Learning)
+
+These are training axes **orthogonal to Transformer pretraining**.
 
 ---
 
-## 1. Core Vision
-
-The intended architecture is NOT:
+## 3. Architecture (3 Layers)
 
 ```
-One 6.7T model
-↓
-Split across smartphones
+Layer 3  Intelligence Attachments
+         Reflection / Debate / Planning / Search / Creativity / Simulation / Coding
+Layer 2  Executive Runtime
+         Executive / Meta Executive / Expert Evolution / Intelligence Scheduler
+Layer 1  Fast Runtime
+         Kernel / AVM / Expert Runtime / ODAR / Device Tree   ← realtime, always fast
 ```
 
-The intended architecture is:
-
-```
-Many independent ~0.6B models
-+
-Specialized training
-+
-Capability-aware routing
-+
-Master orchestration
-+
-Distributed memory
-+
-Fault tolerance
-+
-Expert collaboration
-=
-Large distributed intelligence fabric
-```
-
-Example:
-
-```
-                     USER
-                       │
-                       ▼
-              Heart of Wisdom
-               (Master PC)
-                       │
-                Eye of Wisdom
-              (Intelligent Router)
-                       │
-                  Task Planner
-                       │
-        ┌──────────────┼──────────────┐
-        ↓              ↓              ↓
-      Math           Coding        General
-     Expert           Expert         Expert
-        │              │              │
-    Smartphone      Smartphone     Smartphone
-      Node A          Node B         Node C
-        │              │              │
-        └──────────────┼──────────────┘
-                       ↓
-                  Critic Experts
-                       ↓
-                  Verification
-                       ↓
-                    Synthesis
-                       ↓
-                     USER
-```
+- **Fast vs Deliberation**: Layer 1 keeps realtime control (robot: **30.3 fps**). Layers 2–3 load only when needed (research / long reasoning).
+- **Kernel minimalism**: the OS core stays small and stable; advanced intelligence is an **Attachment** (optional kernel module), loaded on demand.
 
 ---
 
-## 2. Most Important Concept
+## 4. Design Principles
 
-Each edge device should not simply be viewed as:
-
-> "a GPU worker"
-
-Instead, treat it as:
-
-> **an independent Expert Node**
-
-An Expert Node contains:
-
-```
-Model
-+
-Capability Profile
-+
-Hardware Profile
-+
-Runtime
-+
-Local KV Cache
-+
-Health State
-+
-Network State
-```
-
-For example:
-
-```
-Node 001
-Qwen 0.6B
-Role: Mathematics Expert
-
-Node 002
-Qwen 0.6B
-Role: Coding Expert
-
-Node 003
-Qwen 0.6B
-Role: Japanese Language Expert
-
-Node 004
-Qwen 0.6B
-Role: Security Expert
-```
-
-The model family may be identical while the specialization differs through fine-tuning, distillation, data selection, or other training methods.
+1. **Kernel minimal, intelligence as Attachment** — the core never grows by adding intelligence; it grows by adding *interfaces*.
+2. **Deterministic and reproducible** — selftest [1]–[72], golden 30 cases, fixed corpora, fixed model parameters.
+3. **Explainable by construction** — every decision is logged and explainable (Decision Explanation / Replay / Policy Learning).
+4. **Simulation vs Real Device separated** — numbers are labeled `kind: 'simulation'`; real-device harness returns `not-connected` rather than fabricating values.
+5. **OS-level learning** — the training axis of the OS (Policy Learning) is distinct from and orthogonal to model pretraining.
 
 ---
 
-## 3. Total Parameters vs Active Parameters
+## 5. Component Specifications
 
-This distinction is fundamental.
+### 5.1 AILSA — Instruction Set Architecture
 
-Do NOT equate:
+- Registry: `registry.json` **v1.2.0** (66+ instructions).
+- Binary format: **Opcode + Slot + varint + UTF-8**.
+- Deterministic, verifiable ISA for AI kernels.
 
-```
-Total Parameters = Active Parameters
-```
+### 5.2 AILSM — Semantic Intermediate Representation (SSA)
 
-The target is:
+- A graph IR where **tasks, objects, values, memory, beliefs, plans, reflections, capabilities, schedules, processes, threads, namespaces, contexts, pages, slices, caches, executions, chunks, spans, frames, hypotheses, executives, meta-executives, and experts** are all first-class nodes.
+- Edges include `hypothesizes / expands / manages / specializes / mergesInto`.
+- Version: **v1.8**. All graph transforms rebuild via `AilsmBuilder` (node IDs stable).
 
-```
-Total Parameters ≈ 6.7T
-```
+### 5.3 Kernel / AVM — AI Virtual Memory
 
-while:
+- Context is treated as **demand-paged virtual memory** instead of "a bigger context window".
+- Layers: Context SSA / Page Manager / Slice Loader / Context Cache / Long Context ABI (`ContextRef` = file descriptor).
+- Execution Context / Context Switch / Context Fault / Prefetcher; Hot / Warm / Cold tiers.
+- Measured: **4.10× speedup, −77% tokens** vs full-context (kind=simulation).
 
-```
-Active Parameters = dynamic
-```
+### 5.4 Executive Runtime
 
-depending on the request.
+- **Executive** commands the search: READY → EXPAND → EVALUATE → REFLECT → **EXECUTIVE (strategy switch)** → next round. It can change strategy *mid-search* (stagnation → explore; success+pruning → exploit).
+- **Meta Executive** manages executives; estimates budgets; learns from observed outcomes.
+- OS mapping: Expert = execution resource / Hypothesis = process / Reflection = scheduler feedback / Reasoning Graph = execution graph / Kernel = owner of the whole search.
 
-Example:
+### 5.5 Expert Evolution
 
-```
-Simple question
-→ 4–8 Expert Models
-→ ~2.4–4.8B active parameters
+- Experts **split / merge / retire** by objective criteria (health, overlap, utilization).
+- The evolution loop skips unobserved experts; merges are idempotent.
 
-Moderate task
-→ 16–64 Experts
-→ ~9.6–38.4B active parameters
+### 5.6 Thinking Modes
 
-Very difficult task
-→ 128–512 Experts
-→ ~76.8–307.2B active parameters
-```
+- **Fast / Auto / Deep / Custom** — the same OS, different pipeline.
+- **Intelligence Scheduler** allocates a **Thinking Budget** (`usedMs ≤ budgetMs`), visible as `Reflection 150ms / Debate 400ms / TOTAL 550ms`.
 
-These numbers are illustrative and must be experimentally validated.
+### 5.7 Attachments
 
-Do not assume that more active experts automatically produces better intelligence.
+- `Attachment` interface: `id / name / version / enabled / supports / run` + Thinking Budget (`estimatedCost / Latency / Accuracy`).
+- `AttachmentManager`: register / unregister / enable / disable / lazy `load` / unload / execute / executeParallel / executeMerged.
+- Built-ins (7): **Reflection, Debate, Planning, Search, Creativity, Simulation, Coding**.
+- Attachments never touch kernel state directly; all communication goes through the Executive via `AttachmentContext`.
 
-The routing policy must learn when additional computation is useful.
+### 5.8 Explainable
 
----
+- **Decision Explanation** — why this mode / attachment set (expected gain: Planning +31% / Debate +22% / Creativity +28% / Reflection +19%; total ≈ +34%).
+- **Decision Replay** — step-by-step replay of the decision process (`arcasha replay`).
+- **OS Policy Learning** — a Decision Log feeds EMA-based gains (α=0.3) into the Meta Executive's policy (`arcasha policy`).
 
-## 4. Parameter Scaling Target
+### 5.9 Validation
 
-A conceptual target:
-
-```
-~0.6B parameters × ~11,167 models ≈ 6.7T total parameters
-```
-
-This is only a parameter accounting target.
-
-It does NOT mean that 11,167 independent models automatically behave like one 6.7T dense model.
-
-The research problem is precisely:
-
-> Can a large population of specialized small models, when coordinated by ArcAsha, produce capabilities that approach or outperform much larger monolithic models at comparable active compute?
-
-This must be evaluated experimentally.
+- **Simulation** (deterministic, `kind: 'simulation'`): Long Context 4.10× / Reasoning 57→93% / Robot Fast 30.3fps vs Deep 1.2fps / Executive 0.50→0.71 / Flagship (same Qwen1.5B: 0.57→0.79).
+- **Real Benchmark Suite**: GSM8K / MATH500 / HumanEval / MBPP / MMLU / LiveCodeBench — Qwen1.5B (single / Thinking / +Fast / +Auto / +Deep): overall **27% → 95%**.
+- **Real Device**: Mac / iPhone 15 Pro / iPad M4 harness — returns `not-connected` when no device is attached.
+- Reports auto-generated: `reports/benchmark/report.{json,csv,md}`.
 
 ---
 
-## 5. Existing Model Strategy
+## 6. Implementation Status
 
-Use existing models first.
+### v1.0 — Released
+AI OS first generation (Phases 0–4):
+- ISA / IR / Kernel / AVM → realtime devices → Reasoning Search → Executive / Meta Executive → Expert Evolution → Attachments / Thinking Modes → Scientific Validation / Real Benchmark Suite.
 
-Do NOT begin by training a 6.7T model from scratch.
+### v1.1
+- **Decision Replay**, Real Device benchmark plan (Mac / iPhone 15 Pro / iPad M4).
 
-The first practical implementation should use small existing models, especially models around:
+### Verification
+- `npm run ailsm:selftest` [1]–[72] / `npm run ailsm:golden` (30) / `npm run ailsa:selftest` / `npm run build` + dist checks — all green. CI runs these on every push / PR.
 
-```
-~0.3B
-~0.6B
-~1B
-```
+---
 
-Candidate families may include Qwen-class small models and other permissively licensed models appropriate for research and redistribution.
-
-The first baseline should use a model around:
-
-**~0.6B parameters**
-
-because the main purpose is to verify:
+## 7. Repository Layout
 
 ```
-Edge device
-→ Model
-→ ArcAsha Node
-→ Master
-→ Routing
-→ Expert collaboration
+akasha-master/        Core implementation (TypeScript / AILSA / AILSM / Kernel / AVM / Executive / Attachments)
+akasha-client-web/    Web client (WebGPU inference)
+akasha-kernel-native/ Native kernel prototype (Rust)
+examples/             Attachment examples (code / math)
+.github/              Issue templates + CI workflow
+AI_*.md               Specifications (see below)
 ```
 
 ---
 
-## 6. Expert Specialization
+## 8. Documentation Index
 
-Do not manually assign simplistic labels such as:
-
-```
-Model A = Math
-Model B = Code
-```
-
-and stop there.
-
-Every model must have a **Capability Profile**.
-
-Example:
-
-```json
-{
-  "model_id": "expert-001",
-  "capabilities": {
-    "general": 0.86,
-    "reasoning": 0.82,
-    "mathematics": 0.94,
-    "coding": 0.61,
-    "japanese": 0.88,
-    "english": 0.89,
-    "science": 0.79,
-    "security": 0.44,
-    "creative": 0.71
-  }
-}
-```
-
-Another:
-
-```json
-{
-  "model_id": "expert-002",
-  "capabilities": {
-    "general": 0.67,
-    "reasoning": 0.80,
-    "mathematics": 0.65,
-    "coding": 0.97,
-    "japanese": 0.60,
-    "security": 0.84
-  }
-}
-```
-
-The exact values must eventually come from benchmark measurements rather than arbitrary manual assignment.
+| Doc | Contents |
+|-----|----------|
+| `ARCASHA_V2_SPEC.md` | v2 design spec (v0.36) — full phase history |
+| `AILSA_ISA.md` | Instruction Set Architecture |
+| `AILSA_RUNTIME.md` | Runtime / execution model |
+| `AILSM_IR.md` | Semantic IR (SSA) v1.8 |
+| `AILSM_COMPILER.md` | IR compiler |
+| `AI_ABI.md` | ABI / Driver / DeviceTree |
+| `AI_VIRTUAL_MEMORY.md` | AVM |
+| `AI_OBSERVABILITY.md` | AI Monitor / instrumentation |
+| `AI_RUNTIME_PHASE1.md` | Realtime device runtime |
+| `AI_TOOLCHAIN.md` | Toolchain |
+| `AI_REASONING.md` | Hypothesis SSA / Reasoning Graph / Executive / Meta Executive / Expert Evolution |
+| `AI_ATTACHMENTS.md` | Attachment layer / Thinking Modes / Validation |
+| `AI_VALIDATION.md` | Scientific validation (Simulation vs Real Device) / Decision Explanation / Replay / Policy Learning |
+| `AI_EVALUATION.md` | Evaluation |
+| `PROTOCOL.md` | Binary protocol |
+| `NAMING.md` | Naming system |
+| `PAPER_OUTLINE.md` | Paper: "ArcAsha: An Explainable Runtime for AI Intelligence" |
+| `CHANGELOG.md` | Release history (v1.0 / v1.1) |
 
 ---
 
-## 7. Capability Evaluation
+## 9. Research Positioning
 
-Build a Capability Evaluation subsystem.
+ArcAsha is an **experimental platform to compose, control, and measure AI intelligence at the OS level — reproducibly**.
 
-At model registration time, optionally run:
+The most novel point: the OS can
+- **explain why** Reflection / Planning / Debate were used (**Decision Explanation**),
+- **replay** the whole decision process (**Decision Replay**),
+- **learn from its own decisions** (**OS Policy Learning**).
 
-```
-Mathematics Benchmark
-Coding Benchmark
-Reasoning Benchmark
-Japanese Benchmark
-English Benchmark
-Science Benchmark
-Security Benchmark
-Long Context Benchmark
-Tool-use Benchmark
-```
-
-The results become the model's capability profile.
-
-Conceptually:
-
-```
-Model
- ↓
-Benchmark Suite
- ↓
-Capability Evaluation
- ↓
-Capability Profile
- ↓
-Model Registry
- ↓
-Eye of Wisdom
-```
-
-This allows new models to be added without manually designing every routing rule.
+This is a training axis orthogonal to Transformer pretraining — the OS-level analog of "experience replay" for reasoning control.
 
 ---
 
-## 8. Task Capability Vector
+## 10. Roadmap
 
-Every request must be analyzed into a task capability profile.
-
-Example:
-
-User:
-
-> "Implement this algorithm in Rust and prove its complexity."
-
-Task vector:
-
-```json
-{
-  "coding": 0.91,
-  "rust": 0.96,
-  "reasoning": 0.84,
-  "mathematics": 0.58,
-  "general": 0.32
-}
-```
-
-Another:
-
-> "Analyze this cryptographic implementation for weaknesses."
-
-Task vector:
-
-```json
-{
-  "security": 0.94,
-  "cryptography": 0.91,
-  "reasoning": 0.87,
-  "coding": 0.70
-}
-```
-
-The routing system compares task requirements against Expert capabilities.
+1. **Real Device validation** — connect Mac / iPhone 15 Pro / iPad M4 via the Hub and replace simulation numbers with measured latency / power / temperature / accuracy.
+2. **Model integration** — broader small-model support (Qwen family, etc.) on the Fast Runtime.
+3. **Policy scaling** — deepen OS Policy Learning (multi-objective, cross-session transfer).
+4. **Tool calling** — attachments gain real tool / compiler / search access (Coding `COMPILE` becomes a real compile).
 
 ---
 
-## 9. Routing
+## 11. History (Research Roots)
 
-The router is not merely a load balancer.
+The project began as a **distributed expert intelligence fabric** vision (v1):
 
-It must consider:
+> Many independent ~0.6B models coordinated by an intelligent runtime into a ~6.7T aggregate-parameter system — "Expert Fabric", "Heart of Wisdom", "Eye of Wisdom".
 
-```
-Capability Match
-+
-Model Quality
-+
-Node Performance
-+
-Network Latency
-+
-Bandwidth
-+
-Node Availability
-+
-Thermal State
-+
-Battery State
-+
-Memory Availability
-+
-Context Compatibility
-+
-Cost / Energy
-+
-Failure Probability
-+
-Numerical Stability  ← backend + precision divergence risk
-```
-
-Conceptual score:
-
-```
-RoutingScore =
-CapabilityMatch
-× ModelQuality
-× NodeAvailability
-× HardwareFit
-× NetworkQuality
-× Reliability
-× NumericalStability
-÷ Cost
-```
-
-Where **NumericalStability** is derived from:
-- Backend (PyTorch / ONNX / WebGPU)
-- Precision (FP32 / BF16 / FP16 / INT8 / INT4)
-- Measured divergence rate vs baseline (see EXP-0001.5/1.6/1.7)
-- Runtime logit_margin distribution
-
-This enables ArcAsha to distinguish:
-- **"Fast but numerically unstable"** nodes → high-throughput, low-precision tasks
-- **"Slow but exactly reproducible"** nodes → critical verification, Exact Shadow
-
-See experiments: [`EXP-0001.5`](akasha-master/experiments/qwen3_0.6b/EXP-0001.5/), [`EXP-0001.6`](akasha-master/experiments/qwen3_0.6b/EXP-0001.6/), [`EXP-0001.7`](akasha-master/experiments/qwen3_0.6b/EXP-0001.7/).
-
-The exact formula must be treated as a research variable.
-
-Do not hard-code arbitrary coefficients without experiments.
-
----
-
-## 10. Master Node
-
-The Master PC is not the primary model.
-
-It is the **brain of the distributed fabric**.
-
-The Master should perform:
-
-```
-Task analysis
-Expert selection
-Node selection
-Scheduling
-Memory coordination
-Context management
-Failure management
-Result aggregation
-Verification
-Final synthesis
-```
-
-Primary component:
-
-**Heart of Wisdom (Core Orchestrator)**
-
-This is the central control plane.
-
----
-
-## 11. ArcAsha Naming
-
-Use the following terminology consistently.
-
-```
-Heart of Wisdom        (Core Orchestrator)
-Eye of Wisdom          (Intelligent Router)
-Mandate Weaver         (Task Scheduler)
-Star Registry          (Node Registry)
-Knowledge Edict        (Binary Wire Protocol)
-Realm of Knowledge     (Memory Fabric)
-Endless Knowledge      (Long-Context Engine)
-Echo                   (Runtime KV Cache)
-Shadow of Wisdom       (Shadow Execution)
-Divine Safeguard       (Fault Protection)
-Wisdom Engine          (LLM Runtime)
-Invocation Forge       (Model Loader)
-Constellation Mind     (Distributed Mixture-of-Experts)
-Future Sight           (Speculative Decoding)
-```
-
-The first occurrence in documentation should always include the formal technical name in parentheses.
-
-All source-code identifiers must remain English.
-
----
-
-## 12. Distributed Expert Model
-
-The system should conceptually support:
-
-```
-Expert Pool
-├── Mathematics Experts
-├── Coding Experts
-├── Reasoning Experts
-├── Language Experts
-├── Science Experts
-├── Security Experts
-├── Planning Experts
-├── Critic Experts
-├── Verification Experts
-└── General Experts
-```
-
-The Expert Pool must be dynamic.
-
-Nodes can:
-
-```
-join
-leave
-become unavailable
-change capability
-change hardware state
-change network state
-change model
-```
-
-without requiring a complete system restart.
-
----
-
-## 13. Collaboration Instead of Simple Routing
-
-Do not limit the system to:
-
-```
-Prompt → One Model
-```
-
-Support:
-
-```
-Prompt
- ↓
-Planner
- ↓
-Expert Selection
- ↓
-Parallel Expert Execution
- ↓
-Critic
- ↓
-Verification
- ↓
-Synthesis
- ↓
-Final Answer
-```
-
-Example:
-
-```
-"Create a secure Rust implementation of algorithm X."
-
-Coding Expert
-+
-Security Expert
-+
-Algorithm Expert
-+
-Critic Expert
-+
-Verifier
-+
-Final Synthesizer
-```
-
-This is a fundamental capability of the long-term architecture.
-
----
-
-## 14. Active Expert Scaling
-
-The number of participating experts should be dynamically adjustable.
-
-Example:
-
-```
-Easy:      2–8 Experts
-Moderate:  8–32 Experts
-Complex:   32–128 Experts
-Extreme:   128–512+ Experts
-```
-
-These values are examples only.
-
-The scheduler must eventually learn or infer the appropriate compute budget.
-
-Potential future policy:
-
-```
-Task Difficulty
-+
-Expected Benefit of More Compute
-+
-Latency Budget
-+
-Energy Budget
-=
-Active Expert Count
-```
-
-The system should eventually be able to answer:
-
-> "How much distributed computation should this task receive?"
-
----
-
-## 15. Adaptive Computation
-
-ArcAsha should support a variable-compute model.
-
-For example:
-
-```
-Simple prompt
-→ small expert subset
-
-Hard reasoning problem
-→ larger expert subset
-
-Critical answer
-→ expert generation + critic + verification
-
-Agentic task
-→ iterative expert execution
-```
-
-Do not assume a constant number of experts.
-
----
-
-## 16. Memory Architecture
-
-Separate these systems completely.
-
-```
-Conversation Store
-Semantic Memory
-Context Pages
-Runtime KV Cache
-```
-
-Recommended architecture:
-
-```
-Realm of Knowledge
-(Memory Fabric)
-        │
-        ├── Chronicle
-        │   (Conversation Store)
-        │
-        ├── Recall Engine
-        │   (Semantic Memory)
-        │
-        ├── Memory Passage
-        │   (Context Paging)
-        │
-        └── Echo
-            (Runtime KV Cache)
-```
-
-Conversation history must not be stored directly as runtime KV cache.
-
----
-
-## 17. Long Context
-
-Long-term goal:
-
-**~1M input tokens**
-
-Do NOT implement 1M context by simply forcing every token into permanent GPU KV cache.
-
-Use hierarchical memory:
-
-```
-Hot Context
-→ active GPU/RAM KV
-
-Warm Context
-→ compressed/selected context
-
-Cold Context
-→ SSD / object storage / remote memory
-```
-
-Support future context paging:
-
-```
-GPU
-→ Hot pages
-
-RAM
-→ Warm pages
-
-SSD
-→ Cold pages
-
-Remote ArcAsha Nodes
-→ Distributed context pages
-```
-
-This should be treated as a future research target, not as an assumed completed feature.
-
----
-
-## 18. Prefix / KV Reuse
-
-Implement the ability to reuse repeated prefixes.
-
-Conceptually:
-
-```
-Prefix Tokens
- ↓
-Hash
- ↓
-Cache Key
- ↓
-Echo Prime
-(Prefix KV Cache)
-```
-
-Repeated system prompts, documents, or long prefixes should not need to be recomputed unnecessarily.
-
----
-
-## 19. Model Specialization
-
-Start from existing general-purpose models.
-
-Then create specialized variants through:
-
-```
-Fine-tuning
-LoRA / QLoRA
-Knowledge Distillation
-Synthetic Data
-Domain Data
-Verifier-generated Data
-```
-
-Potential specialization categories:
-
-```
-Mathematics
-Coding
-Cybersecurity
-Science
-Japanese
-English
-Reasoning
-Planning
-Verification
-Critique
-```
-
-The specialization process should be reproducible.
-
----
-
-## 20. Important Distinction
-
-Do NOT claim:
-
-```
-0.6B model × 11,000 = one 6.7T model
-```
-
-as a scientific fact.
-
-Instead describe the system as:
-
-> **A distributed expert intelligence fabric with approximately 6.7T aggregate parameters.**
-
-The research challenge is determining how closely its behavior approaches a monolithic model with similar total parameter capacity.
-
-This distinction must be explicit in all documentation.
-
----
-
-## 21. Research Baselines
-
-The system must eventually compare:
-
-```
-Single small model
-vs
-Multiple identical models
-vs
-Specialized Expert Pool
-vs
-Capability-aware Expert Pool
-vs
-Capability-aware + Node-aware routing
-vs
-Capability-aware + Node-aware + Fault-aware routing
-```
-
-Measure:
-
-```
-Accuracy
-Reasoning quality
-Coding quality
-Math quality
-Latency
-Throughput
-p50
-p95
-p99
-Energy
-Cost
-Network traffic
-Failure recovery
-Scaling efficiency
-```
-
----
-
-## 22. Scaling Experiments
-
-Build experiments around:
-
-```
-1 Expert
-4 Experts
-16 Experts
-64 Experts
-256 Experts
-1,024 Experts
-10,000+ Experts
-```
-
-where infrastructure allows.
-
-The goal is to determine:
-
-> Does intelligence improve as the Expert population grows?
-
-And:
-
-> Does the benefit continue after accounting for active compute, communication, and latency?
-
----
-
-## 23. Fault Tolerance
-
-Edge devices are unreliable.
-
-Assume:
-
-```
-Node failure
-Network loss
-High latency
-Battery depletion
-Thermal throttling
-Background OS load
-Temporary unavailability
-```
-
-ArcAsha should therefore use:
-
-```
-Shadow of Wisdom
-Divine Safeguard
-Retry
-Failover
-Health monitoring
-Adaptive routing
-```
-
-A model should never be selected purely because it is the most capable if its node is unstable.
-
----
-
-## 24. Smartphone Deployment
-
-A long-term target is:
-
-```
-Smartphone A → Expert Model A
-Smartphone B → Expert Model B
-Smartphone C → Expert Model C
-```
-
-with the Master PC controlling them.
-
-The smartphone should act as a genuine ArcAsha Node.
-
-It should expose:
-
-```
-Model capability
-Available memory
-Compute capability
-Network state
-Battery
-Thermal state
-Current workload
-Latency
-```
-
-to the Master.
-
-Privacy and user consent must be explicit for any real-device deployment.
-
----
-
-## 25. Model Registry vs Node Registry
-
-Keep these separate.
-
-### Model Registry
-
-Describes:
-
-```
-Model identity
-Architecture
-Parameters
-Capabilities
-Context length
-Quantization
-License
-Performance
-Specialization
-```
-
-### Star Registry (Node Registry)
-
-Describes:
-
-```
-Node identity
-Hardware
-Location class
-Network
-Thermal state
-Battery
-Availability
-Loaded model
-Current workload
-```
-
-The Eye of Wisdom combines both.
-
----
-
-## 26. Future ArcAsha-native Model
-
-Only after the existing-model Expert Fabric works should an ArcAsha-native model be developed.
-
-Initial target:
-
-```
-~160M
-```
-
-then:
-
-```
-~320M
-~1B
-larger sparse models
-```
-
-The native model should use:
-
-```
-Decoder-only Transformer
-RMSNorm
-RoPE
-SwiGLU
-GQA
-Weight Tying
-KV Cache
-Quantization support
-```
-
-and eventually explore:
-
-```
-Activation Compression
-Adaptive Precision
-Long Context
-Hybrid Attention
-MoE
-Speculative Decoding
-```
-
-The native model should be designed specifically for distributed execution.
-
----
-
-## 27. Ultimate Architecture
-
-The long-term target is:
-
-```
-                              USER
-                                │
-                                ▼
-                        Heart of Wisdom
-                         (Master PC)
-                                │
-                         Eye of Wisdom
-                        (AI Router)
-                                │
-                         Task Planner
-                                │
-            ┌───────────────────┼───────────────────┐
-            │                   │                   │
-            ▼                   ▼                   ▼
-       Realm of Knowledge   Expert Registry     Node Registry
-          (Memory)                               (Star Registry)
-            │                   │                   │
-            └───────────────────┼───────────────────┘
-                                │
-                         Expert Selection
-                                │
-       ┌────────────────────────┼────────────────────────┐
-       │                        │                        │
-       ▼                        ▼                        ▼
-  Mathematics              Coding                  Reasoning
-   Experts                  Experts                 Experts
-       │                        │                        │
-   Smartphones              Smartphones              Smartphones
-       │                        │                        │
-       └────────────────────────┼────────────────────────┘
-                                │
-                         Critic / Verifier
-                                │
-                           Synthesis
-                                │
-                         Wisdom Engine
-                                │
-                              USER
-```
-
----
-
-## 28. Ultimate Parameter Target
-
-Target aggregate capacity:
-
-**~6.7T parameters**
-
-Potential realization:
-
-```
-~0.6B × ~11,167 Experts
-```
-
-The exact architecture is not fixed.
-
-The number of experts may differ.
-
-The total may include:
-
-```
-General Experts
-Reasoning Experts
-Coding Experts
-Mathematics Experts
-Science Experts
-Language Experts
-Security Experts
-Planner Models
-Critic Models
-Verifier Models
-Specialist Models
-```
-
-The important property is:
-
-> **The aggregate intelligence capacity is enormous while each individual edge device only needs to host a small model.**
-
----
-
-## 29. Critical Research Question
-
-The entire project should eventually answer this question:
-
-> **Can a large population of specialized small language models, coordinated by an intelligent distributed runtime, achieve useful frontier-level capabilities without requiring any individual node to host a frontier-scale model?**
-
-Secondary questions:
-
-```
-How many experts are needed?
-How should experts specialize?
-How should experts communicate?
-How should active expert count scale?
-How much does specialization improve quality?
-How much communication overhead is acceptable?
-How resilient is the system to node failure?
-Does aggregate parameter count correlate with intelligence?
-When does adding experts stop being useful?
-Can expert diversity outperform simply scaling one model?
-```
-
-These questions should drive the experiments.
-
----
-
-## 30. Implementation Strategy
-
-Do not implement the final 6.7T architecture immediately.
-
-Use progressive milestones.
-
-### Stage 1
-One existing ~0.6B model
-
-```
-Master + One Node + LLM
-```
-
-### Stage 2
-Multiple Nodes
-
-```
-4–16 Nodes
-```
-
-### Stage 3
-Multiple specialized models
-
-```
-General, Math, Coding, Reasoning
-```
-
-### Stage 4
-Capability-aware routing
-
-```
-Task Vector + Capability Profile + Node State
-```
-
-### Stage 5
-Expert collaboration
-
-```
-Parallel Experts + Critic + Verifier + Synthesis
-```
-
-### Stage 6
-Dynamic active-compute scaling
-
-```
-Easy → few Experts
-Hard → many Experts
-```
-
-### Stage 7
-Hundreds / thousands of Experts
-
-### Stage 8
-Long-context / Memory Fabric
-
-### Stage 9
-ArcAsha-native Models
-
-### Stage 10
-Large-scale distributed intelligence
-
----
-
-## 31. What NOT to Do
-
-Do not:
-
-```
-Assume many models automatically become one model.
-Assume parameter count alone determines intelligence.
-Treat all models as equally capable.
-Treat all Nodes as equally reliable.
-Use only round-robin routing.
-Store Conversation History as KV Cache.
-Force all 1M tokens into GPU memory.
-Start by training a massive model.
-Hide communication overhead.
-Ignore failed experiments.
-Claim frontier-level performance without benchmark evidence.
-```
-
----
-
-## 32. Required Engineering Principle
-
-Always separate:
-
-```
-Model
-Runtime
-Node
-Network
-Memory
-Scheduler
-Router
-Evaluation
-```
-
-Do not create a monolithic implementation.
-
-Every component must be independently testable.
-
----
-
-## 33. Required Research Record
-
-Every experiment must record:
-
-```
-experiment_id
-git_commit
-model_id
-model_revision
-model_parameters
-capability_profile
-node_count
-active_expert_count
-hardware
-network
-latency
-throughput
-p50
-p95
-p99
-prompt
-input_tokens
-output_tokens
-network_bytes
-memory_usage
-energy
-failure_events
-final_result
-```
-
-Experiments must be reproducible.
-
----
-
-## 34. Final Goal
-
-ArcAsha should ultimately become:
-
-> **An operating system and distributed runtime for assembling many small, specialized, heterogeneous AI models into a single adaptive intelligence fabric.**
-
-The vision is not:
-
-> "Put one huge LLM on every device."
-
-The vision is:
-
-> **"Put a small piece of intelligence on every device, and let ArcAsha turn the collective into something much larger."**
-
-The long-term target is an aggregate intelligence fabric approaching:
-
-**~6.7T total parameters**
-
-while keeping:
-
-**individual edge models small**
-
-and:
-
-**active compute dynamically adjustable.**
-
-The system should be controllable from a Master PC while individual Expert Models run on smartphones, PCs, GPUs, browsers, and other heterogeneous devices.
-
-The ultimate research objective is to determine whether this architecture can produce meaningful advantages in:
-
-```
-Capability
-Efficiency
-Scalability
-Fault tolerance
-Cost
-Energy
-Availability
-Long-context reasoning
-```
-
-without requiring a single machine to possess the entire model.
-
-Do not assume the hypothesis is true.
-
-**Build the system, instrument it, benchmark it, and let the measurements determine whether the hypothesis holds.**
+That vision remains the long-term *scale* ambition, but the implemented architecture (v1.0+) deliberately focuses on the **OS layer**: how to manage, explain, and learn reasoning on small models. The naming system retains the v1 world-view names as lore (see `NAMING.md`), while the formal names reflect the implemented runtime.

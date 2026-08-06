@@ -224,7 +224,7 @@ STORE        LOAD          SEARCH      MERGE
 
 最終形は人間可読な名前ではなく**固定Token ID**。閉じた語彙の各トークンに一意のIDを割り当て、AILSAそのものを**AI用アセンブリ言語**にする。
 
-Token ID の割当は **AILSA Registry**（`AILSA_ISA.md` で仕様化）が唯一の権威を持つ。Registryは Heart of Wisdom（マスター）が管理し、バージョン付きで配布される。
+Token ID の割当は **AILSA Registry**（`AILSA_ISA.md` で仕様化）が唯一の権威を持つ。Registryはマスターノード（Master）が管理し、バージョン付きで配布される。
 
 | 範囲 | カテゴリ | 例 |
 |------|---------|-----|
@@ -378,7 +378,7 @@ CONF   = 0.82
 
 ### 2.4 Relay（中継）
 
-**直接通信は禁止。必ずMaster（Heart of Wisdom）経由。**
+**直接通信は禁止。必ずマスターノード（Master）経由。**
 
 ```
 AILSA
@@ -406,7 +406,7 @@ AILSA
 
 Token ID の割当は**一元管理**され、バージョン付きで配布される。
 
-- **権威**: Heart of Wisdom（マスター）が唯一の権威。`src/arcasha/ailsa/registry.json` に同梱
+- **権威**: マスターノード（Master）が唯一の権威。`src/arcasha/ailsa/registry.json` に同梱
 - **形式**: `Version` + トークン（名前, ID, カテゴリ, 方言, 意味）
 - **変更ポリシー（不変則）**:
   - 既存トークンのIDは**絶対に変更しない**（`TASK_SOLVE=0x04` が将来 `0x84` になる事故を防ぐ）

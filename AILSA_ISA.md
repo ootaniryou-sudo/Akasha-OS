@@ -69,7 +69,7 @@ flowchart TB
 
 ### 3.1 権威（Authority）
 
-- **AILSA Registry は Heart of Wisdom（マスター）が唯一の権威**
+- **AILSA Registry はマスターノード（Master）が唯一の権威**
 - 全Expert・全CodecはRegistryを参照する
 - Registryはバージョン管理され、配布される
 
