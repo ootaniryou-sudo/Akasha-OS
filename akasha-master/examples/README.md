@@ -40,4 +40,4 @@ npx tsx examples/quickstart.ts
 - **Layer 2: Executive Runtime** — 戦略・予算・資源管理
 - **Layer 3: Intelligence Attachments** — 高度推論・議論・創造（プラグイン）
 
-詳細は `docs/`（AI_VALIDATION.md / AI_ATTACHMENTS.md / AI_REASONING.md）を参照。
+詳細はリポジトリルートの仕様書（`AI_VALIDATION.md` / `AI_ATTACHMENTS.md` / `AI_REASONING.md`）を参照。
