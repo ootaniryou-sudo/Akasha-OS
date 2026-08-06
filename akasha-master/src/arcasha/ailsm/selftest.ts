@@ -1157,7 +1157,7 @@ const llmOf = (p: { components: { component: string; cpuPct: number }[] }): numb
 check('OS オーバーヘッド: 単体は LLM 100%、OS を増やすほど LLM 割合が下がる', osOverheadProfile('qwen').components[0].cpuPct === 100 && llmOf(ovFast69) > llmOf(ovDeep69) && llmOf(ovDeep69) > 0, `fast LLM=${llmOf(ovFast69)}% deep LLM=${llmOf(ovDeep69)}%`);
 check('OS オーバーヘッド: CPU/レイテンシは 100% に収束', ovFast69.components.reduce((s, c) => s + c.cpuPct, 0) === 100 && ovDeep69.components.reduce((s, c) => s + c.latencyPct, 0) === 100);
 const json69 = JSON.parse(buildJsonReport(rows69, allOverheadProfiles())) as { version: string; overall: unknown[]; kind: string };
-check('report.json: バージョン + 全体結果', json69.version === '1.2.0' && json69.overall.length === 5 && json69.kind === 'simulation');
+check('report.json: バージョン + 全体結果', json69.version === '1.3.0' && json69.overall.length === 5 && json69.kind === 'simulation');
 check('report.csv: ヘッダ + 30 行', buildCsvReport(rows69).split('\n').length === 31 && buildCsvReport(rows69).startsWith('suite,suite_name'));
 check('report.md: ベンチ表 + OS オーバーヘッド', buildMarkdownReport(rows69, allOverheadProfiles()).includes('| gsm8k |') && buildMarkdownReport(rows69, allOverheadProfiles()).includes('OS Overhead'));
 const files69 = await writeReports('reports/.selftest', rows69, allOverheadProfiles());
@@ -1366,6 +1366,17 @@ oasis75.record({ task: 'ドローン設計', team: ['planning', 'vision', 'physi
 check('Oasis: 類似タスク検索（Runtime Knowledge Base）', oasis75.search('ドローン').length === 1);
 check('Oasis: 権限（expert は Task/Reasoning だけ・team は見えない）', (() => { const v = oasis75.view('expert', oasis75.all()[0]); return v.task !== undefined && v.team === undefined; })());
 check('Oasis: Lesson が保存される', oasis75.lessons()[0].includes('LESSON'));
+
+// [76] Oasis / Team Learning 効果（Validation G — モデルを再学習しなくても OS が賢くなる）
+console.log('\n[76] Oasis / Team Learning 効果');
+const { runOasisBenchmark } = await import('../bench/oasis.js');
+const ob76 = runOasisBenchmark(1000);
+check('Validation G: 4 フェーズ記録', ob76.naive.length === 4 && ob76.learned.length === 4);
+check('Validation G: 成功率が改善（Learned > Naive）', ob76.final.learned.successRate > ob76.final.naive.successRate);
+check('Validation G: 平均遅延が改善（Learned < Naive）', ob76.final.learned.avgLatencyMs < ob76.final.naive.avgLatencyMs);
+check('Validation G: 平均品質が改善（Learned > Naive）', ob76.final.learned.avgQuality > ob76.final.naive.avgQuality);
+check('Validation G: 学習が進むほど成功率が高い（late >= warmup）', ob76.learned[3].successRate >= ob76.learned[0].successRate);
+check('Validation G: 改善が正の値', ob76.final.improvement.successRate > 0 && ob76.final.improvement.latencyMs > 0);
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {

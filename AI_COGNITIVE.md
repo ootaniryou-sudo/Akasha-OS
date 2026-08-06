@@ -153,7 +153,75 @@ selftest: [75]（AI Pool / Capability Graph / 型チェーン編成 / 共有メ�
 
 ---
 
-## 7. 研究上の位置付け
+## 8. ArcAsha IR 1.0（BNF 仕様）
+
+Cognitive Graph Runtime の経験・通信を記録する共通言語。実装の一貫性を保ち、他者が参加しやすくするための公式仕様。
+
+### 基本文法（BNF）
+
+```
+<oasis-record> ::= <task> <team> <process> <memory> <lesson>
+                 | <task> <team> <process> <memory>          (* lesson は任意 *)
+<task>    ::= "TASK" <ws> <string>
+<team>    ::= "TEAM" <ws> <role> { "," <role> }
+<role>    ::= "planning" | "vision" | "physics" | "coding" | "robot"
+            | "math" | "search" | "memory"
+<process> ::= "PROCESS" <ws> <edge> { ";" <edge> }
+<edge>    ::= <expert-id> "->" <expert-id> "(" <data-type> ")"
+<expert-id> ::= <role>
+<data-type> ::= "goal" | "plan" | "camera" | "object-list" | "trajectory"
+              | "motion" | "program" | "equation" | "solution" | "query"
+              | "documents" | "context" | "knowledge"
+<memory>  ::= "MEMORY" <ws> <entry> { ";" <entry> }
+<entry>   ::= <data-type> ":" <ir-value>
+<ir-value> ::= <string> | <object>
+<object>  ::= "[" <key-value> { "," <key-value> } "]"
+<key-value> ::= <key> ":" <value>
+<lesson>  ::= "LESSON" <ws> <string> "confidence" <number>
+<key>     ::= <letter> { <letter> | <digit> | "-" }
+<value>   ::= <number> | <string>
+<number>  ::= [ "-" ] <digit> { <digit> } [ "." <digit> { <digit> } ]
+<string>  ::= <unicode-char> { <unicode-char> }     (* 改行・区切り文字を除く *)
+<ws>      ::= " " | "\t"
+<nl>      ::= "\n"
+```
+
+### 記録例
+
+```
+TASK: robot_navigation
+TEAM: planning, vision, physics, coding
+PROCESS: vision->physics(object-list); physics->coding(trajectory); planning->memory(plan)
+MEMORY: object-list:[door(conf 0.93), obstacle(conf 0.63)]; trajectory:[waypoints 2, risk 0.22]; program:[plan motor-control-v4]
+LESSON: Physics before Coding confidence 0.94
+```
+
+### 意味（データフロー）
+
+```
+TASK      →  何をやったか（Task Archive）
+TEAM      →  誰がやったか（Team Archive）
+PROCESS   →  どう配線したか（Reasoning Archive）
+MEMORY    →  何を受け渡したか（Shared Task Memory）
+LESSON    →  何を学んだか（Lesson Archive → Policy）
+```
+
+### 実装対応
+
+| IR 要素 | 実装 |
+|---------|------|
+| TASK / TEAM / PROCESS | `OasisEntry`（oasis.ts）の task / team / graph |
+| MEMORY | `SharedMemoryEntry`（runtime.ts）の key/value（IR 値） |
+| LESSON | `makeLesson()`（oasis.ts） |
+
+### バージョン管理
+
+- 現行: **ArcAsha IR 1.0**（AILSM グラフ IR v1.8 とは別に、経験記録用 IR として独立）
+- 追試可能性のため、`report.json` には version と kind=simulation を必ず含める
+
+---
+
+## 9. 研究上の位置付け
 
 蓄積されるのは **LLM の重み（パラメータ）ではない**:
 

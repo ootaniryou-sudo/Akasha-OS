@@ -157,6 +157,25 @@ qwen-deep   = qwen-fast + 0.16（全 Attachment 積極利用）
 - kind=simulation（決定論モデル）。実機は REAL_DEVICE_PROFILE と差し替え可能
 - `npm run benchmark` に統合（report.json の `caravanScaling` / report.md の Caravan セクション）
 
+## Validation G — Lesson Memory / Team Learning の効果（Phase v1.2）
+
+**「モデルを再学習しなくても OS が賢くなる」**ことを定量実証する（Cognitive Graph Runtime / Knowledge Oasis）。
+
+1000 タスクのシミュレーション。チーム候補の真の成功率は固定（決定論・kind=simulation）。
+Naive（経験なし・ランダムチーム）と Learned（TeamLearner が成功率を学習 + ε-greedy 探索→活用 + 繰り返し高速化）を比較:
+
+| フェーズ | タスク数 | 成功率(Naive) | 成功率(Learned) | 平均遅延(Naive) | 平均遅延(Learned) | 平均品質(Learned) |
+|---|---:|---:|---:|---:|---:|---:|
+| warmup | 100 | 67% | 75% | 711ms | 606ms | 76% |
+| early | 300 | 68% | 89% | 713ms | 629ms | 87% |
+| mid | 600 | 68% | 92% | 715ms | 634ms | 90% |
+| late | 1000 | 67% | 93% | 714ms | 637ms | 91% |
+
+- **成功率 67% → 93%（+26pt）**、平均遅延 714ms → 637ms（-77ms）、平均品質 +28pt
+- **学習が進むほど改善**（warmup 75% → late 93%）— 探索→活用で最適チームに収束
+- 蓄積されるのは **LLM の重みではなく OS の運用知識**（Team / Policy / Lesson）
+- `npm run benchmark` に統合（report.json の `oasisLearning` / report.md の Lesson Memory セクション）
+
 ## OS Overhead（Kernel / Scheduler / AVM / Executive / Attachment の資源内訳）
 
 ```

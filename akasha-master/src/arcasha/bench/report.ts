@@ -10,15 +10,16 @@ import type { BenchResultRow } from './run.js';
 import { overallAccuracy } from './run.js';
 import type { OverheadProfile } from './overhead.js';
 import type { CaravanBenchRow } from './caravan.js';
+import type { OasisBenchResult } from './oasis.js';
 
-export const REPORT_VERSION = '1.2.0';
+export const REPORT_VERSION = '1.3.0';
 export const REPORT_CORPUS = 'GSM8K/MATH500/HumanEval/MBPP/MMLU/LiveCodeBench (deterministic subset)';
 
 export const VALIDATION_KIND = 'simulation';
 export const VALIDATION_NOTE = '設計上の評価モデル（決定論・再現可能）。実機実測は Real Device Benchmark（bench/real-device.ts）と区別する。';
 
 /** JSON レポート（機械可読・追試可能） */
-export function buildJsonReport(rows: BenchResultRow[], overhead: OverheadProfile[], caravan?: CaravanBenchRow[]): string {
+export function buildJsonReport(rows: BenchResultRow[], overhead: OverheadProfile[], caravan?: CaravanBenchRow[], oasis?: OasisBenchResult): string {
   return JSON.stringify(
     {
       version: REPORT_VERSION,
@@ -30,6 +31,7 @@ export function buildJsonReport(rows: BenchResultRow[], overhead: OverheadProfil
       results: rows,
       osOverhead: overhead,
       caravanScaling: caravan ?? [],
+      oasisLearning: oasis ?? null,
     },
     null,
     2,
@@ -47,7 +49,7 @@ export function buildCsvReport(rows: BenchResultRow[]): string {
 }
 
 /** Markdown レポート（論文化用） */
-export function buildMarkdownReport(rows: BenchResultRow[], overhead: OverheadProfile[], caravan?: CaravanBenchRow[]): string {
+export function buildMarkdownReport(rows: BenchResultRow[], overhead: OverheadProfile[], caravan?: CaravanBenchRow[], oasis?: OasisBenchResult): string {
   const lines: string[] = [];
   lines.push(`# ArcAsha Benchmark Report`);
   lines.push('');
@@ -90,16 +92,32 @@ export function buildMarkdownReport(rows: BenchResultRow[], overhead: OverheadPr
     const last = caravan[caravan.length - 1];
     lines.push(`> Master は ${last.devices.toLocaleString()} 台でも ${last.caravans} キャラバンを管理するだけ（フラットの ${last.reductionX}x 削減）。`);
   }
+  if (oasis) {
+    lines.push('');
+    lines.push(`## Lesson Memory / Team Learning の効果 (Validation G)`);
+    lines.push('');
+    lines.push(`| フェーズ | 成功率(Naive) | 成功率(Learned) | 平均遅延(Naive) | 平均遅延(Learned) |`);
+    lines.push('|---|---:|---:|---:|---:|');
+    for (let i = 0; i < oasis.naive.length; i++) {
+      const n = oasis.naive[i];
+      const l = oasis.learned[i];
+      lines.push(`| ${n.phase} | ${(n.successRate * 100).toFixed(0)}% | ${(l.successRate * 100).toFixed(0)}% | ${n.avgLatencyMs.toFixed(0)}ms | ${l.avgLatencyMs.toFixed(0)}ms |`);
+    }
+    const f = oasis.final;
+    lines.push('');
+    lines.push(`> 成功率 ${(f.naive.successRate * 100).toFixed(0)}% → ${(f.learned.successRate * 100).toFixed(0)}%（+${(f.improvement.successRate * 100).toFixed(0)}pt）/ 遅延 ${f.naive.avgLatencyMs.toFixed(0)}ms → ${f.learned.avgLatencyMs.toFixed(0)}ms`);
+    lines.push('> モデルの重みを変えずに、OS の運用知識（Team / Policy / Lesson）だけで改善することを実証。');
+  }
   return lines.join('\n');
 }
 
 /** レポートをディスクへ書き出す（既定: reports/benchmark/） */
-export async function writeReports(dir: string, rows: BenchResultRow[], overhead: OverheadProfile[], caravan?: CaravanBenchRow[]): Promise<string[]> {
+export async function writeReports(dir: string, rows: BenchResultRow[], overhead: OverheadProfile[], caravan?: CaravanBenchRow[], oasis?: OasisBenchResult): Promise<string[]> {
   await mkdir(dir, { recursive: true });
   const files: string[] = [];
-  const json = buildJsonReport(rows, overhead, caravan);
+  const json = buildJsonReport(rows, overhead, caravan, oasis);
   const csv = buildCsvReport(rows);
-  const md = buildMarkdownReport(rows, overhead, caravan);
+  const md = buildMarkdownReport(rows, overhead, caravan, oasis);
   const targets: [string, string][] = [
     [join(dir, 'report.json'), json],
     [join(dir, 'report.csv'), csv],

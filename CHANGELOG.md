@@ -20,7 +20,11 @@
   - フラット vs キャラバン比較: 10,000 台でも Master は 1,000 キャラバンを管理するだけ（**9.99x 削減**）
   - 探索コスト 10,000 → 1,010 に圧縮 / 2 ホップルーティング
   - `npm run benchmark` に統合（report.json の `caravanScaling` / report.md の Caravan セクション）
-- selftest [73] / [74]
+- **Validation G: Lesson Memory / Team Learning の効果** — 「モデルを再学習しなくても OS が賢くなる」ことを定量実証
+  - 1000 タスクで Naive vs Learned: 成功率 67% → 93%（+26pt）・遅延 714→637ms・品質 +28pt
+  - 学習が進むほど改善（warmup 75% → late 93%）— ε-greedy 探索→活用で最適チームに収束
+  - `npm run benchmark` に統合（report.json の `oasisLearning` / report.md の Lesson Memory セクション）
+- selftest [73] / [74] / [76]
 
 > **v2 研究テーマ**: Intelligence is not a monolithic model, but a hierarchical runtime
 > composed of autonomous decision layers.（知能は単一モデルではなく、自律的な意思決定層から構成される階層的ランタイム）
