@@ -49,6 +49,26 @@
   .btn-kill:hover { background:rgba(224,90,79,.15); }
   .role { padding:4px 0; }
   .role-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
+  /* tree（樹形図: Master → キャラバン → デバイス） */
+  .tree { padding:2px 0; }
+  .tree-root { display:flex; align-items:center; gap:8px; padding:8px 10px; background:rgba(47,206,122,.08); border:1px solid rgba(47,206,122,.35); border-radius:8px; font-size:13px; }
+  .tree-caravan { margin:10px 0 0 18px; padding-left:16px; border-left:2px solid var(--line); }
+  .caravan-head { display:flex; align-items:center; gap:8px; padding:6px 8px; background:rgba(224,184,74,.07); border:1px solid rgba(224,184,74,.3); border-radius:8px; font-size:12px; }
+  .tree-leaf { margin:6px 0 0 18px; padding-left:12px; border-left:2px dashed #1e2833; }
+  .tree-badge { font-size:9px; font-weight:800; padding:1px 6px; border-radius:4px; flex:none; }
+  .tree-badge.root { background:var(--go); color:#000; }
+  .tree-badge.caravan { background:var(--busy); color:#000; }
+  /* peer（デバイス間会話） */
+  .peer { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .peer select, .peer input { background:#0e141b; border:1px solid #24313f; border-radius:6px; color:var(--ink); font:inherit; font-size:11px; padding:5px 8px; }
+  .peer input { flex:1; min-width:120px; }
+  .peer button { background:#24313f; color:var(--ink); border:none; border-radius:6px; font:inherit; font-size:11px; padding:6px 12px; cursor:pointer; }
+  .peer button:hover { background:#2c3b4c; }
+  .peer-log { max-height:220px; overflow-y:auto; }
+  .peer-msg { display:flex; gap:8px; padding:4px 0; border-bottom:1px solid #1a232e; font-size:11px; align-items:center; }
+  .peer-msg .who { color:var(--go); font-weight:700; flex:none; }
+  .peer-msg .who.to { color:var(--busy); }
+  .peer-msg .relay { color:var(--mute); font-size:9px; flex:none; }
 </style>
 </head>
 <body>
@@ -68,8 +88,20 @@
   </div>
 
   <div class="card">
-    <h2>Device Tree（端末管理）</h2>
+    <h2>Device Tree（樹形図）</h2>
     <div id="devices"><div class="mute">waiting…</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Neuron Network（デバイス間会話）</h2>
+    <div class="peer">
+      <select id="peer-from" title="送信元デバイス"></select>
+      <span class="arrow">→</span>
+      <select id="peer-to" title="宛先デバイス"></select>
+      <input id="peer-text" placeholder="メッセージ…" />
+      <button id="peer-send">送信</button>
+    </div>
+    <div class="peer-log" id="peer"><div class="mute">no conversations yet</div></div>
   </div>
 
   <div class="card">
@@ -107,16 +139,6 @@ function renderPipe(steps) {
   ).join('');
 }
 
-function renderDevices(nodes) {
-  const el = $('devices');
-  if (!nodes.length) { el.innerHTML = '<div class="mute">no device connected</div>'; return; }
-  el.innerHTML = nodes.map(n => {
-    const role = n.nodeId.includes('ipad') ? 'iPad' : n.nodeId.includes('iphone') ? 'iPhone' : 'Mac';
-    return '<div class="node"><span class="dot"></span><span class="id">' + n.nodeId +
-      '</span><span class="meta">' + role + ' · ' + n.modelId + ' · ' + n.paramsM + 'M</span></div>';
-  }).join('');
-}
-
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /** 給電・回線のサマリー */
@@ -140,33 +162,54 @@ function renderPower(nodes) {
     '<div class="kv"><span>実測 / 推定（sim）</span><b>' + real + ' / ' + (nodes.length - real) + '</b></div>';
 }
 
-/** 端末一覧（バッテリー・回線速度・担当ロール・切断操作） */
-function renderDevices(nodes) {
+/** 端末 1 台分の詳細 HTML（バッテリー・回線速度・担当ロール・切断操作） */
+function deviceNodeHtml(n) {
+  const role = n.nodeId.includes('ipad') ? 'iPad' : n.nodeId.includes('iphone') ? 'iPhone' : 'Mac';
+  const batt = Math.max(0, Math.min(100, n.batteryPct ?? 50));
+  const battColor = batt > 50 ? 'var(--go)' : batt > 20 ? 'var(--busy)' : 'var(--bad)';
+  const rtt = n.rttMs ?? 20;
+  const rttClass = rtt < 30 ? 'go' : rtt < 80 ? 'busy' : 'bad';
+  const roles = (n.roles && n.roles.length) ? n.roles.join(', ') : 'general';
+  return '<div class="node" style="border-bottom:none"><span class="dot"></span>' +
+    '<div style="flex:1">' +
+      '<div><span class="id">' + esc(n.nodeId) + '</span>' +
+        '<span class="tag ' + (n.source === 'real' ? 'tag-real' : 'tag-sim') + '">' + (n.source === 'real' ? 'REAL' : 'SIM') + '</span>' +
+        '<span class="meta">' + esc(n.modelId) + ' · ' + n.paramsM + 'M</span></div>' +
+      '<div class="meta">' + role + ' · role: ' + esc(roles) + '</div>' +
+      '<div class="batt"><div class="batt-fill" style="width:' + batt + '%;background:' + battColor + '"></div></div>' +
+    '</div>' +
+    '<div class="meta" style="text-align:right">' +
+      '<div><span class="' + rttClass + '">' + rtt + 'ms</span> RTT</div>' +
+      '<div>' + batt + '% batt</div>' +
+      '<div>' + (n.powerMw / 1000).toFixed(2) + 'W</div>' +
+      '<button class="btn-kill" onclick="disconnectNode(\'' + String(n.nodeId).replace(/[^\w.-]/g, '') + '\')">切断</button>' +
+    '</div>' +
+  '</div>';
+}
+
+/** 樹形図（Master → キャラバン → デバイス） */
+function renderDevices(tree) {
   const el = $('devices');
-  if (!nodes.length) { el.innerHTML = '<div class="mute">no device connected</div>'; return; }
-  el.innerHTML = nodes.map(n => {
-    const role = n.nodeId.includes('ipad') ? 'iPad' : n.nodeId.includes('iphone') ? 'iPhone' : 'Mac';
-    const batt = Math.max(0, Math.min(100, n.batteryPct ?? 50));
-    const battColor = batt > 50 ? 'var(--go)' : batt > 20 ? 'var(--busy)' : 'var(--bad)';
-    const rtt = n.rttMs ?? 20;
-    const rttClass = rtt < 30 ? 'go' : rtt < 80 ? 'busy' : 'bad';
-    const roles = (n.roles && n.roles.length) ? n.roles.join(', ') : 'general';
-    return '<div class="node"><span class="dot"></span>' +
-      '<div style="flex:1">' +
-        '<div><span class="id">' + esc(n.nodeId) + '</span>' +
-          '<span class="tag ' + (n.source === 'real' ? 'tag-real' : 'tag-sim') + '">' + (n.source === 'real' ? 'REAL' : 'SIM') + '</span>' +
-          '<span class="meta">' + esc(n.modelId) + ' · ' + n.paramsM + 'M</span></div>' +
-        '<div class="meta">' + role + ' · role: ' + esc(roles) + '</div>' +
-        '<div class="batt"><div class="batt-fill" style="width:' + batt + '%;background:' + battColor + '"></div></div>' +
-      '</div>' +
-      '<div class="meta" style="text-align:right">' +
-        '<div><span class="' + rttClass + '">' + rtt + 'ms</span> RTT</div>' +
-        '<div>' + batt + '% batt</div>' +
-        '<div>' + (n.powerMw / 1000).toFixed(2) + 'W</div>' +
-        '<button class="btn-kill" onclick="disconnectNode(\'' + String(n.nodeId).replace(/[^\w.-]/g, '') + '\')">切断</button>' +
-      '</div>' +
-    '</div>';
-  }).join('');
+  const caravans = (tree && tree.caravans) || [];
+  const all = caravans.flatMap((c) => c.members || []);
+  if (!all.length) { el.innerHTML = '<div class="mute">no device connected</div>'; return; }
+  const master = tree.master || { name: 'Master', caravanCount: 0 };
+  let html = '<div class="tree">';
+  html += '<div class="tree-root"><span class="tree-badge root">M</span>' +
+    '<span class="id">' + esc(master.name) + '</span>' +
+    '<span class="meta" style="margin-left:auto">' + master.caravanCount + ' キャラバン · ' + all.length + ' デバイス</span></div>';
+  caravans.forEach((c) => {
+    html += '<div class="tree-caravan">' +
+      '<div class="caravan-head"><span class="tree-badge caravan">軍曹</span>' +
+      '<span class="id">' + esc(c.id) + '</span>' +
+      '<span class="meta" style="margin-left:auto">' + (c.members || []).length + ' デバイス管理 · 割当はこのキャラバンが担当</span></div>';
+    (c.members || []).forEach((n) => {
+      html += '<div class="tree-leaf">' + deviceNodeHtml(n) + '</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 /** 役職（Expert ロール）の偏り — 利用サンプルの集中度と精度分布 */
@@ -206,6 +249,50 @@ async function disconnectNode(nodeId) {
   }
 }
 
+/** デバイス間会話ログ（ニューロン風ピア通信） */
+function renderPeer(peerLog) {
+  const el = $('peer');
+  if (!peerLog.length) { el.innerHTML = '<div class="mute">no conversations yet</div>'; return; }
+  el.innerHTML = peerLog.slice(0, 30).map((m) =>
+    '<div class="peer-msg">' +
+      '<span class="who">' + esc(m.from) + '</span>' +
+      '<span class="arrow">→</span>' +
+      '<span class="who to">' + esc(m.to) + '</span>' +
+      '<span style="flex:1">' + esc(m.text) + '</span>' +
+      (m.relayedBy ? '<span class="relay">via ' + esc(m.relayedBy) + '</span>' : '') +
+      '<span class="relay">' + new Date(m.ts).toLocaleTimeString() + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+/** 会話の送信元/宛先セレクトを更新 */
+function updatePeerSelects(nodes) {
+  const from = $('peer-from'), to = $('peer-to');
+  if (!nodes.length) { from.innerHTML = '<option>—</option>'; to.innerHTML = '<option>—</option>'; return; }
+  const opts = nodes.map((n) => '<option value="' + esc(n.nodeId) + '">' + esc(n.nodeId) + '</option>').join('');
+  const keepFrom = from.value, keepTo = to.value;
+  from.innerHTML = opts; to.innerHTML = opts;
+  if (nodes.some((n) => n.nodeId === keepFrom)) from.value = keepFrom;
+  if (nodes.some((n) => n.nodeId === keepTo)) to.value = keepTo;
+}
+
+/** デバイス間メッセージ送信 */
+async function sendPeer() {
+  const from = $('peer-from').value, to = $('peer-to').value, text = $('peer-text').value.trim();
+  if (!from || !to || !text || from === '—' || to === '—') { $('status').textContent = '⚠ 送信元/宛先/メッセージを指定'; return; }
+  if (from === to) { $('status').textContent = '⚠ 自分自身への送信は不可'; return; }
+  try {
+    const r = await fetch('/api/peer', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to, text }),
+    });
+    const d = await r.json();
+    $('status').textContent = d.error ? ('❌ ' + d.error) : ('⚡ ' + d.from + ' → ' + d.to + (d.relayedBy ? ' (via ' + d.relayedBy + ')' : ''));
+    $('peer-text').value = '';
+    tick();
+  } catch (e) { $('status').textContent = '❌ ' + e; }
+}
+
 function renderLearner(learner) {
   const el = $('learner');
   if (!learner.length) { el.innerHTML = '<div class="mute">no observations yet</div>'; return; }
@@ -237,10 +324,12 @@ async function tick() {
     const d = await r.json();
     renderPipe(d.recent && d.recent[0] ? d.recent[0].steps : []);
     renderPower(d.nodes ?? []);
-    renderDevices(d.nodes ?? []);
+    renderDevices(d.tree);
     renderLearner(d.learner);
     renderRoles(d.roles ?? []);
+    renderPeer(d.peerLog ?? []);
     renderRecent(d.recent);
+    updatePeerSelects(d.nodes ?? []);
     $('bench').textContent =
       '■ Fault スケーリング実験\n' + (d.scaling ?? '') +
       '\n\n■ 方式比較（context=1M tokens）\n' + (d.comparison ?? '');
@@ -256,6 +345,8 @@ async function tick() {
 renderPipe([]);
 tick();
 setInterval(tick, 2000);
+$('peer-send').addEventListener('click', sendPeer);
+$('peer-text').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendPeer(); });
 </script>
 </body>
 </html>

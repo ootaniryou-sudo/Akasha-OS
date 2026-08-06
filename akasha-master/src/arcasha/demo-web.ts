@@ -368,6 +368,23 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ─── デバイス間ピア会話 API（ニューロンネットワーク風）────────────
+  if (url.pathname === '/api/peer' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      try {
+        const { from, to, text } = JSON.parse(body);
+        if (!from || !to || !text) { sendJson(400, { error: 'from/to/text required' }); return; }
+        const msg = hub.peerMessage(String(from), String(to), String(text));
+        sendJson(200, msg);
+      } catch (e) {
+        sendJson(400, { error: String(e) });
+      }
+    });
+    return;
+  }
+
   // ─── AI OS Monitor API（Phase 2.1）────────────────────────────────
   if (url.pathname === '/api/monitor') {
     syncAiOs(aios);
@@ -379,6 +396,8 @@ const server = http.createServer((req, res) => {
       comparison: monitorData().comparison,
       nodes: hub.metrics(),
       roles: aios.learner.all(),
+      tree: hub.tree(),
+      peerLog: hub.peerLog,
     });
     return;
   }

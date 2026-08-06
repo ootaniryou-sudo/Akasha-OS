@@ -48,12 +48,37 @@ function simMetric(nodeId: string): { batteryPct: number; rttMs: number; powerMw
   };
 }
 
+/**
+ * キャラバン（中間マスター「軍曹」）— 増えすぎたデバイスを管理するための階層ノード。
+ * CARAVAN_SIZE 台ごとに 1 キャラバンを立て、デバイスの割り当て管理を任せることで、
+ * 1000 機レベルのデバイスでも Master が直接扱わずに済む（スケーラブルな木構造）。
+ */
+export interface Caravan {
+  id: string;          // 'caravan-0', 'caravan-1', ...
+  memberIds: string[]; // 配下のデバイス（葉）
+}
+
+export const CARAVAN_SIZE = 10; // 10 デバイスごとに 1 キャラバン
+
+/** 下層デバイス同士の会話（ニューロンネットワーク風）。別キャラバン間はキャラバンを経由。 */
+export interface PeerMessage {
+  from: string;
+  to: string;
+  text: string;
+  ts: number;
+  relayedBy?: string; // 経由したキャラバン（同一キャラバン内なら undefined = 直接）
+}
+
 export class ExpertHub {
   readonly experts: ExpertInfo[] = [];
   /** register 時に送られた生のノード情報 (platform/backend/precision/settings等) */
   readonly nodeDetails = new Map<string, Record<string, any>>();
   /** ノードごとの動作メトリクス（給電・回線速度） */
   readonly nodeMetrics = new Map<string, NodeMetric>();
+  /** キャラバン（中間マスター）階層: caravanId → 配下デバイス */
+  private readonly caravans = new Map<string, Caravan>();
+  /** 下層デバイス同士の会話ログ（ニューロン風ピア通信） */
+  readonly peerLog: PeerMessage[] = [];
   private sockets = new Map<string, WebSocket>();
   private cache = new Map<string, EvalResult>();
   private genCache = new Map<string, string>();
@@ -101,7 +126,7 @@ export class ExpertHub {
           });
           this.sockets.set(nodeId, ws);
           ws.send(JSON.stringify({ type: 'register_ack', node_id: nodeId, master: 'ArcAsha' }));
-          console.log(`  ✅ expert ${nodeId} (${modelId}, ${params}M)`);
+          console.log(`  ✅ expert ${nodeId} (${modelId}, ${params}M) → ${this.assignCaravan(nodeId)}`);
           if (this.experts.length >= minNodes) onReady();
         } else if (msg.type === 'ping') {
           // 回線速度（RTT）計測 — ノードの ping に往復遅延を記録
@@ -119,6 +144,7 @@ export class ExpertHub {
       ws.on('close', () => {
         this.sockets.delete(nodeId);
         this.experts.splice(this.experts.indexOf(this.experts.find(e => e.nodeId === nodeId)!), 1);
+        this.removeFromCaravan(nodeId);
       });
       ws.on('error', () => {});
     });
@@ -194,6 +220,7 @@ export class ExpertHub {
     if (idx >= 0) this.experts.splice(idx, 1);
     this.nodeDetails.delete(nodeId);
     this.nodeMetrics.delete(nodeId);
+    this.removeFromCaravan(nodeId);
     return true;
   }
 
@@ -236,6 +263,92 @@ export class ExpertHub {
         roles,
       };
     });
+  }
+
+  // ─── キャラバン階層（中間マスター）────────────────────────────────
+
+  /** デバイスをキャラバンに割り当て（CARAVAN_SIZE 台ごとに新キャラバンを立てる） */
+  private assignCaravan(nodeId: string): string {
+    const last = [...this.caravans.values()].pop();
+    if (last && last.memberIds.length < CARAVAN_SIZE) {
+      last.memberIds.push(nodeId);
+      return last.id;
+    }
+    const id = `caravan-${this.caravans.size}`;
+    this.caravans.set(id, { id, memberIds: [nodeId] });
+    return id;
+  }
+
+  /** 切断されたデバイスをキャラバンから除去（空になったらキャラバンも削除） */
+  private removeFromCaravan(nodeId: string): void {
+    for (const [id, c] of this.caravans) {
+      const i = c.memberIds.indexOf(nodeId);
+      if (i >= 0) {
+        c.memberIds.splice(i, 1);
+        if (c.memberIds.length === 0) this.caravans.delete(id);
+        return;
+      }
+    }
+  }
+
+  /** ノードが所属するキャラバン ID */
+  caravanOf(nodeId: string): string | undefined {
+    for (const c of this.caravans.values()) {
+      if (c.memberIds.includes(nodeId)) return c.id;
+    }
+    return undefined;
+  }
+
+  /**
+   * キャラバンの役割（軍曹）: 配下の AI モデルノードのデバイス割り当てを管理する。
+   * Master はキャラバン単位でしか扱わないため、1000 機レベルでも耐えられる。
+   * タスクキーから配下デバイスを決定論的に割り当てる（ラウンドロビン + ハッシュ分散）。
+   */
+  caravanRoute(caravanId: string, taskKey: string): string | null {
+    const c = this.caravans.get(caravanId);
+    if (!c || c.memberIds.length === 0) return null;
+    let h = 0;
+    for (let i = 0; i < taskKey.length; i++) h = (h * 31 + (taskKey.charCodeAt(i) || 0)) >>> 0;
+    return c.memberIds[h % c.memberIds.length];
+  }
+
+  /** Master → キャラバン → デバイスの木構造（樹形図表示用） */
+  tree(): {
+    master: { nodeId: string; name: string; caravanCount: number };
+    caravans: Array<{ id: string; members: ReturnType<ExpertHub['metrics']> }>;
+  } {
+    const memberById = new Map(this.metrics().map((m) => [m.nodeId, m]));
+    return {
+      master: {
+        nodeId: 'master',
+        name: 'ArcAsha Master',
+        caravanCount: this.caravans.size,
+      },
+      caravans: [...this.caravans.values()].map((c) => ({
+        id: c.id,
+        members: c.memberIds
+          .map((id) => memberById.get(id))
+          .filter((m): m is NonNullable<ReturnType<ExpertHub['metrics']>[number]> => Boolean(m)),
+      })),
+    };
+  }
+
+  // ─── 下層デバイス同士の会話（ニューロンネットワーク風ピア通信）──
+
+  /** デバイス → デバイスの会話。別キャラバン間はキャラバン（軍曹）を経由して中継する。 */
+  peerMessage(from: string, to: string, text: string): PeerMessage {
+    const fc = this.caravanOf(from);
+    const tc = this.caravanOf(to);
+    const msg: PeerMessage = {
+      from,
+      to,
+      text,
+      ts: Date.now(),
+      relayedBy: fc && tc && fc !== tc ? tc : undefined,
+    };
+    this.peerLog.unshift(msg);
+    if (this.peerLog.length > 100) this.peerLog.pop();
+    return msg;
   }
 
   close(): void {
