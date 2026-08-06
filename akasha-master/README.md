@@ -72,13 +72,21 @@ arcasha replay
 arcasha policy
 ```
 
-Or run from the repo:
+Or run from the repo (workspace root — convenience scripts delegate to the core package):
+
+```bash
+npm run setup           # npm install --prefix akasha-master
+npm run selftest        # AILSM 72 deterministic tests
+npm run benchmark       # full benchmark + reports/ (json/csv/md)
+npm run arcasha -- benchmark
+```
+
+Or work directly in the core package:
 
 ```bash
 cd akasha-master
 npm install
 npm run ailsm:selftest    # 72 deterministic tests
-npm run benchmark         # full benchmark + reports/ (json/csv/md)
 npx tsx examples/quickstart.ts   # 5-minute tour
 ```
 
@@ -90,8 +98,8 @@ npx tsx examples/quickstart.ts   # 5-minute tour
 akasha-master/        Core implementation (TypeScript / AILSA / AILSM / Kernel / AVM / Executive / Attachments)
 akasha-client-web/    Web client (WebGPU inference)
 akasha-kernel-native/ Native kernel prototype (Rust)
-examples/             Plugin examples (code / math)
-.github/              Issue templates
+examples/             Attachment examples (code / math)
+.github/              Issue templates + CI workflow
 AI_*.md               Specifications (see below)
 ```
 

@@ -21,9 +21,6 @@ import { FaultToleranceEngine, createTxPool, routeCluster, createDynamicRouter }
 import { DoublyLinkedList } from './structures/doubly-linked-list.js';
 import { HEADER_SIZE, MAGIC, PROTOCOL_VERSION, Cmd, Flag, MAX_PACKET_BYTES,
   EX_HEADER_SIZE, decodeExtendedHeader, fletcher32 } from './binary/protocol.js';
-import { PluginRegistry } from './plugin/registry.js';
-import { isLifecyclePlugin } from './plugin/types.js';
-
 export {
   AkashaOrchestrator,
   AkashaInferenceLoop,
@@ -57,8 +54,6 @@ export {
   createTxPool,
   routeCluster,
   createDynamicRouter,
-  PluginRegistry,
-  isLifecyclePlugin,
   DoublyLinkedList,
   HEADER_SIZE,
   MAGIC,
@@ -131,16 +126,6 @@ export type {
 } from './memory/store.js';
 export type { ContextPage, ContextConfig } from './memory/context.js';
 export type { ExperimentConfig, ExperimentRun, EnvironmentInfo } from './experiments/logger.js';
-export type {
-  AkashaExpertPlugin,
-  AkashaLifecyclePlugin,
-  PluginMetadata,
-  PluginManifest,
-  PluginHealthStatus,
-  ExpertDomain,
-  PluginClusterId,
-} from './plugin/types.js';
-export type { PluginRegistryEvent } from './plugin/registry.js';
 export type { ExtendedHeader } from './binary/protocol.js';
 
 // ═════════════════════════════════════════════════════════════════════════════

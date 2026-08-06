@@ -32,7 +32,6 @@
 import { AkashaBootstrapper } from '../bootstrap/akasha-bootstrapper.js';
 import { IdleClusterPool, type AkashaNodeRecord } from '../structures/idle-cluster-pool.js';
 import { FaultToleranceEngine, createTxPool, createDynamicRouter } from '../fault/fault-tolerance.js';
-import { PluginRegistry } from '../plugin/registry.js';
 import { BufferPool } from '../pool/object-pool.js';
 import { BinaryCodec } from '../binary/codec.js';
 import { Cmd, ClusterId, Flag, MAX_PACKET_BYTES, NodeRole, nowUs } from '../binary/protocol.js';
@@ -88,7 +87,6 @@ export class AkashaRouter {
   readonly bootstrapper: AkashaBootstrapper;
   readonly nodePool: IdleClusterPool;
   readonly fault: FaultToleranceEngine;
-  readonly pluginRegistry: PluginRegistry;
   readonly nicMonitor: NicMonitor;
   readonly handover: ClusterHandover;
   readonly tournament: LogitTournament;
@@ -139,11 +137,6 @@ export class AkashaRouter {
       marginUs: this.config.faultMarginUs,
     });
 
-    this.pluginRegistry = new PluginRegistry();
-    this.pluginRegistry.onEvent((_ev) => {
-      // Plugin lifecycle events — routing table updated automatically
-    });
-
     this.nicMonitor = new NicMonitor({
       pollIntervalMs: this.config.nicPollIntervalMs,
       onEmergencyDisconnect: (_ev) => {
@@ -152,7 +145,7 @@ export class AkashaRouter {
     });
 
     this.handover = new ClusterHandover({
-      resolveCluster: (domain) => this.pluginRegistry.route(domain, ClusterId.GENERAL),
+      resolveCluster: () => ClusterId.GENERAL,
       sendToCluster: (clusterId, tensor, handoverId) => {
         this._relayToCluster(clusterId, tensor, handoverId);
       },
@@ -327,7 +320,7 @@ export class AkashaRouter {
    * Submit a user prompt for inference.
    *
    * Flow:
-   *   1. Plugin registry routes prompt → clusterId.
+   *   1. Static router maps prompt → clusterId.
    *   2. pickLocalNode acquires an idle node (same-hub preferred).
    *   3. COMPUTE_TASK is dispatched.
    *   4. RESULT → logit tournament → final token.
@@ -335,8 +328,8 @@ export class AkashaRouter {
    *   6. If no handover, token is yielded; next step begins.
    */
   submitPrompt(prompt: string): number {
-    // Route to expert cluster
-    const dynamicRoute = createDynamicRouter(this.pluginRegistry);
+    // Route to expert cluster（Attachment 層は Executive Runtime が管理）
+    const dynamicRoute = createDynamicRouter();
     const clusterId = dynamicRoute(prompt);
 
     // Acquire an idle node
@@ -404,7 +397,6 @@ export class AkashaRouter {
     totalNodes: number;
     idleNodes: number;
     inFlightTxs: number;
-    pluginCount: number;
     queueDepth: number;
   } {
     return {
@@ -413,7 +405,6 @@ export class AkashaRouter {
         + this.nodePool.idleCount(ClusterId.MATH)
         + this.nodePool.idleCount(ClusterId.CODE),
       inFlightTxs: this.fault.inFlight,
-      pluginCount: this.pluginRegistry.size,
       queueDepth: this.bootstrapper.queueDepth,
     };
   }

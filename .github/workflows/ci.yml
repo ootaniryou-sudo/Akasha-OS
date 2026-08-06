@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: build + selftests (akasha-master)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: akasha-master
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: akasha-master/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript build
+        run: npm run build
+
+      - name: AILSM selftest [1]-[72]
+        run: npm run ailsm:selftest
+
+      - name: AILSM golden (30 cases)
+        run: npm run ailsm:golden
+
+      - name: AILSA selftest
+        run: npm run ailsa:selftest
