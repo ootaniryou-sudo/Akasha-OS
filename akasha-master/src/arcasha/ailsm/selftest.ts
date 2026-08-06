@@ -1298,6 +1298,28 @@ check('ベンチ: Token 削減率 > 70%', obs.headline.tokenReduction > 0.7, `${
 check('ベンチ: Speedup > 1', obs.headline.speedup > 1, `${obs.headline.speedup.toFixed(2)}x`);
 check('ベンチ: Fault Rate / TLB Hit が揃う', obs.headline.faultRate >= 0 && obs.headline.tlbHitRate > 0);
 
+// [73] Hierarchy Runtime（Hierarchical Runtime Intelligence）
+console.log('\n[73] Hierarchy Runtime');
+const { buildHierarchy } = await import('../hierarchy/hierarchy.js');
+const { runHierarchy, detectRole, hierarchySnapshot } = await import('../hierarchy/hierarchy-runtime.js');
+const h73 = buildHierarchy();
+check('階層: Master 配下に 5 Caravan（Role 付き）', h73.kind === 'master' && h73.children.length === 5 && h73.children.every((c) => c.kind === 'caravan' && !!c.role));
+check('階層: Caravan 配下に Device', h73.children.every((c) => c.children.length > 0 && c.children[0].kind === 'device'));
+check('階層: Device 配下に Expert', h73.children[0].children[0].children.length > 0 && h73.children[0].children[0].children[0].kind === 'expert');
+check('Role 判定: 画像→Vision', detectRole('画像から物体を検出して') === 'Vision');
+check('Role 判定: 翻訳→Language', detectRole('この文章を翻訳して') === 'Language');
+check('Role 判定: 計算→Math', detectRole('x^2+3x+2=0を解いて') === 'Math');
+const hr73 = await runHierarchy(buildHierarchy(), '画像から物体を検出して');
+check('階層実行: 判断の連鎖 master>caravan>device>expert', hr73.steps.length === 4 && hr73.steps.map((s) => s.level).join('>') === 'master>caravan>device>expert');
+check('階層実行: Master は Vision Caravan へ委譲', hr73.steps[0].decision.includes('Caravan') && hr73.steps[0].role === 'Vision');
+check('階層実行: Expert が実行', hr73.steps[3].level === 'expert' && hr73.steps[3].role === 'vision');
+check('階層学習: 各階層の Memory に記録', hr73.root.memory.entries.length > 0 && hr73.root.children[0].memory.entries.length > 0);
+check('階層学習: 要約が上位へ集約（情報要約）', hr73.summary.includes('Caravan') && hr73.summary.includes('avg'));
+const snap73 = hierarchySnapshot(buildHierarchy());
+check('スナップショット: 各階層に Budget と自律度を持つ', snap73.children[0].budget.timeMs > 0 && snap73.children[0].decision.autonomy > 0);
+const hr73b = await runHierarchy(buildHierarchy(), '画像から物体を検出して');
+check('決定論: 同じタスクで同じ判断連鎖', JSON.stringify(hr73.steps.map((s) => s.decision)) === JSON.stringify(hr73b.steps.map((s) => s.decision)));
+
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {
   console.log('  ✅ ALL PASS — AILSM Phase 0.5（Stage 1 決定論 + Stage 3 決定論Verifier）');

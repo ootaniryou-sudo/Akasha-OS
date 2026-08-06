@@ -5,6 +5,7 @@
  *   npm install arcasha → `arcasha benchmark` が動く（package.json の bin）。
  *   - benchmark : Real Benchmark Suite（Simulation）+ Decision Explanation + Real Device + reports/ 生成
  *   - policy    : OS ポリシー学習デモ（Decision Explanation を学習データにする）
+ *   - hierarchy : Hierarchy Runtime デモ（Master → Caravan → Device → Expert が考える→判断→命令→学習）
  *   - version   : version 表示
  *   - help      : ヘルプ
  */
@@ -32,6 +33,11 @@ export async function runCli(argv: string[]): Promise<string> {
       }
       return runReplayDemo();
     }
+    case 'hierarchy': {
+      const { runHierarchyDemoCli } = await import('./hierarchy/hierarchy-runtime.js');
+      await runHierarchyDemoCli();
+      return 'arcasha hierarchy: done';
+    }
     case 'version':
       return `ArcAsha v${ARCASHA_VERSION}`;
     case 'help':
@@ -43,6 +49,7 @@ export async function runCli(argv: string[]): Promise<string> {
         '  benchmark   Real Benchmark Suite（Simulation）+ Decision Explanation + Real Device + reports/ 生成',
         '  replay      Decision Replay（なぜこの回答になったのかをステップ再生。引数でタスク指定可）',
         '  policy      OS ポリシー学習デモ（Decision Explanation を学習データにして Meta Executive のポリシーを更新）',
+        '  hierarchy   Hierarchy Runtime デモ（Master → Caravan → Device → Expert の階層が自律判断）',
         '  version     version 表示',
         '  help        このヘルプ',
       ].join('\n');

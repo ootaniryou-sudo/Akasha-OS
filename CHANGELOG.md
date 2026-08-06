@@ -1,5 +1,19 @@
 # Changelog — ArcAsha
 
+## v1.2（2026-08-07）— Hierarchy Runtime（Hierarchical Runtime Intelligence）
+
+- **Hierarchy Runtime**: 階層型知能ランタイム `src/arcasha/hierarchy/`
+  - 階層: **Master → Caravan（Role 付き）→ Device → Expert**（最終形は Human → Executive → Cluster → Computer → LLM → Reasoning の 6 階層）
+  - 各階層が **Decision / Policy / Budget / Memory** を持ち「**考える → 判断する → 命令する → 学習する**」を自律的に行う
+  - Caravan は Role 付き（Vision / Language / Math / Planning / Search）— 脳の領域のような役割分担
+  - **階層間は「情報要約」でやり取り**（下位の詳細をそのまま上位へ送らない）
+  - 各階層が独立に学習（Memory に outcome を記録、EMA でポリシー更新）
+  - `npx arcasha hierarchy` でデモ実行
+- selftest [73]
+
+> **v2 研究テーマ**: Intelligence is not a monolithic model, but a hierarchical runtime
+> composed of autonomous decision layers.（知能は単一モデルではなく、自律的な意思決定層から構成される階層的ランタイム）
+
 ## v1.1（2026-08-06）— Decision Replay / 実機プラン
 
 - **Decision Replay**: 「なぜこの回答になったのか」を Round1-4 のステップ再生（理由・ゲイン・出力つき）。`npx arcasha replay`
