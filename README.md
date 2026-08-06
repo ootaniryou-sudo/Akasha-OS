@@ -1,305 +1,132 @@
-# Akasha-OS (ArcAsha)
+# ArcAsha (Akasha-OS)
 
-> **📜 Master Specification**: [`MASTER_SPEC.md`](MASTER_SPEC.md) — the authoritative architecture, research roadmap, and design principles.
-> This README is the implementation-facing overview. For the full vision, read the master spec.
+> **An AI Operating System for Modular Reasoning and Runtime Intelligence**
 
-> **"Democratising Big Tech's data centers — from your own room."**
->
-> ArcAsha is a **distributed expert intelligence fabric** — not one model split across phones, but many specialized small models (~0.6B each) dynamically coordinated by an intelligent runtime into a single adaptive intelligence system with **~6.7T aggregate parameters**.
->
-> **🎯 Core research question**: Can a large population of specialized small language models, coordinated by an intelligent distributed runtime, achieve useful frontier-level capabilities without requiring any individual node to host a frontier-scale model?
+ArcAsha is **not a model**. It is an **operating system that runs on top of neural models** — it configures, controls, measures, and **explains** AI reasoning at the OS level.
+
+- We do **not** modify the model.
+- We place an **OS layer outside the model** to manage intelligence: routing, memory, reasoning, scheduling, and self-improvement.
+
+> **Core research question**: Can we compose, control, and measure intelligence at the OS level — and prove it reproducibly — rather than scaling the model alone?
 
 ---
 
-## 🌌 1. Core Concept: Expert Fabric, Not Model Sharding
+## 🎯 Why ArcAsha
 
-**What ArcAsha is NOT**: One 6.7T model split across smartphones.
+Models (GPT / MoE) perform all reasoning **inside** the neural network — a black box.
 
-**What ArcAsha IS**: Many independent ~0.6B models, each an **Expert Node** with its own capability profile, dynamically coordinated by the **Heart of Wisdom (Core Orchestrator)** and **Eye of Wisdom (Intelligent Router)** into a collective intelligence fabric.
+ArcAsha moves reasoning **outside** the model:
 
 ```
-Many independent ~0.6B models
-+ Specialized training (fine-tuning, distillation)
-+ Capability-aware routing (task vector × expert profile)
-+ Master orchestration (Heart of Wisdom)
-+ Distributed memory (Realm of Knowledge)
-+ Fault tolerance (Shadow of Wisdom, Divine Safeguard)
-+ Expert collaboration (parallel → critic → verify → synthesize)
-= Large distributed intelligence fabric (~6.7T aggregate params)
+Task → Compiler → AILSM IR → Kernel → Executive → Hypothesis → Search → Experts → Memory
 ```
 
-Each smartphone is not a "GPU worker" — it is an **independent Expert Node** containing: Model + Capability Profile + Hardware Profile + Runtime + Local KV Cache + Health State + Network State.
-
-The AI industry today is dominated by Big Tech's capital. **ArcAsha** is the **technical antithesis** — inspired by the **Akasha System** from Sumeru (*Genshin Impact*), where countless connected terminals approach divine intelligence.
-
-> 📖 **ArcAsha Naming System**: All components have lore names. See [`NAMING.md`](NAMING.md) and [`MASTER_SPEC.md` §11`](MASTER_SPEC.md#11-arcasha-naming).
+- **AILSM / AILSA**: AI-specific IR & ISA (the "machine code" of reasoning)
+- **AVM**: AI Virtual Memory (only the needed context is loaded, like demand paging)
+- **Executive / Meta Executive**: who commands the whole reasoning process
+- **Intelligence Attachments**: advanced intelligence loaded only when needed (like optional kernel modules)
 
 ---
 
-## 🛠️ 2. Core Architecture (4-Layer Stack)
+## 🏗️ Architecture (3 Layers)
 
 ```
-[Layer 4: Application UI]     User Interface / Token Streaming
-[Layer 3: Master Orchestrator] Akasha-Core (TypeScript)
-[Layer 2: Autonomous Edge Cluster] Phone WebWorker + WebGPU
-[Layer 1: Physical Topology]  Fat-tree wired LAN & distributed power
+Layer 3  Intelligence Attachments
+         Reflection / Debate / Planning / Search / Creativity / Simulation / Coding
+Layer 2  Executive Runtime
+         Executive / Meta Executive / Expert Evolution / Intelligence Scheduler
+Layer 1  Fast Runtime
+         Kernel / AVM / Expert Runtime / ODAR / Device Tree   ← realtime, always fast
 ```
 
-### 2.1 Layer 1: Physical Topology
-
-| Equipment | Role | Capacity | Est. Price |
-|-----------|------|----------|------------|
-| USB-LAN Hub (10-port) | Wire + power 10 phones | 10/hub | ~$15 |
-| L2 Gigabit Switch (24-port) | Backbone | 24 hubs/switch | ~$30 |
-| Household outlets (separate breakers) | Power isolation | ≤100 phones/circuit | — |
-
-### 2.2 Layer 2: Autonomous Edge Cluster
-
-Phones run in-browser via WebWorker + WebGPU:
-- Persistent WebSocket → 48-byte binary protocol (zero JSON)
-- Float32Array zero-copy → WebGPU buffer
-- Computes assigned layer range → P2P relay to next node
-
-### 2.3 Layer 3: Master Orchestrator (Heart of Wisdom)
-
-`Akasha-Core` — Node.js (TypeScript):
-
-| Module | Purpose |
-|--------|---------|
-| **Bootstrapper** | Connection throttling, IP analysis, APS benchmark, role assignment |
-| **Inference Loop** | Per-token pipeline, P2P relay, shadow race coordination |
-| **Fault Tolerance** | Deadline monitoring, automatic failover (Shadow of Wisdom) |
-| **Idle Pool** | O(1) node acquire/release (intrusive DLL) |
-| **Ring Buffer** | Lock-free SPSC IPC (SharedArrayBuffer + Atomics) |
-| **Binary Codec** | 48-byte fixed header encode/decode (zero allocation) |
-| **LLM Adapter** | LLM abstraction (Qwen, Llama, custom) |
-| **Memory Fabric** | Conversation store, semantic memory, KV cache (Echo) |
-| **Context Manager** | HOT/WARM/COLD tiered context paging |
+- **Fast vs Deliberation**: Fast keeps realtime control (robot: 30.3 fps), Deliberation loads only when needed (research / long reasoning).
 
 ---
 
-## 🧬 2.5 Parameter Scaling Roadmap
+## ✨ Key Features
 
-**Key distinction**: Aggregate Parameters ≠ Active Parameters ≠ Active Expert Count. See [`MASTER_SPEC.md §3`](MASTER_SPEC.md#3-total-parameters-vs-active-parameters).
-
-| Phase | Expert Nodes | Aggregate Params | Active Experts (typical) | Active Params (typical) | Comparable to |
-|---|---|---|---|---|---|
-| Phase 1: Proof | 100 | **60B** | 4–8 | **2.4–4.8B** | GPT-2 |
-| Phase 2: Small | 1,000 | **600B** | 8–32 | **4.8–19.2B** | Llama-2-70B* |
-| Phase 3: Medium | 5,000 | **3T** | 32–128 | **19.2–76.8B** | DeepSeek-V3* |
-| Phase 4: Large | 10,000 | **6T** | 64–256 | **38.4–153.6B** | GPT-4 estimated* |
-| Phase 5: Frontier | 50,000 | **30T** | 128–512 | **76.8–307.2B** | Frontier-class |
-| Phase X: Beyond | 100,000 | **60T** | 256–1024 | **153.6–614.4B** | Research target |
-
-> \* Comparable in active parameter scale only. Does not imply equivalent capability.
-> Aggregate capacity grows with node count; active compute is dynamically adjusted to task difficulty.
-> See [`MASTER_SPEC.md §20`](MASTER_SPEC.md#20-important-distinction) for the critical distinction.
-> ArcAsha explores whether distributed expert coordination can approach the capabilities
-> of much larger monolithic models at a fraction of the hardware cost. This is a research
-> hypothesis — not a proven claim. See [`MASTER_SPEC.md §29`](MASTER_SPEC.md#29-critical-research-question).
+| Feature | Description |
+|---------|-------------|
+| **AVM** | AI Virtual Memory — context as demand-paged virtual memory (4.10x, −77% tokens vs full-context) |
+| **Executive / Meta Executive** | Commands the search; learns its own policy from observed outcomes |
+| **Expert Evolution** | Experts split / merge / retire by objective criteria (health, overlap, utilization) |
+| **Thinking Modes** | Fast / Auto / Deep / Custom — same OS, different pipeline |
+| **Explainable** | **Decision Explanation** (why this configuration), **Decision Replay** (step-by-step), **OS Policy Learning** (decisions become training data) |
+| **Validation** | Simulation vs Real Device separated; external benchmarks: GSM8K / MATH500 / HumanEval / MBPP / MMLU / LiveCodeBench |
 
 ---
 
-## ⚡ 3. Advantages Over Big Tech
+## 🚀 Quickstart
 
-### ① Cost Democratization
+```bash
+# Install (after publishing) or run from repo
+npm install arcasha
 
-| | Traditional DC | Akasha-OS |
-|---|---|---|
-| Initial Cost | $100M–$1B+ | ~$1.3M |
-| Monthly Power | $100K–$1M+ | ~$1,200 |
-| Cooling | Liquid/AC | Natural air |
-| Procurement | Months lead time | Same-day eBay |
+# Full benchmark suite (Simulation) + Decision Explanation + Real Device plan + reports/
+arcasha benchmark
 
-### ② Zero-Copy Binary Relay
+# "Why did the AI choose this?" — replay the decision process step by step
+arcasha replay
 
-- Zero JSON — 48-byte header + raw Float32Array
-- WebGPU zero-copy upload
-- P2P direct relay (bypasses master)
-- Buffer pool suppresses V8 GC
-
-### ③ Speculative Shadow Racing
-
-Primary + Shadow nodes compute simultaneously. Whichever finishes first wins; late result is discarded O(1). The system never stops.
-
----
-
-## 🔌 4. Plugin Architecture
-
-### Open Expert Plugin Standard
-
-```typescript
-export interface AkashaExpertPlugin {
-    metadata: { id, name, version, expertDomain, parameterSize, keywords, ... };
-    execute(inputTensor: Float32Array): Promise<Float32Array>;
-}
+# OS Policy Learning — decisions become training data for the Meta Executive
+arcasha policy
 ```
 
-One function. Plug into the swarm instantly.
-
-### Dynamic Semantic Routing
-
-New plugins are hot-plugged — registered at runtime without restart. Keywords are indexed O(1).
-
-### Community DePIN Marketplace
-
-Anyone can open their phone's browser, run a plugin, and contribute compute. Open infrastructure.
-
----
-
-## 🚀 5. Quick Start
+Or run from the repo:
 
 ```bash
 cd akasha-master
-npm install && npm run build
-npm run dev          # Master on :8080
-npm run sim          # Demo
-npm run selftest     # Self-test
+npm install
+npm run ailsm:selftest    # 72 deterministic tests
+npm run benchmark         # full benchmark + reports/ (json/csv/md)
+npx tsx examples/quickstart.ts   # 5-minute tour
 ```
 
 ---
 
-## 🧪 5.5 PoC Guide
+## 📁 Repository Layout
 
-```bash
-./poc/measure.sh <edge-ip-1> <edge-ip-2>
-node poc/wt-rtt-measure.mjs <master-ip> 8080
-curl http://localhost:9090/metrics
+```
+akasha-master/        Core implementation (TypeScript / AILSA / AILSM / Kernel / AVM / Executive / Attachments)
+akasha-client-web/    Web client (WebGPU inference)
+akasha-kernel-native/ Native kernel prototype (Rust)
+examples/             Plugin examples (code / math)
+.github/              Issue templates
+AI_*.md               Specifications (see below)
 ```
 
 ---
 
-## 📡 6. Binary Protocol
+## 📚 Documentation
 
-48-byte fixed header + Float32Array. See [`PROTOCOL.md`](PROTOCOL.md). Commands: REGISTER, COMPUTE_TASK, RESULT, RELAY, TOKEN_OUT.
-
----
-
-## 🔬 7.5 Research Progress — Phase 1〜4 (Jul 2026)
-
-> Full details: [`experiments/qwen3_0.6b/README.md`](akasha-master/experiments/qwen3_0.6b/README.md) | Conclusions: [`CONCLUSIONS.md`](akasha-master/experiments/qwen3_0.6b/CONCLUSIONS.md) | Framework: [`RESEARCH_FRAMEWORK.md`](akasha-master/experiments/qwen3_0.6b/RESEARCH_FRAMEWORK.md)
-
-ArcAsha は「分散LLMを動かす」だけのプロジェクトではない。
-**「分散LLMにおけるルーティング戦略を、多目的最適化・数値安定性・信頼度推定を用いて体系化する」**
-ことを研究テーマとし、`理論 → 実装 → 実データ検証 → システム状態変化` のサイクルで段階的に検証している。
-
-### Phase 1 ✅ — LLM Numerical Characterization (EXP-0000〜0001.9)
-
-| # | Experiment | Result | Key Finding |
-|---|-----------|:---:|------|
-| 0000 | Golden Reference | ✅ | Qwen3-0.6B base model, 10 prompts, T=0 deterministic, MPS |
-| 0001 | Python vs JS/ONNX | ✅ | Tokenizer 10/10 match. Output 15-44% (ONNX fp16 ≠ PyTorch fp32) |
-| 0001.5 | Logit-Level Analysis | ✅ | FP32→FP16: 93.75% top-1 match. Divergence at logit_margin < 0.02 |
-| 0001.6 | Divergence Prediction | ⚠️ | Per-step prediction NOT viable (AUC=0.57). Backend-level characterization is the right abstraction |
-| 0001.7 | Precision Ladder | ✅ | FP16: 99.2% stable, 1.42× faster. BF16 on MPS: 20.9% divergence |
-| 0001.8 | Replication | ✅ | σ=0.0000 — BF16 20.88% perfectly reproducible |
-| 0001.9 | Platform Matrix | ✅ | macOS MPS completed (fp32/fp16/bf16). CUDA/CPU pending |
-
-**Three-line conclusion:**
-1. Cross-runtime inference is functional, but token-level reproducibility is backend-sensitive.
-2. Divergence is triggered by numerical ambiguity (logit_margin < 0.02) and amplified by backend/kernel differences.
-3. Exact replication, approximate redundancy, and independent verification should be distinct execution modes.
-
-**Design principle:** *Numerical Stability is a property of an execution configuration (platform + backend + precision), not of a model alone.*
-
-### Phase 2 ✅ — Distributed Runtime (EXP-0002A/B)
-
-| # | Experiment | Result | Key Finding |
-|---|-----------|:---:|------|
-| 0002A | Remote Single Expert | ✅ | Mac Node: Qwen3-0.6B via WebSocket. Network overhead 2ms (localhost) |
-| 0002A-iPhone | iPhone 12 mini Relay | ✅ | **iPhone joins ArcAsha network.** WiFi 20ms RTT. Lightweight relay — no model needed |
-| 0002B | Heterogeneous Two-Node Routing | ✅ | **Round-Robin PC Expert + iPhone 15 Pro Relay. 50/50. 1.9× throughput** (13.2s→6.96s) |
-
-**Node Type Architecture:**
-
-| Type | Has Model? | Example | Role |
-|------|:---:|------|------|
-| **Expert Node** | ✅ | Mac + Qwen3-0.6B | Inference execution |
-| **Relay Node** | ❌ | iPhone 12 mini | Connectivity, forwarding, health |
-| **Hybrid Node** | ✅ | Future iPhone 15 Pro | Expert + Relay combined |
-
-### Phase 3 ✅ — Intelligent Routing (EXP-0002C〜0002E.2)
-
-| # | Experiment | Result | Key Finding |
-|---|-----------|:---:|------|
-| 0002C | Capability-Aware Routing | ✅ | **Routing Accuracy 100%.** coding→coding expert, math→math expert |
-| 0002D | Adaptive Capability (SMA) | ✅ | **Score Inversion 発見** → Evaluation fidelity bounds routing quality |
-| 0002D.1 | Confidence-Aware Routing | ✅ | Two-stage eval (μ × confidence). **Inversion 7回避・0発生** |
-| 0002E | Composite Score Routing | ✅ | Under equal capability, **Stability dominates** (FP16 10/10, BF16 0/10) |
-| 0002E.1 | Decision Boundary | ✅ | **critical w_stab = 0.0 / 0.185 / 0.351.** Stability = secondary objective |
-| 0002E.2 | Pareto Routing | ✅ | Scalarization hides dominance. **Two-stage: Pareto Filter → Composite Score** |
-
-### Phase 4 ⏳ — Adaptive State Routing (EXP-0002F〜)
-
-| # | Experiment | Result | Key Finding |
-|---|-----------|:---:|------|
-| 0002F | Shadow Expert Feedback | ✅ | 閉ループ実装. Same-runtime 100% agree (EXP-0001.8 と整合) |
-| 0002F.1 | **Cross-Backend Shadow** | ✅ | **ONNX vs PyTorch MPS: 88.6% overlap, FLAG=1 (45%). Stability 0.992→0.743** — Belief Update 実証 |
-| 0002F.2 | Stability Recovery | 📐 | Drift + Recovery 両検出（環境変化への追従） |
-| 0002E.3 | Adaptive Weight Learning | 📐 | 実データで重みを自己最適化 |
-
-> **Phase 4 の中核**: 「良いノードを選ぶ」→「**観測結果に応じてノードの信頼性を更新し、次の意思決定へ反映する**」
-> `Static Knowledge → Observed Evidence → Belief Update → Routing`
-
-### Roadmap
-
-```
-Phase 5 📐 Emergent Routing（ルールなし，Policy 生成）
-Phase 6 📐 Multi-Agent Collaboration / Distributed Frontier AI
-```
-
-### Apple Backend Architecture
-
-```
-ArcAsha Runtime
-  ├── CUDA Backend
-  ├── CPU Backend
-  ├── WebGPU Backend
-  └── Apple Backend ← NEW
-        ├── Asha Metal (Metal/MPS)
-        ├── Asha Neural (Core ML/Core AI)
-        └── Asha Metal Kernel Lab (Custom Shaders)
-```
-
-See [`APPLE_BACKEND_DESIGN.md`](akasha-master/experiments/qwen3_0.6b/APPLE_BACKEND_DESIGN.md).
+| Doc | Contents |
+|-----|----------|
+| `MASTER_SPEC.md` | Full architecture vision |
+| `ARCASHA_V2_SPEC.md` | v2 design spec (v0.36) |
+| `AI_REASONING.md` | Hypothesis SSA / Reasoning Graph / Executive / Meta Executive / Expert Evolution |
+| `AI_ATTACHMENTS.md` | Attachment plugin layer / Thinking Modes |
+| `AI_VALIDATION.md` | Scientific validation (Simulation vs Real Device) / Decision Explanation / Replay / Policy Learning |
+| `AI_VIRTUAL_MEMORY.md` | AVM |
+| `PAPER_OUTLINE.md` | Paper: "ArcAsha: An Explainable Runtime for AI Intelligence" |
+| `CHANGELOG.md` | Release history (v1.0 / v1.1) |
 
 ---
 
-## 🧪 7. APS (Akasha Performance Score)
+## 🧪 Status
 
-$$APS = \frac{1000}{\text{GPU}_\text{ms} + \frac{\text{RTT}_\text{ms}}{2}}$$
-
-APS ≥ 80 → HEAD layers | 25–80 → MID layers | < 25 → SHADOW backup.
-
----
-
-## 📂 8. Project Structure
-
-```
-Akasha-OS/
-├── MASTER_SPEC.md          # Authoritative architecture & research spec
-├── README.md, NAMING.md, LICENSE, CONTRIBUTING.md
-├── akasha-master/          # TypeScript orchestrator (Heart of Wisdom)
-├── akasha-client-web/      # Browser edge node (Akasha Terminal)
-├── akasha-kernel-native/   # Rust native kernel (Core Terminal)
-└── examples/               # Plugin templates
-```
+- **v1.0 released** — AI OS first generation (Phases 0-4: ISA/IR/Kernel/AVM → Realtime devices → Reasoning → Executive/Meta → Attachments → Validation)
+- **v1.1** — Decision Replay, Real Device benchmark plan (Mac / iPhone 15 Pro / iPad M4)
+- selftest [1]-[72] all pass / golden 30 / AILSA selftest / build + dist verified
 
 ---
 
-## 🌍 9. Community
+## 🔬 Research Positioning
 
-- Submit plugins via [`examples/`](examples/)
-- Report bugs: [Issue Templates](.github/ISSUE_TEMPLATE/)
-- Contribute: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+ArcAsha is **not** "a bigger model". It is:
 
----
+> **An experimental platform to compose, control, and measure AI intelligence at the OS level — reproducibly.**
 
-## 📝 10. License
+The most novel point: the OS can **explain why** Reflection / Planning / Debate were used (Decision Explanation), replay the whole decision process (Decision Replay), and **learn from its own decisions** (OS Policy Learning) — a training axis orthogonal to Transformer pretraining.
 
-MIT — [`LICENSE`](LICENSE)
-
----
-
-> *"Knowledge, however small each grain may be, when connected becomes a desert that eventually covers the entire world."*
-> —— Sumeru Akasha System philosophy (*Genshin Impact*)
+## License
+MIT — see `LICENSE`.
