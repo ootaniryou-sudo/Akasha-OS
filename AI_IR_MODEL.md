@@ -205,7 +205,173 @@ SLOT_DOMAIN の後は code | math | search | reasoning しか来てはいけな�
 
 ---
 
-## 8. まとめ
+## 8. IR の定義：知識の言語ではなく実行言語
+
+> **IR is not a representation of knowledge. IR is a representation of reasoning control and execution flow.**
+> （IR は知識を表現するものではない。推論の制御と実行フローを表現するものである。）
+
+**これは ArcAsha 全体を貫く最重要の定義**。これを間違えると「歴史や文学は全部 IR で書けるの？」という誤った問いになる。
+
+### 8.1 人間の会社で例えると
+
+社長が「来月までに新製品を作って」と言い、社員（設計・営業・製造・品質管理）は会話する。
+しかし彼らは毎回「こんにちは。今日は…」と自然言語だけで仕事はしない。
+
+```
+Task #145
+Owner    : Design
+Deadline : 8/20
+Status   : Running
+Dependency: Task#143
+```
+
+これは知識ではなく**仕事を進めるための状態**。ArcAsha も同じで、IR はこの管理情報に相当する。
+
+### 8.2 ArcAsha で言うと
+
+```
+「PythonでWebサーバーを書いて」
+  → Master が TASK を作る
+  → PLAN → CODE → BUILD → TEST → REVIEW（全部 IR）
+```
+
+Coding Expert は自然言語を理解している必要はない。必要なのは `PLAN` を理解できること。
+
+```
+「織田信長について教えて」
+  → IR: SEARCH / DOMAIN=history / ENTITY=織田信長 / GOAL=summary まで
+  → その後は History Expert が知識を持つ
+```
+
+**IR は「織田信長とは○○」を保存しない。**
+
+### 8.3 IR が保存するもの vs 知識を持つもの
+
+| IR が保存するもの | 知識を持つもの |
+|-------------------|----------------|
+| `SEARCH` `SUMMARY` `COMPARE` `VERIFY` | History Expert |
+| `PLAN` `RETRY` `MERGE` `REFLECT` | General Model |
+| — 思考や実行の流れ | Vision Model / Memory |
+
+**IR が持つのは「誰が・何を・いつ・どの順番で・どこへ渡すか」だけ。**
+
+### 8.4 Linux の比喩
+
+`read()` / `write()` / `fork()` / `exec()` は本も動画も保存していない。
+ただ「どう扱うか」を決めているだけ。**ArcAsha の IR も同じ**。
+
+### 8.5 だから IR は永遠に小さい
+
+10 年後、知識が 1000 倍になっても、IR は `SEARCH` / `PLAN` / `VERIFY` / `MERGE` / `EXECUTE`
+くらいしか増えない。**IR の大きさは知識量と無関係**。
+
+この定義にすると、History / Coding / Math / Vision Expert がどれだけ増えても、
+**全員が同じ IR で会話できる理由**が明確になる。
+
+---
+
+## 9. 段階的 IR ネイティブ化ロードマップ（レベル 0 → 3）
+
+「全部 IR 化する」のではなく**「IR 化できるものから IR 化する」**。
+これは既存の Phase 4 → 5 → 6（蒸留 → ネイティブ → 分散）を領域別に具体化したもの。
+
+| レベル | 内容 | 対象 | 理由 |
+|--------|------|------|------|
+| **Lv0（現在）** | 全部 General LLM が担当 | 全タスク | — |
+| **Lv1** | まず IR ネイティブ化しやすい専門 2 種 | **Math, Coding** | 入力が構造化しやすい / 正解がある / 蒸留しやすい |
+| **Lv2** | OS そのもの | **Search, Planning, Tool Calling, Scheduling** | OS 自身なので自然言語がほぼ不要 |
+| **Lv3** | 構造化しやすい感覚系 | **Vision, Robot, Navigation** | `DETECT_OBJECT class=person x=...` の世界 |
+| **最後** | 自然言語そのものが知識 | **歴史・哲学・文学・雑談・感情・創作** | 完全 IR 化はかなり難しい |
+
+### 9.1 Lv1 の例（Math）
+
+```
+IR: SOLVE equation=x^2-9 goal=find_roots
+  → Math Expert
+  → ROOTS=[3,-3]
+```
+
+### 9.2 最後の層が難しい理由
+
+「なぜ本能寺の変が起きたの？」の答えには政治・経済・人間関係・仮説が全部混ざる。
+`PERSON#18273` だけでは説明できない。**自然言語そのものが知識**だから。
+
+### 9.3 二層構造（IR Native + General LLM の同居）
+
+```
+                Master
+                   │
+                  IR
+                   │
+        ┌──────────────┐
+        │              │
+ IR Native        General LLM
+ Experts
+```
+
+| 依頼 | 担当 |
+|------|------|
+| Math | Math Expert（IR Native） |
+| Python を書く | Coding Expert（IR Native） |
+| 画像認識 | Vision Expert（IR Native） |
+| 歴史を説明 | General History LLM |
+| 雑談 | General Chat LLM |
+
+**IR ネイティブな Expert がどんどん増えていく世界。**
+
+### 9.4 5 年後の姿
+
+Math / Coding / Planning / Vision / Robot / Navigation / Tool / Memory が全部 IR ネイティブになったとき、
+**General LLM が担当するのは歴史・哲学・小説・会話だけ** — General LLM は「最後の知識辞典」になる。
+
+### 9.5 論文での書き方
+
+> 「最初からすべてを IR ネイティブ化する」ではなく、
+> **「IR ネイティブ化しやすい専門領域（Math・Coding・Planning など）から段階的に置き換え、
+> 自然言語依存の強い領域は General モデルに委譲するハイブリッド構成を採用する」**
+
+この書き方は実現可能性が高く、査読者にも受け入れられやすい。
+
+---
+
+## 10. Control IR / Domain IR の二層構造
+
+### 10.1 提案
+
+IR 自体を二層構造に発展させる可能性:
+
+| 層 | 内容 | 例 |
+|----|------|-----|
+| **Control IR** | OS 全体で共通の実行命令 | `PLAN` `SEARCH` `MERGE` `VERIFY` |
+| **Domain IR** | 各分野に最適化された構造表現 | Math なら数式木 / Coding なら AST / Vision なら物体・座標・関係グラフ |
+
+- 制御は共通 IR、専門知識は各分野に最適化された IR で扱う
+- **OS としての統一性を保ちながら**、専門分野は自然言語より効率的に処理できる
+
+### 10.2 これは実は既に仕様に存在する（重要）
+
+この二層構造は **設計当初からのビジョン** であり、`ARCASHA_V2_SPEC.md` に明記されている:
+
+> 「**専門家ごとに IR が異なる**ことが設計の核心。共通 AILSA は『**翻訳・中継**』のための言語であり、
+> 各エキスパートは自ドメインの IR で最も効率よく推論する」
+
+| 層 | 既存仕様での対応 | Token 範囲 |
+|----|------------------|-----------|
+| **Control IR** | 共通 AILSA（基本命令） | `CALL` `RETURN` `STORE` `LOAD` ...（0x30-0x3E） |
+| **Domain IR: Math** | **AILSA-M** | `EQ` `DERIVE` `MATRIX` `INTEGRAL` ...（0x40-0x4F） |
+| **Domain IR: Code** | **AILSA-C** | `FUNCTION` `CLASS` `PATCH` `TEST` ...（0x50-0x5F） |
+| **Domain IR: Search** | **AILSA-S** | `QUERY` `FILTER` `RANK` ...（0x60-0x6F） |
+| **Domain IR: Reasoning** | **AILSA-R** | `CAUSE` `PLAN` `VERIFY` ...（0x70-0x7F） |
+| **Domain IR: Vision** | **AILSA-V**（将来） | 画像入力 |
+
+つまり「Control IR + Domain IR の二層構造」は新しい提案ではなく、
+**ArcAsha が最初から持っていた設計を、あなたの言葉で再定義したもの**。
+この §3（制御プレーン / データプレーン）と §10（Control / Domain IR）は同じ構造を
+「閉じた語彙 vs 開いたスロット」と「共通 IR vs 専門 IR」の 2 つの視点で見たもの。
+
+---
+
+## 11. まとめ
 
 1. **IR はモデル同士の言語ではなく、OS の内部バス** — モデルは IR を知らなくても動く
 2. **モデルを IR に接続するのはドライバ（RemoteDriver）** — モデルは常に NL で入出力
@@ -213,6 +379,9 @@ SLOT_DOMAIN の後は code | math | search | reasoning しか来てはいけな�
 4. **IR ネイティブ化は Phase 4-6** — 蒸留で「制御プレーンを話せる専門モデル」を作る。コンテンツ（コード）は常にスロット値として運ばれる
 5. **「NL を覚えない AI」は可能** — 「散文を生成しない」という意味で。OS の構造（閉じた語彙 + 文法制約 + Front-end/Back-end 分離）がそれを技術的に保証する
 6. **モデルが IR を「話す」かどうかはモデルごとに違ってよく、それを吸収するのが OS の仕事**
+7. **IR は知識の言語ではなく、推論の制御と実行フローの言語** — 知識は各 Expert / Memory が持ち、IR は「誰が・何を・いつ・どの順番で・どこへ渡すか」だけを持つ。だから IR は知識量と無関係に永遠に小さい
+8. **IR ネイティブ化は「全部」ではなく「できるものから」** — Math・Coding（Lv1）→ Search・Planning・Tool・Scheduling（Lv2）→ Vision・Robot・Navigation（Lv3）と段階的に置き換え、歴史・哲学・文学・雑談など自然言語依存の強い領域は General LLM（「最後の知識辞典」）に委譲するハイブリッド構成
+9. **Control IR / Domain IR の二層構造** — 制御は共通 IR（CALL / RETURN / PLAN...）、専門知識は各分野に最適化された IR（AILSA-M / C / S / R / V）で扱う。これは既に仕様（`ARCASHA_V2_SPEC.md`）に存在する設計の再確認であり、統一性と専門効率を両立する
 
 ---
 
