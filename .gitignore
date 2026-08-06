@@ -54,3 +54,6 @@ __pycache__/
 
 # バックアップ
 *.bak
+
+# 個人用メモ（開発者マスター向け・公開しない）
+DEV_MASTER_SPEC.md
