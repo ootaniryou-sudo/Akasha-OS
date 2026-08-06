@@ -113,6 +113,7 @@ AI_*.md               Specifications (see below)
 | `ARCASHA_V2_SPEC.md` | v2 design spec (v0.36) |
 | `AI_REASONING.md` | Hypothesis SSA / Reasoning Graph / Executive / Meta Executive / Expert Evolution |
 | `ARCHITECTURE.md` | 全体アーキテクチャ（Linux との対比 / 3 層 + メモリ / 研究ロードマップ） |
+| `DEV_MASTER_SPEC.md` | 開発者マスター向け総合仕様書（既存・新技術・比喩・現状をすべて網羅） |
 | `AI_COGNITIVE.md` | Composable Intelligence Runtime（タスクごとの動的配線 / 共有メモリ + IR / Team Learning / Knowledge Oasis） |
 | `AI_ATTACHMENTS.md` | Attachment plugin layer / Thinking Modes |
 | `AI_VALIDATION.md` | Scientific validation (Simulation vs Real Device) / Decision Explanation / Replay / Policy Learning |
