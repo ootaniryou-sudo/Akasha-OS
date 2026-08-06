@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "kind": "simulation",
   "note": "設計上の評価モデル（決定論・再現可能）。実機実測は Real Device Benchmark（bench/real-device.ts）と区別する。",
   "corpus": "GSM8K/MATH500/HumanEval/MBPP/MMLU/LiveCodeBench (deterministic subset)",
@@ -527,6 +527,74 @@
           "latencyPct": 40
         }
       ]
+    }
+  ],
+  "caravanScaling": [
+    {
+      "devices": 10,
+      "caravans": 1,
+      "flatManaged": 10,
+      "caravanManaged": 2,
+      "flatSearch": 10,
+      "caravanSearch": 11,
+      "reductionX": 5,
+      "hopsFlat": 1,
+      "hopsCaravan": 2
+    },
+    {
+      "devices": 100,
+      "caravans": 10,
+      "flatManaged": 100,
+      "caravanManaged": 11,
+      "flatSearch": 100,
+      "caravanSearch": 20,
+      "reductionX": 9.09,
+      "hopsFlat": 1,
+      "hopsCaravan": 2
+    },
+    {
+      "devices": 500,
+      "caravans": 50,
+      "flatManaged": 500,
+      "caravanManaged": 51,
+      "flatSearch": 500,
+      "caravanSearch": 60,
+      "reductionX": 9.8,
+      "hopsFlat": 1,
+      "hopsCaravan": 2
+    },
+    {
+      "devices": 1000,
+      "caravans": 100,
+      "flatManaged": 1000,
+      "caravanManaged": 101,
+      "flatSearch": 1000,
+      "caravanSearch": 110,
+      "reductionX": 9.9,
+      "hopsFlat": 1,
+      "hopsCaravan": 2
+    },
+    {
+      "devices": 5000,
+      "caravans": 500,
+      "flatManaged": 5000,
+      "caravanManaged": 501,
+      "flatSearch": 5000,
+      "caravanSearch": 510,
+      "reductionX": 9.98,
+      "hopsFlat": 1,
+      "hopsCaravan": 2
+    },
+    {
+      "devices": 10000,
+      "caravans": 1000,
+      "flatManaged": 10000,
+      "caravanManaged": 1001,
+      "flatSearch": 10000,
+      "caravanSearch": 1010,
+      "reductionX": 9.99,
+      "hopsFlat": 1,
+      "hopsCaravan": 2
     }
   ]
 }

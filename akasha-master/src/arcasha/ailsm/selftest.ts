@@ -1157,7 +1157,7 @@ const llmOf = (p: { components: { component: string; cpuPct: number }[] }): numb
 check('OS オーバーヘッド: 単体は LLM 100%、OS を増やすほど LLM 割合が下がる', osOverheadProfile('qwen').components[0].cpuPct === 100 && llmOf(ovFast69) > llmOf(ovDeep69) && llmOf(ovDeep69) > 0, `fast LLM=${llmOf(ovFast69)}% deep LLM=${llmOf(ovDeep69)}%`);
 check('OS オーバーヘッド: CPU/レイテンシは 100% に収束', ovFast69.components.reduce((s, c) => s + c.cpuPct, 0) === 100 && ovDeep69.components.reduce((s, c) => s + c.latencyPct, 0) === 100);
 const json69 = JSON.parse(buildJsonReport(rows69, allOverheadProfiles())) as { version: string; overall: unknown[]; kind: string };
-check('report.json: バージョン + 全体結果', json69.version === '1.1.0' && json69.overall.length === 5 && json69.kind === 'simulation');
+check('report.json: バージョン + 全体結果', json69.version === '1.2.0' && json69.overall.length === 5 && json69.kind === 'simulation');
 check('report.csv: ヘッダ + 30 行', buildCsvReport(rows69).split('\n').length === 31 && buildCsvReport(rows69).startsWith('suite,suite_name'));
 check('report.md: ベンチ表 + OS オーバーヘッド', buildMarkdownReport(rows69, allOverheadProfiles()).includes('| gsm8k |') && buildMarkdownReport(rows69, allOverheadProfiles()).includes('OS Overhead'));
 const files69 = await writeReports('reports/.selftest', rows69, allOverheadProfiles());
@@ -1319,6 +1319,20 @@ const snap73 = hierarchySnapshot(buildHierarchy());
 check('スナップショット: 各階層に Budget と自律度を持つ', snap73.children[0].budget.timeMs > 0 && snap73.children[0].decision.autonomy > 0);
 const hr73b = await runHierarchy(buildHierarchy(), '画像から物体を検出して');
 check('決定論: 同じタスクで同じ判断連鎖', JSON.stringify(hr73.steps.map((s) => s.decision)) === JSON.stringify(hr73b.steps.map((s) => s.decision)));
+
+// [74] Caravan スケーラビリティ（Validation F — キャラバン分割がスケールする実証）
+console.log('\n[74] Caravan スケーラビリティ');
+const { runCaravanBenchmark } = await import('../bench/caravan.js');
+const cb74 = runCaravanBenchmark();
+check('キャラバン数 = ceil(N/10)', cb74[1].devices === 100 && cb74[1].caravans === 10);
+check('1000 台でキャラバン 100', cb74[3].devices === 1000 && cb74[3].caravans === 100);
+check('10000 台でキャラバン 1000', cb74[5].devices === 10000 && cb74[5].caravans === 1000);
+check('フラットの管理対象 = N', cb74[5].flatManaged === 10000);
+check('キャラバンの管理対象 = キャラバン数+1', cb74[5].caravanManaged === 1001);
+check('10000 台で管理コスト約 10x 削減', cb74[5].reductionX > 9 && cb74[5].reductionX < 10);
+check('探索コスト: キャラバン = キャラバン数+10', cb74[5].caravanSearch === 1010);
+check('ホップ: フラット1 → キャラバン2', cb74[5].hopsFlat === 1 && cb74[5].hopsCaravan === 2);
+check('N が 1000x でも管理対象は 1000x 未満（圧縮）', cb74[5].caravanManaged / cb74[0].caravanManaged < 1000);
 
 console.log('\n' + '═'.repeat(60));
 if (failed === 0) {

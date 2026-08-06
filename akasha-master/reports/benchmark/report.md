@@ -1,6 +1,6 @@
 # ArcAsha Benchmark Report
 
-- version: 1.1.0
+- version: 1.2.0
 - kind: simulation（設計上の評価モデル（決定論・再現可能）。実機実測は Real Device Benchmark（bench/real-device.ts）と区別する。）
 - corpus: GSM8K/MATH500/HumanEval/MBPP/MMLU/LiveCodeBench (deterministic subset)
 
@@ -23,3 +23,16 @@
 - **qwen-fast**: OS layered（CPU 100%、うち LLM 85%）
 - **qwen-auto**: OS layered（CPU 100%、うち LLM 65%）
 - **qwen-deep**: OS layered（CPU 100%、うち LLM 40%）
+
+## Caravan スケーラビリティ (Validation F)
+
+| デバイス数 | キャラバン数 | Master管理対象(Flat) | Master管理対象(Caravan) | 削減 | 探索(Flat) | 探索(Caravan) | ホップ |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 10 | 1 | 10 | 2 | 5x | 10 | 11 | 1→2 |
+| 100 | 10 | 100 | 11 | 9.09x | 100 | 20 | 1→2 |
+| 500 | 50 | 500 | 51 | 9.8x | 500 | 60 | 1→2 |
+| 1000 | 100 | 1000 | 101 | 9.9x | 1000 | 110 | 1→2 |
+| 5000 | 500 | 5000 | 501 | 9.98x | 5000 | 510 | 1→2 |
+| 10000 | 1000 | 10000 | 1001 | 9.99x | 10000 | 1010 | 1→2 |
+
+> Master は 10,000 台でも 1000 キャラバンを管理するだけ（フラットの 9.99x 削減）。

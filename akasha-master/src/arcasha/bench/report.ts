@@ -9,15 +9,16 @@ import { join } from 'node:path';
 import type { BenchResultRow } from './run.js';
 import { overallAccuracy } from './run.js';
 import type { OverheadProfile } from './overhead.js';
+import type { CaravanBenchRow } from './caravan.js';
 
-export const REPORT_VERSION = '1.1.0';
+export const REPORT_VERSION = '1.2.0';
 export const REPORT_CORPUS = 'GSM8K/MATH500/HumanEval/MBPP/MMLU/LiveCodeBench (deterministic subset)';
 
 export const VALIDATION_KIND = 'simulation';
 export const VALIDATION_NOTE = '設計上の評価モデル（決定論・再現可能）。実機実測は Real Device Benchmark（bench/real-device.ts）と区別する。';
 
 /** JSON レポート（機械可読・追試可能） */
-export function buildJsonReport(rows: BenchResultRow[], overhead: OverheadProfile[]): string {
+export function buildJsonReport(rows: BenchResultRow[], overhead: OverheadProfile[], caravan?: CaravanBenchRow[]): string {
   return JSON.stringify(
     {
       version: REPORT_VERSION,
@@ -28,6 +29,7 @@ export function buildJsonReport(rows: BenchResultRow[], overhead: OverheadProfil
       overall: overallAccuracy(rows),
       results: rows,
       osOverhead: overhead,
+      caravanScaling: caravan ?? [],
     },
     null,
     2,
@@ -45,7 +47,7 @@ export function buildCsvReport(rows: BenchResultRow[]): string {
 }
 
 /** Markdown レポート（論文化用） */
-export function buildMarkdownReport(rows: BenchResultRow[], overhead: OverheadProfile[]): string {
+export function buildMarkdownReport(rows: BenchResultRow[], overhead: OverheadProfile[], caravan?: CaravanBenchRow[]): string {
   const lines: string[] = [];
   lines.push(`# ArcAsha Benchmark Report`);
   lines.push('');
@@ -75,16 +77,29 @@ export function buildMarkdownReport(rows: BenchResultRow[], overhead: OverheadPr
     const llm = p.components.filter((c) => c.component.includes('LLM')).reduce((s, c) => s + c.cpuPct, 0);
     lines.push(`- **${p.config}**: ${name}（CPU ${cpu}%、うち LLM ${llm}%）`);
   }
+  if (caravan && caravan.length > 0) {
+    lines.push('');
+    lines.push(`## Caravan スケーラビリティ (Validation F)`);
+    lines.push('');
+    lines.push(`| デバイス数 | キャラバン数 | Master管理対象(Flat) | Master管理対象(Caravan) | 削減 | 探索(Flat) | 探索(Caravan) | ホップ |`);
+    lines.push('|---|---:|---:|---:|---:|---:|---:|---:|');
+    for (const r of caravan) {
+      lines.push(`| ${r.devices} | ${r.caravans} | ${r.flatManaged} | ${r.caravanManaged} | ${r.reductionX}x | ${r.flatSearch} | ${r.caravanSearch} | ${r.hopsFlat}→${r.hopsCaravan} |`);
+    }
+    lines.push('');
+    const last = caravan[caravan.length - 1];
+    lines.push(`> Master は ${last.devices.toLocaleString()} 台でも ${last.caravans} キャラバンを管理するだけ（フラットの ${last.reductionX}x 削減）。`);
+  }
   return lines.join('\n');
 }
 
 /** レポートをディスクへ書き出す（既定: reports/benchmark/） */
-export async function writeReports(dir: string, rows: BenchResultRow[], overhead: OverheadProfile[]): Promise<string[]> {
+export async function writeReports(dir: string, rows: BenchResultRow[], overhead: OverheadProfile[], caravan?: CaravanBenchRow[]): Promise<string[]> {
   await mkdir(dir, { recursive: true });
   const files: string[] = [];
-  const json = buildJsonReport(rows, overhead);
+  const json = buildJsonReport(rows, overhead, caravan);
   const csv = buildCsvReport(rows);
-  const md = buildMarkdownReport(rows, overhead);
+  const md = buildMarkdownReport(rows, overhead, caravan);
   const targets: [string, string][] = [
     [join(dir, 'report.json'), json],
     [join(dir, 'report.csv'), csv],

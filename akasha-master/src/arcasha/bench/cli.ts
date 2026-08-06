@@ -12,6 +12,7 @@
 
 import { runExternalBenchmarks, renderExternalBenchmarks } from './run.js';
 import { allOverheadProfiles, renderOverhead } from './overhead.js';
+import { runCaravanBenchmark, renderCaravanBenchmark } from './caravan.js';
 import { writeReports, VALIDATION_KIND, VALIDATION_NOTE } from './report.js';
 import { runRealDeviceBenchmark, renderRealDeviceBenchmark, renderRealDevicePlan } from './real-device.js';
 import { explainExecutive, renderExplanation } from '../attachments/explain.js';
@@ -60,8 +61,11 @@ export async function main(reportDir = 'reports/benchmark'): Promise<void> {
   console.log('\n' + renderRealDevicePlan());
   console.log('\n' + renderRealDeviceBenchmark(await runRealDeviceBenchmark()));
 
+  // 8.5 Caravan スケーラビリティ（Validation F — キャラバン分割がスケールする実証）
+  console.log('\n' + renderCaravanBenchmark(runCaravanBenchmark()));
+
   // 9. レポート生成
-  const files = await writeReports(reportDir, rows, allOverheadProfiles());
+  const files = await writeReports(reportDir, rows, allOverheadProfiles(), runCaravanBenchmark());
   console.log('\n' + DIVIDER);
   console.log('Reports generated (kind=simulation):');
   for (const f of files) console.log(`  ${f}`);

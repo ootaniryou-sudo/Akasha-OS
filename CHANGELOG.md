@@ -1,6 +1,6 @@
 # Changelog — ArcAsha
 
-## v1.2（2026-08-07）— Hierarchy Runtime（Hierarchical Runtime Intelligence）
+## v1.2（2026-08-07）— Hierarchy Runtime / Caravan スケーラビリティ
 
 - **Hierarchy Runtime**: 階層型知能ランタイム `src/arcasha/hierarchy/`
   - 階層: **Master → Caravan（Role 付き）→ Device → Expert**（最終形は Human → Executive → Cluster → Computer → LLM → Reasoning の 6 階層）
@@ -9,7 +9,11 @@
   - **階層間は「情報要約」でやり取り**（下位の詳細をそのまま上位へ送らない）
   - 各階層が独立に学習（Memory に outcome を記録、EMA でポリシー更新）
   - `npx arcasha hierarchy` でデモ実行
-- selftest [73]
+- **Validation F: Caravan スケーラビリティ**（v2 優先順位 2）— キャラバン分割がスケールすることを定量実証
+  - フラット vs キャラバン比較: 10,000 台でも Master は 1,000 キャラバンを管理するだけ（**9.99x 削減**）
+  - 探索コスト 10,000 → 1,010 に圧縮 / 2 ホップルーティング
+  - `npm run benchmark` に統合（report.json の `caravanScaling` / report.md の Caravan セクション）
+- selftest [73] / [74]
 
 > **v2 研究テーマ**: Intelligence is not a monolithic model, but a hierarchical runtime
 > composed of autonomous decision layers.（知能は単一モデルではなく、自律的な意思決定層から構成される階層的ランタイム）

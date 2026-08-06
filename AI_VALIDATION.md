@@ -140,6 +140,23 @@ qwen-deep   = qwen-fast + 0.16（全 Attachment 積極利用）
 正答 = 品質 ≥ 0.7
 ```
 
+## Validation F — Caravan スケーラビリティ（Phase v1.2 / Hierarchy Runtime）
+
+**キャラバン分割がスケールすることを定量実証**する（v2 優先順位 2）。フラット構成（Master が全デバイスを直接管理）とキャラバン構成（Master → Caravan → Device、10 台ごとに 1 キャラバン）を比較:
+
+| デバイス数 | キャラバン数 | Master管理対象(Flat) | Master管理対象(Caravan) | 削減 | 探索(Flat) | 探索(Caravan) | ホップ |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 10 | 1 | 10 | 2 | **5x** | 10 | 11 | 1→2 |
+| 100 | 10 | 100 | 11 | **9.09x** | 100 | 20 | 1→2 |
+| 1,000 | 100 | 1,000 | 101 | **9.9x** | 1,000 | 110 | 1→2 |
+| 10,000 | 1,000 | 10,000 | 1,001 | **9.99x** | 10,000 | 1,010 | 1→2 |
+
+- **10,000 台でも Master は 1,000 キャラバンを管理するだけ**（フラットの 9.99x 削減）
+- N=10 → 10,000（1,000x）でも Master の管理対象は 1 → 1,000 でしか増えない（階層化による圧縮）
+- ルーティングは Master → Caravan → Device の 2 ホップ、探索コストは「キャラバン数 + 10」に圧縮
+- kind=simulation（決定論モデル）。実機は REAL_DEVICE_PROFILE と差し替え可能
+- `npm run benchmark` に統合（report.json の `caravanScaling` / report.md の Caravan セクション）
+
 ## OS Overhead（Kernel / Scheduler / AVM / Executive / Attachment の資源内訳）
 
 ```
