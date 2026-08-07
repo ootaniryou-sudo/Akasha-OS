@@ -20,6 +20,7 @@ import { toHex } from './ailsm/compiler.js';
 import { encodeProgram } from './ailsa/encoder.js';
 import { runComparisonBenchmark } from './ailsm/comparison.js';
 import { runScalingExperiment, renderScaling } from './ailsm/experiment.js';
+import { runRealDeviceBenchmarkMeasured } from './bench/real-device.js';
 
 let WS_PORT = Number(process.env.PORT ?? 8080);
 let WEB_PORT = Number(process.env.WEB_PORT ?? 4173);
@@ -553,6 +554,40 @@ const server = http.createServer((req, res) => {
         } else {
           sendJson(400, { ok: false, error: 'type must be "mock" or "http"' });
         }
+      } catch (e) {
+        sendJson(400, { ok: false, error: String(e) });
+      }
+    });
+    return;
+  }
+
+  // ─── Real Device Benchmark API（接続中の実機で実際に計測）─────────
+  if (url.pathname === '/api/real-benchmark' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', async () => {
+      try {
+        // 実機ノードのみ（mock / http は実機 LLM ではないので除外）
+        const realNodes = hub.experts.filter((e) => !hub.mockNodes.has(e.nodeId) && !hub.httpNodes.has(e.nodeId));
+        if (realNodes.length === 0) {
+          sendJson(200, { status: 'not-connected', devices: [], rows: [], note: '実機（WS 接続の iPad/iPhone）が接続されていません。モック / HTTP デバイスは実機計測の対象外です。' });
+          return;
+        }
+        const r = await runRealDeviceBenchmarkMeasured({
+          devices: realNodes.map((e) => e.nodeId),
+          generate: async (nodeId, prompt, maxTokens = 64) => {
+            const t0 = Date.now();
+            const text = await hub.generate(nodeId, String(prompt), Number(maxTokens) || 64);
+            const ms = Date.now() - t0;
+            return { text, ms, tokens: text.length };
+          },
+          getMetric: (nodeId) => {
+            const m = hub.nodeMetrics.get(nodeId);
+            if (!m) return undefined;
+            return { batteryPct: m.batteryPct, rttMs: m.rttMs, powerMw: m.powerMw, source: m.source };
+          },
+        });
+        sendJson(200, r);
       } catch (e) {
         sendJson(400, { ok: false, error: String(e) });
       }
