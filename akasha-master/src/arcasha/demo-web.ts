@@ -13,6 +13,7 @@
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { marked } from 'marked';
 import { ExpertHub } from './experts/registry.js';
 import { initAiOs, aiosExecute, aiosRelay, syncAiOs } from './ailsm/aios.js';
 import { toHex } from './ailsm/compiler.js';
@@ -31,6 +32,24 @@ for (let i = 0; i < args.length; i++) {
 
 const hub = new ExpertHub();
 hub.start(WS_PORT, 1, () => {});
+
+// ─── Web 起動時にすぐ動く基盤: モックノード自動起動 ──────────────────
+// 実機 (iPad/iPhone) が無くても Web を開いた瞬間にデバイスが繋がっている状態にする。
+// --no-mock で無効化 / --mock N で台数指定。
+const mockArg = args.indexOf('--mock');
+let mockCount = 3;
+if (mockArg >= 0) {
+  const v = Number(args[mockArg + 1]);
+  mockCount = Number.isFinite(v) && v >= 0 ? v : 3;
+} else if (args.includes('--no-mock')) {
+  mockCount = 0;
+}
+const AUTO_MOCK_IDS = ['mock-ios-a', 'mock-ipad-b', 'mock-iphone-c'];
+for (let i = 0; i < mockCount; i++) {
+  const id = AUTO_MOCK_IDS[i] ?? `mock-node-${i}`;
+  hub.addMockNode(id);
+}
+if (mockCount > 0) console.log(`  🧪 モックノード ${mockCount} 台を自動起動（--no-mock で無効）`);
 
 // ノードをラウンドロビンで選択（複数端末に分散 → 役職の偏りが可視化される）
 let rrCursor = 0;
@@ -143,6 +162,17 @@ const html = `<!DOCTYPE html>
   </div>
 
   <div class="card">
+    <h2>デバイス接続（基盤）</h2>
+    <div class="input-row" style="flex-wrap:wrap">
+      <button id="add-mock" class="secondary" style="flex:1;min-width:120px">+ モックノード追加</button>
+      <input id="http-url" type="text" placeholder="HTTPデバイス URL (例: http://192.168.1.10:8080)" style="flex:2;min-width:220px;background:#0e141b;border:1px solid #24313f;border-radius:8px;color:var(--ink);font:inherit;padding:10px 12px;outline:none" />
+      <button id="add-http" class="secondary" style="flex:1;min-width:120px">+ HTTP接続</button>
+    </div>
+    <div id="device-status" style="color:var(--mute);font-size:12px;margin-top:8px;min-height:16px"></div>
+    <div class="sub" style="margin-top:6px">実機 (iPad/iPhone) はアプリ起動で自動接続 / モックは Web 起動時に 3 台自動起動（--no-mock で無効）</div>
+  </div>
+
+  <div class="card">
     <h2>システム情報 (内部設定)</h2>
     <div id="sysinfo"><div class="empty">—</div></div>
   </div>
@@ -206,13 +236,55 @@ async function refreshNodes() {
     if (d.nodes && d.nodes.length) {
       nodesEl.innerHTML = d.nodes.map(n =>
         '<div class="node"><span class="dot"></span><span class="id">' + esc(n.nodeId) +
-        '</span><span class="meta">' + esc(n.modelId) + ' · ' + n.paramsM + 'M params</span></div>'
+        '</span><span class="meta">' + esc(n.modelId) + ' · ' + n.paramsM + 'M params</span>' +
+        '<button class="secondary" style="margin-left:auto;padding:4px 10px;font-size:11px" data-disconnect="' + esc(n.nodeId) + '">切断</button></div>'
       ).join('');
+      // 切断ボタン
+      nodesEl.querySelectorAll('[data-disconnect]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-disconnect');
+          await fetch('/api/node/' + encodeURIComponent(id) + '/disconnect', { method: 'POST' });
+          refreshNodes(); refreshInfo();
+        });
+      });
     } else {
       nodesEl.innerHTML = '<div class="empty">ノード接続待ち…</div>';
     }
   } catch (_) {}
 }
+
+// ─── デバイス接続（基盤）─────────────────────────────────────────────
+const deviceStatusEl = $('device-status');
+const httpUrlEl = $('http-url');
+async function deviceStatus(msg) {
+  deviceStatusEl.textContent = msg;
+}
+$('add-mock').addEventListener('click', async () => {
+  try {
+    const r = await fetch('/api/device/connect', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'mock' }),
+    });
+    const d = await r.json();
+    deviceStatus(d.ok ? '✅ モックノード ' + d.nodeId + ' を追加しました' : '❌ ' + (d.error || '追加失敗'));
+    refreshNodes(); refreshInfo();
+  } catch (e) { deviceStatus('❌ ' + e); }
+});
+$('add-http').addEventListener('click', async () => {
+  const url = httpUrlEl.value.trim();
+  if (!url) { deviceStatus('⚠️ HTTP デバイスの URL を入力してください'); return; }
+  try {
+    const r = await fetch('/api/device/connect', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'http', url }),
+    });
+    const d = await r.json();
+    deviceStatus(d.ok ? '✅ HTTP デバイス ' + d.nodeId + ' を接続しました (' + d.url + ')' : '❌ ' + (d.error || '接続失敗'));
+    if (d.ok) httpUrlEl.value = '';
+    refreshNodes(); refreshInfo();
+  } catch (e) { deviceStatus('❌ ' + e); }
+});
+httpUrlEl.addEventListener('keydown', e => { if (e.key === 'Enter') $('add-http').click(); });
 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -269,8 +341,8 @@ $('ailsm-run').addEventListener('click', async () => {
     ailsmStatusEl.textContent = '✅ ' + (d.fallback ? 'Stage-2委譲: ' : '') + (d.driverId ? 'CALL ' + d.driverId + ' → ' + d.deviceId + ' (' + d.ms + 'ms)' : 'ローカル解決') + ' / ODAR学習: ' + (d.learned ? '記録済み' : '-');
     ailsmOutEl.style.display = 'block';
     ailsmOutEl.textContent =
-      'result : ' + d.result + '\n' +
-      (d.fallback ? 'stage  : Stage-2 フォールバック（決定論→実機LLM）\n' : '') +
+      'result : ' + d.result + '\\n' +
+      (d.fallback ? 'stage  : Stage-2 フォールバック（決定論→実機LLM）\\n' : '') +
       'driver : ' + (d.driverId ?? 'local') + '\\n' +
       'device : ' + (d.deviceId ?? 'local') + '\\n' +
       'steps  : ' + d.steps.join(' → ') + '\\n' +
@@ -315,6 +387,108 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ─── DEV_MASTER_SPEC.md ビューア（個人用マークダウンをブラウザで見やすく表示）──
+  if (url.pathname === '/dev-master-spec' || url.pathname === '/dev-master-spec.html') {
+    try {
+      const md = readFileSync(new URL('../../../DEV_MASTER_SPEC.md', import.meta.url), 'utf-8');
+      const body = marked.parse(md, { gfm: true, breaks: true });
+      const page = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DEV_MASTER_SPEC.md — ArcAsha 開発者マスター仕様書</title>
+<style>
+  :root {
+    --bg:#0b0f14; --card:#131a22; --ink:#e6f1ea; --mute:#8aa2b5;
+    --accent:#2fce7a; --accent2:#e0b84a; --line:#1e2833;
+    --code-bg:#0d1420; --pre-bg:#0a1018;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+    line-height:1.75; font-size:15px;
+  }
+  .wrap { max-width:960px; margin:0 auto; padding:40px 24px 120px; }
+  .topbar {
+    position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:12px;
+    padding:12px 24px; background:rgba(11,15,20,.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar .logo { font-weight:800; color:var(--accent); letter-spacing:.04em; }
+  .topbar .path { color:var(--mute); font-size:12px; font-family:ui-monospace,Menlo,monospace; }
+  .topbar a { color:var(--accent2); text-decoration:none; font-size:13px; margin-left:auto; }
+  h1, h2, h3, h4 { color:#fff; line-height:1.4; margin-top:1.8em; }
+  h1 { font-size:1.9em; border-bottom:2px solid var(--line); padding-bottom:.35em; }
+  h2 { font-size:1.45em; border-bottom:1px solid var(--line); padding-bottom:.3em; }
+  h3 { font-size:1.2em; }
+  a { color:var(--accent); }
+  p, li { color:var(--ink); }
+  li { margin:.25em 0; }
+  code {
+    background:var(--code-bg); color:#7ee2a8; padding:2px 6px; border-radius:4px;
+    font-family:ui-monospace,Menlo,Consolas,monospace; font-size:.88em;
+  }
+  pre {
+    background:var(--pre-bg); border:1px solid var(--line); border-radius:8px;
+    padding:16px; overflow-x:auto; line-height:1.5;
+  }
+  pre code { background:none; padding:0; color:#c9e6d6; font-size:.85em; }
+  table {
+    border-collapse:collapse; width:100%; margin:1.2em 0; font-size:.9em;
+    display:block; overflow-x:auto;
+  }
+  th, td { border:1px solid var(--line); padding:8px 12px; text-align:left; }
+  th { background:var(--card); color:#fff; font-weight:700; }
+  tr:nth-child(even) td { background:rgba(19,26,34,.4); }
+  blockquote {
+    margin:1.2em 0; padding:.6em 1.1em; border-left:4px solid var(--accent);
+    background:rgba(47,206,122,.06); border-radius:0 6px 6px 0; color:#cfe9da;
+  }
+  blockquote p { color:#cfe9da; }
+  hr { border:none; border-top:1px solid var(--line); margin:2.5em 0; }
+  .tag { display:inline-block; padding:2px 10px; border-radius:20px; font-size:12px;
+         background:rgba(47,206,122,.12); color:var(--accent); border:1px solid rgba(47,206,122,.3); }
+  .mermaid { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; margin:1.2em 0; }
+  .toc { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px 24px; }
+  .toc a { color:var(--mute); text-decoration:none; }
+  .toc a:hover { color:var(--accent); }
+  ::-webkit-scrollbar { height:8px; width:8px; }
+  ::-webkit-scrollbar-thumb { background:var(--line); border-radius:4px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="logo">ArcAsha</span>
+  <span class="path">DEV_MASTER_SPEC.md（個人用・公開対象外）</span>
+  <a href="/monitor">→ AI OS Monitor</a>
+</div>
+<div class="wrap" id="content">${body}</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    mermaid.initialize({ startOnLoad:false, theme:'dark' });
+    document.querySelectorAll('pre code.language-mermaid').forEach((el) => {
+      const pre = el.parentElement;
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = el.textContent;
+      pre.replaceWith(div);
+    });
+    mermaid.run({ nodes: document.querySelectorAll('.mermaid') }).catch(() => {});
+  }
+</script>
+</body>
+</html>`;
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(page);
+    } catch (e) {
+      sendJson(404, { error: 'DEV_MASTER_SPEC.md not found: ' + String(e) });
+    }
+    return;
+  }
+
   if (url.pathname === '/api/nodes') {
     sendJson(200, { nodes: hub.experts.map((e) => ({ nodeId: e.nodeId, modelId: e.modelId, paramsM: e.paramsM })) });
     return;
@@ -355,6 +529,32 @@ const server = http.createServer((req, res) => {
         });
       } catch (e) {
         sendJson(400, { error: String(e) });
+      }
+    });
+    return;
+  }
+
+  // ─── デバイス接続 API（Web からデバイスを追加・切断する基盤）──────
+  if (url.pathname === '/api/device/connect' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      try {
+        const { type, nodeId, url: baseUrl, modelId } = JSON.parse(body);
+        if (type === 'mock') {
+          const id = nodeId && String(nodeId).trim() ? String(nodeId).trim() : `mock-${Date.now() % 10000}`;
+          const ok = hub.addMockNode(id, modelId ? String(modelId) : undefined);
+          sendJson(ok ? 200 : 409, ok ? { ok, nodeId: id, type: 'mock' } : { ok: false, error: `node ${id} already exists` });
+        } else if (type === 'http') {
+          const id = nodeId && String(nodeId).trim() ? String(nodeId).trim() : `http-${Date.now() % 10000}`;
+          if (!baseUrl || !String(baseUrl).trim()) { sendJson(400, { ok: false, error: 'url required for http device' }); return; }
+          const ok = hub.addHttpNode(id, String(baseUrl).trim(), modelId ? String(modelId) : undefined);
+          sendJson(ok ? 200 : 409, ok ? { ok, nodeId: id, type: 'http', url: String(baseUrl).trim() } : { ok: false, error: `node ${id} already exists` });
+        } else {
+          sendJson(400, { ok: false, error: 'type must be "mock" or "http"' });
+        }
+      } catch (e) {
+        sendJson(400, { ok: false, error: String(e) });
       }
     });
     return;

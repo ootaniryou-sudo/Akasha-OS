@@ -79,6 +79,10 @@ export class ExpertHub {
   private readonly caravans = new Map<string, Caravan>();
   /** 下層デバイス同士の会話ログ（ニューロン風ピア通信） */
   readonly peerLog: PeerMessage[] = [];
+  /** HTTP デバイス（llama.cpp server 等）: nodeId → baseUrl */
+  readonly httpNodes = new Map<string, string>();
+  /** モックノード（WS 不要の決定論フェイク） */
+  readonly mockNodes = new Set<string>();
   private sockets = new Map<string, WebSocket>();
   private cache = new Map<string, EvalResult>();
   private genCache = new Map<string, string>();
@@ -171,12 +175,65 @@ export class ExpertHub {
     const key = `gen|${nodeId}|${prompt}`;
     const hit = this.genCache.get(key);
     if (hit !== undefined) { this.genCacheHit++; return hit; }
+    // HTTP デバイス（llama.cpp /completion 等）
+    const baseUrl = this.httpNodes.get(nodeId);
+    if (baseUrl) {
+      const text = await this.httpGenerate(baseUrl, prompt, maxTokens);
+      this.genCache.set(key, text);
+      this.genCacheMiss++;
+      return text;
+    }
+    // モックノード（WS 不要の決定論フェイク）
+    if (this.mockNodes.has(nodeId)) {
+      const family = nodeId.split('-').pop() || 'mock';
+      const text = `[MOCK ${family}] received \"${prompt.slice(0, 60)}\" (max_tokens=${maxTokens})`;
+      this.genCache.set(key, text);
+      this.genCacheMiss++;
+      return text;
+    }
     const ws = this.sockets.get(nodeId);
     if (!ws) throw new Error(`expert ${nodeId} not connected`);
     const res = await this.sendCompute(ws, `gen-${this.genCacheMiss}-${nodeId}`, prompt, true, maxTokens);
     this.genCache.set(key, res.text);
     this.genCacheMiss++;
     return res.text;
+  }
+
+  /**
+   * HTTP デバイス（llama.cpp server / OpenAI 互換 API）を呼ぶ。
+   * まず llama.cpp の POST /completion を試し、失敗したら /v1/chat/completions を試す。
+   */
+  private async httpGenerate(baseUrl: string, prompt: string, maxTokens: number): Promise<string> {
+    const url = baseUrl.replace(/\/+$/, '');
+    // 1) llama.cpp /completion
+    try {
+      const res = await fetch(`${url}/completion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, n_predict: maxTokens, temperature: 0, top_p: 1 }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { content?: string; response?: string };
+        const text = data.content ?? data.response;
+        if (typeof text === 'string') return text;
+      }
+    } catch { /* fallthrough */ }
+    // 2) OpenAI 互換 /v1/chat/completions
+    const res2 = await fetch(`${url}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llm',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens,
+        temperature: 0,
+      }),
+    });
+    if (!res2.ok) throw new Error(`HTTP device error ${res2.status}: ${await res2.text()}`);
+    const data2 = (await res2.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const text = data2.choices?.[0]?.message?.content;
+    if (typeof text !== 'string') throw new Error('HTTP device returned no content');
+    return text;
   }
 
   private sendCompute(
@@ -213,14 +270,93 @@ export class ExpertHub {
   /** 特定ノードを切断（モニターの端末操作） */
   disconnect(nodeId: string): boolean {
     const ws = this.sockets.get(nodeId);
-    if (!ws) return false;
-    ws.close();
-    this.sockets.delete(nodeId);
+    if (ws) {
+      ws.close();
+      this.sockets.delete(nodeId);
+    }
+    this.httpNodes.delete(nodeId);
+    this.mockNodes.delete(nodeId);
     const idx = this.experts.findIndex((e) => e.nodeId === nodeId);
     if (idx >= 0) this.experts.splice(idx, 1);
     this.nodeDetails.delete(nodeId);
     this.nodeMetrics.delete(nodeId);
     this.removeFromCaravan(nodeId);
+    return true;
+  }
+
+  // ─── Web コンソールからのデバイス接続（WS 不要）────────────────
+
+  /** モックノードを直接登録（Web 起動時に自動で試せる基盤） */
+  addMockNode(nodeId: string, modelId = 'HuggingFaceTB/SmolLM2-135M-Instruct'): boolean {
+    if (this.experts.some((e) => e.nodeId === nodeId)) return false;
+    const params = paramsOf(modelId);
+    const now = Date.now();
+    const sim = simMetric(nodeId);
+    this.nodeDetails.set(nodeId, {
+      platform: 'mock',
+      device: 'Mock (no real inference)',
+      backend: 'mock',
+      precision: 'mock',
+      model_id: modelId,
+      capabilities: { coding: 0.4, math: 0.4, general: 0.5 },
+    });
+    this.nodeMetrics.set(nodeId, {
+      batteryPct: sim.batteryPct,
+      rttMs: sim.rttMs,
+      powerMw: sim.powerMw,
+      connectedAt: now,
+      lastSeenAt: now,
+      source: 'sim',
+    });
+    this.experts.push({
+      nodeId,
+      modelId,
+      family: nodeId.split('-').pop() || 'mock',
+      paramsM: params,
+      memoryGB: Math.round((params / 500) * 100) / 100,
+      temperature: 0.6,
+    });
+    this.mockNodes.add(nodeId);
+    console.log(`  ✅ mock expert ${nodeId} (${modelId}, ${params}M) → ${this.assignCaravan(nodeId)}`);
+    return true;
+  }
+
+  /**
+   * HTTP デバイス（llama.cpp server / OpenAI 互換 API）を直接登録。
+   * baseUrl 例: http://192.168.1.10:8080（/completion または /v1/chat/completions）
+   */
+  addHttpNode(nodeId: string, baseUrl: string, modelId = 'http-llm'): boolean {
+    if (this.experts.some((e) => e.nodeId === nodeId)) return false;
+    const params = paramsOf(modelId);
+    const now = Date.now();
+    const sim = simMetric(nodeId);
+    this.nodeDetails.set(nodeId, {
+      platform: 'http',
+      device: 'HTTP device',
+      backend: 'http',
+      precision: 'auto',
+      baseUrl,
+      model_id: modelId,
+      capabilities: { general: 0.6 },
+    });
+    this.nodeMetrics.set(nodeId, {
+      batteryPct: 100,
+      rttMs: sim.rttMs,
+      powerMw: 800,
+      connectedAt: now,
+      lastSeenAt: now,
+      source: 'sim',
+    });
+    this.experts.push({
+      nodeId,
+      modelId,
+      family: nodeId.split('-').pop() || 'http',
+      paramsM: params,
+      memoryGB: Math.round((params / 500) * 100) / 100,
+      temperature: 0.6,
+    });
+    this.httpNodes.set(nodeId, baseUrl);
+    console.log(`  ✅ http expert ${nodeId} (${baseUrl}, ${modelId}) → ${this.assignCaravan(nodeId)}`);
     return true;
   }
 
