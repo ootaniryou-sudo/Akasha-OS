@@ -32,6 +32,12 @@ pub enum NetError {
     #[cfg(feature = "quic")]
     #[error("quic: {0}")]
     Quic(#[from] quinn::ConnectionError),
+    #[cfg(feature = "quic")]
+    #[error("quic stream write: {0}")]
+    QuicWrite(#[from] quinn::WriteError),
+    #[cfg(feature = "quic")]
+    #[error("quic stream read: {0}")]
+    QuicRead(#[from] quinn::ReadExactError),
     #[error("io: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -46,11 +52,11 @@ pub trait Transport: Send + Sync {
     async fn connect(&mut self, addr: SocketAddr) -> Result<(), NetError>;
 
     /// Send a raw binary frame (header + payload).
-    async fn send(&self, frame: &[u8]) -> Result<(), NetError>;
+    async fn send(&mut self, frame: &[u8]) -> Result<(), NetError>;
 
     /// Receive a raw binary frame into the provided buffer.
     /// Returns the number of bytes read.
-    async fn recv(&self, buf: &mut [u8]) -> Result<usize, NetError>;
+    async fn recv(&mut self, buf: &mut [u8]) -> Result<usize, NetError>;
 
     /// Close the connection gracefully.
     async fn close(&mut self) -> Result<(), NetError>;

@@ -34,7 +34,7 @@ impl Transport for TcpTransport {
         Ok(())
     }
 
-    async fn send(&self, frame: &[u8]) -> Result<(), NetError> {
+    async fn send(&mut self, frame: &[u8]) -> Result<(), NetError> {
         let stream = self.stream.as_ref().ok_or(NetError::ConnectionClosed)?;
         let len_prefix = (frame.len() as u32).to_le_bytes();
         stream.writable().await?;
@@ -43,7 +43,7 @@ impl Transport for TcpTransport {
         Ok(())
     }
 
-    async fn recv(&self, buf: &mut [u8]) -> Result<usize, NetError> {
+    async fn recv(&mut self, buf: &mut [u8]) -> Result<usize, NetError> {
         let stream = self.stream.as_ref().ok_or(NetError::ConnectionClosed)?;
         let mut len_buf = [0u8; 4];
         stream.readable().await?;

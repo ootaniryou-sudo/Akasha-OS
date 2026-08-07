@@ -16,12 +16,12 @@ name = "akasha-kernel"
 path = "src/main.rs"
 
 [features]
-default = ["wgpu"]
+default = ["wgpu", "tokio", "quic"]
 # Platform feature flags
 android-foreground = []
 ios-background = []
 # GPU backend selection (auto-detected; overridable for cross-compile)
-vulkan = ["wgpu/vulkan"]
+vulkan = ["wgpu/vulkan-portability"]
 metal = ["wgpu/metal"]
 dx12 = ["wgpu/dx12"]
 # Use QUIC (default) or fall back to raw TCP
@@ -30,10 +30,10 @@ tcp-only = ["tokio"]
 
 [dependencies]
 # ── Async runtime ──
-tokio = { version = "1", features = ["full", "sync", "signal"] }
+tokio = { version = "1", features = ["full", "sync", "signal"], optional = true }
 
 # ── GPU compute (cross-platform: Vulkan / Metal / DX12 / GLES) ──
-wgpu = { version = "22", features = ["spirv"] }
+wgpu = { version = "22", features = ["spirv"], optional = true }
 bytemuck = { version = "1", features = ["derive"] }
 encase = "0.8"
 
@@ -45,16 +45,19 @@ rcgen = { version = "0.13", optional = true }
 # ── Binary protocol ──
 byteorder = "1.5"
 
-# ── Platform detection / JNI ──
-[target.'cfg(target_os = "android")'.dependencies]
-jni = { version = "0.21", features = ["invocation"] }
-
 # ── Logging ──
 log = "0.4"
 env_logger = "0.11"
 
 # ── Error handling ──
 thiserror = "2"
+
+# ── Async traits (used by Transport / Platform) ──
+async-trait = "0.1"
+
+# ── Platform detection / JNI ──
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.21", features = ["invocation"] }
 
 [profile.release]
 opt-level = 3

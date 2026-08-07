@@ -87,7 +87,7 @@ pub unsafe extern "C" fn akasha_kernel_shutdown(kernel_ptr: *mut AkashaKernel) {
     if kernel_ptr.is_null() {
         return;
     }
-    let kernel = unsafe { Box::from_raw(kernel_ptr) };
+    let mut kernel = unsafe { Box::from_raw(kernel_ptr) };
     let runtime = tokio::runtime::Runtime::new().expect("tokio runtime");
     runtime.block_on(async { kernel.shutdown().await });
 }

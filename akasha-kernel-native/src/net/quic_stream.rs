@@ -61,10 +61,13 @@ impl QuicTransport {
         // Maximise throughput for tensor data
         transport
             .max_concurrent_bidi_streams(1u32.into())
-            .send_window(16 * 1024 * 1024) // 16 MiB send window
-            .receive_window(16 * 1024 * 1024); // 16 MiB recv window
+            .send_window(16 * 1024 * 1024)
+            .receive_window(quinn::VarInt::from_u64(16 * 1024 * 1024).unwrap()); // 16 MiB recv window
 
-        let mut config = quinn::ClientConfig::new(Arc::new(tls_config));
+        // quinn 0.11: wrap rustls config in QuicClientConfig
+        let quic_crypto = quinn::crypto::rustls::QuicClientConfig::try_from(tls_config)
+            .map_err(|e| NetError::Protocol(format!("quic tls: {e}")))?;
+        let mut config = quinn::ClientConfig::new(Arc::new(quic_crypto));
         config.transport_config(Arc::new(transport));
 
         Ok(config)
@@ -80,14 +83,10 @@ impl Transport for QuicTransport {
             .map_err(|e| NetError::Protocol(format!("endpoint: {e}")))?;
 
         let config = Self::configure_tls()?;
-        endpoint.set_default_client_config(config);
 
-        let server_name = "akasha.local"
-            .try_into()
-            .map_err(|_| NetError::Protocol("invalid server name".into()))?;
-
+        // quinn 0.11: connect_with(config, addr, server_name)
         let connecting = endpoint
-            .connect_with(server_name, addr)
+            .connect_with(config, addr, "akasha.local")
             .map_err(|e| NetError::ConnectionRefused(format!("connect: {e}")))?;
 
         let connection = connecting
@@ -109,24 +108,24 @@ impl Transport for QuicTransport {
         Ok(())
     }
 
-    async fn send(&self, frame: &[u8]) -> Result<(), NetError> {
+    async fn send(&mut self, frame: &[u8]) -> Result<(), NetError> {
         let send = self
             .send_stream
-            .as_ref()
+            .as_mut()
             .ok_or(NetError::ConnectionClosed)?;
 
         // Write frame length prefix (u32 LE) + frame data
         let len_prefix = (frame.len() as u32).to_le_bytes();
-        send.write_all(&len_prefix).await?;
-        send.write_all(frame).await?;
+        send.write_all(&len_prefix).await.map_err(|e| NetError::Protocol(format!("quic send: {e}")))?;
+        send.write_all(frame).await.map_err(|e| NetError::Protocol(format!("quic send: {e}")))?;
 
         Ok(())
     }
 
-    async fn recv(&self, buf: &mut [u8]) -> Result<usize, NetError> {
+    async fn recv(&mut self, buf: &mut [u8]) -> Result<usize, NetError> {
         let recv = self
             .recv_stream
-            .as_ref()
+            .as_mut()
             .ok_or(NetError::ConnectionClosed)?;
 
         // Read length prefix
@@ -178,7 +177,26 @@ impl QuicTransport {
         ),
         NetError,
     > {
-        let n = self.recv(&mut self.recv_buf).await?;
+        // recv_buf を先に mutable 借用として分離し、recv() には recv_stream だけ渡す
+        let n = {
+            let recv: &mut quinn::RecvStream = self
+                .recv_stream
+                .as_mut()
+                .ok_or(NetError::ConnectionClosed)?;
+            let buf = &mut self.recv_buf;
+            // 長さプレフィックスを読む
+            let mut len_buf = [0u8; 4];
+            recv.read_exact(&mut len_buf).await?;
+            let frame_len = u32::from_le_bytes(len_buf) as usize;
+            if frame_len > buf.len() {
+                return Err(NetError::Protocol(format!(
+                    "frame too large: {frame_len} > {}",
+                    buf.len()
+                )));
+            }
+            recv.read_exact(&mut buf[..frame_len]).await?;
+            frame_len
+        };
         let header = decode_header(&self.recv_buf[..n])
             .ok_or(NetError::Protocol("bad packet header".into()))?;
 

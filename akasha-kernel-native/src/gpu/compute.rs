@@ -15,6 +15,8 @@ use super::shaders;
 pub enum GpuError {
     #[error("wgpu: {0}")]
     Wgpu(#[from] wgpu::RequestDeviceError),
+    #[error("no compatible GPU adapter found")]
+    AdapterNotFound,
     #[error("buffer size mismatch: need {need}, have {have}")]
     BufferSize { need: u64, have: u64 },
     #[error("shader not found: {0}")]
@@ -29,6 +31,47 @@ pub enum ComputeOp {
     Gelu,
     RmsNorm,
     ResidualAdd,
+}
+
+// ─── Bind group layout per shader ─────────────────────────────────────────
+
+enum BindingKind {
+    Storage,
+    Uniform,
+}
+
+/// 各 shader の @group(0) バインディングを (binding, kind, read_only) で定義。
+/// shader の WGSL 宣言と一致させる必要がある（不一致はランタイム検証エラー）。
+fn bindings_for(op: ComputeOp) -> Vec<(u32, BindingKind, bool)> {
+    use BindingKind::{Storage, Uniform};
+    match op {
+        // W(0,read) x(1,read) b(2,read) y(3,rw) uniforms(4,uniform)
+        ComputeOp::MatmulVec => vec![
+            (0, Storage, true),
+            (1, Storage, true),
+            (2, Storage, true),
+            (3, Storage, false),
+            (4, Uniform, false),
+        ],
+        // data(0,rw) uniforms(1,uniform)
+        ComputeOp::Gelu => vec![
+            (0, Storage, false),
+            (1, Uniform, false),
+        ],
+        // x(0,read) gamma(1,read) y(2,rw) uniforms(3,uniform)
+        ComputeOp::RmsNorm => vec![
+            (0, Storage, true),
+            (1, Storage, true),
+            (2, Storage, false),
+            (3, Uniform, false),
+        ],
+        // x(0,rw) residual(1,read) uniforms(2,uniform)
+        ComputeOp::ResidualAdd => vec![
+            (0, Storage, false),
+            (1, Storage, true),
+            (2, Uniform, false),
+        ],
+    }
 }
 
 // ─── The compute engine ────────────────────────────────────────────────────
@@ -62,7 +105,7 @@ impl GpuEngine {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or_else(|| GpuError::Wgpu(wgpu::RequestDeviceError))?;
+            .ok_or(GpuError::AdapterNotFound)?;
 
         let (device, queue) = adapter
             .request_device(
@@ -95,62 +138,32 @@ impl GpuEngine {
                 source: wgpu::ShaderSource::Wgsl(wgsl_src.into()),
             });
 
-            // Create bind group layout matching the shader's @group(0) bindings
+            // shader ごとの @group(0) バインディングに一致するレイアウトを作る
+            let entries: Vec<wgpu::BindGroupLayoutEntry> = bindings_for(op)
+                .into_iter()
+                .map(|(binding, storage, read_only)| wgpu::BindGroupLayoutEntry {
+                    binding,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: match storage {
+                        BindingKind::Storage => wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        BindingKind::Uniform => wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                    },
+                    count: None,
+                })
+                .collect();
+
             let bind_group_layout =
                 device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some(&format!("akasha-bgl-{:?}", op)),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 2,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: true },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 3,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Storage { read_only: false },
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 4,
-                            visibility: wgpu::ShaderStages::COMPUTE,
-                            ty: wgpu::BindingType::Buffer {
-                                ty: wgpu::BufferBindingType::Uniform,
-                                has_dynamic_offset: false,
-                                min_binding_size: None,
-                            },
-                            count: None,
-                        },
-                    ],
+                    entries: &entries,
                 });
 
             let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -164,6 +177,7 @@ impl GpuEngine {
                 layout: Some(&layout),
                 module: &shader,
                 entry_point: "main",
+                cache: None,
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             });
 
