@@ -277,3 +277,4 @@ export function mergeExperts(
 export function retireExpert(g: AilsmGraph, expertId: number): ExpertResult {
   return updateExpert(g, expertId, { state: 'retired' });
 }
+

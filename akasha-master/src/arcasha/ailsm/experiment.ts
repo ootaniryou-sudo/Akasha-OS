@@ -53,3 +53,4 @@ export function renderScaling(rows: ScalingRow[]): string {
   }
   return lines.join('\n');
 }
+

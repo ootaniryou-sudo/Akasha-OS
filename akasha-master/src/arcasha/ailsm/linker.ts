@@ -57,3 +57,4 @@ export function link(name: string, segments: LinkSegment[]): LinkedProgram {
   const bytes = codecEncode(instructions); // 検証込みでエンコード
   return { name, segments: symbols, instructions, bytes };
 }
+

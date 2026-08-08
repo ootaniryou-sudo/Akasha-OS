@@ -36,3 +36,4 @@ line('AILSA バイト列', toHex(r.bytes));
 console.log(`\n  capability: ${JSON.stringify(r.capability)}`);
 console.log(`  notes: ${r.notes.join(' | ') || '(none)'}`);
 console.log('═'.repeat(64));
+

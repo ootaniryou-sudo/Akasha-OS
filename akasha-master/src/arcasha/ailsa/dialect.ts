@@ -95,3 +95,4 @@ export const DIALECTS: Record<DialectId, Dialect> = {
 export function getDialect(id: DialectId): Dialect {
   return DIALECTS[id];
 }
+

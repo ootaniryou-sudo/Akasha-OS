@@ -172,3 +172,4 @@ export function renderOasisBenchmark(r: OasisBenchResult): string {
   lines.push('> これは「モデルの重みを変えずに、OS の運用知識（Team / Policy / Lesson）だけで改善する」ことの定量実証。');
   return lines.join('\n');
 }
+

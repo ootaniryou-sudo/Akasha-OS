@@ -326,3 +326,4 @@ export function mergeFrames(
 export function frameOf(g: AilsmGraph, frameId: number): ReasoningFrame | undefined {
   return toFrame(g, frameId);
 }
+

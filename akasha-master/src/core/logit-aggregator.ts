@@ -637,3 +637,4 @@ export function extractTop5(logits: Float32Array): TokenCandidate[] {
 
   return top5.filter((c) => c.score > 0);
 }
+

@@ -109,3 +109,4 @@ export function renderComparison(rows: ComparisonRow[]): string {
   }
   return lines.join('\n');
 }
+

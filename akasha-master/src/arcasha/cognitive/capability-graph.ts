@@ -142,3 +142,4 @@ export function renderComposition(c: ComposedTeam): string {
   lines.push(`order: ${c.order.join(' → ')}`);
   return lines.join('\n');
 }
+

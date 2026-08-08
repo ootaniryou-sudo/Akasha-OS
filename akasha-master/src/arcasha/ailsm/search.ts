@@ -109,3 +109,4 @@ export const SEARCH_POLICIES = {
   bfs: () => new BFSPolicy(),
   mcts: () => new MctsPolicy(),
 };
+

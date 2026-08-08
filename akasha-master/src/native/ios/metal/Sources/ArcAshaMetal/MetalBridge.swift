@@ -297,3 +297,4 @@ final class TokenizerBridge {
     return tokenIds.compactMap { vocab[$0] ?? "[\($0)]" }.joined(separator: "")
   }
 }
+

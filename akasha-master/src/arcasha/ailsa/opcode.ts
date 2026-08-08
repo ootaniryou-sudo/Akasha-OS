@@ -73,3 +73,4 @@ export function isSlotByte(b: number): boolean {
 export function isBaseOpcode(op: number): boolean {
   return op >= Opcode.CALL && op <= Opcode.FILTER;
 }
+

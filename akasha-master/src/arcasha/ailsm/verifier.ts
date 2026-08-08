@@ -83,3 +83,4 @@ export function verifyCompilation(g: AilsmGraph, instrs: Instruction[]): Verific
 
   return { valid: issues.length === 0, issues };
 }
+

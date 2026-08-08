@@ -138,3 +138,4 @@ export const enum IpcKind {
   SUBMIT_PROMPT = 6,
   STATS = 7,
 }
+

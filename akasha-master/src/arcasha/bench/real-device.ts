@@ -225,3 +225,4 @@ export function renderRealDeviceBenchmark(r: RealDeviceBenchmarkResult): string 
   }
   return lines.join('\n');
 }
+

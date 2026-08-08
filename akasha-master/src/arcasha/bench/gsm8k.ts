@@ -23,3 +23,4 @@ export const gsm8kSuite: BenchSuite = {
     s('g10', '金利 2% で 50000 円を 1 年預けたときの利息は？', '1000円', 0.55),
   ],
 };
+

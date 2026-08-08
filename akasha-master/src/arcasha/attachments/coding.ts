@@ -101,3 +101,4 @@ export class CodingAttachment implements Attachment {
     return makeResult(code, compile.ok ? 0.9 : 0.5, this.estimatedLatency, attempts, detail);
   }
 }
+

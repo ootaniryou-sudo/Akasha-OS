@@ -265,3 +265,4 @@ export async function runHierarchyDemoCli(): Promise<void> {
     console.log('');
   }
 }
+

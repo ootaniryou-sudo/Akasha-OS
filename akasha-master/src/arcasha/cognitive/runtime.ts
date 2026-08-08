@@ -157,3 +157,4 @@ export function renderCognitive(r: CognitiveRunResult): string {
   }
   return lines.join('\n');
 }
+

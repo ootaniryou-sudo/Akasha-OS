@@ -41,3 +41,4 @@ export async function evaluateAll(
 export function evaluateWith(node: ExpertInfo, task: Task, text: string, latencyMs: number): EvalResult {
   return { nodeId: node.nodeId, text, score: evaluateTask(task.capability, text), latencyMs };
 }
+

@@ -113,3 +113,4 @@ export function validateProgram(program: Instruction[]): ValidationResult {
 
   return { valid: issues.length === 0, issues };
 }
+

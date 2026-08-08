@@ -197,3 +197,4 @@ export function toStateDiagram(steps: StateStepLike[]): string {
   lines.push(`  ${ids[ids.length - 1]} --> [*]`);
   return lines.join('\n');
 }
+

@@ -23,3 +23,4 @@ export const humanEvalSuite: BenchSuite = {
     s('h10', 'メモ化されたフィボナッチの並列版を実装せよ', '並列 DP', 0.85),
   ],
 };
+

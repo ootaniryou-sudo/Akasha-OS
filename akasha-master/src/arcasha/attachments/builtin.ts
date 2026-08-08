@@ -26,3 +26,4 @@ export function registerBuiltinAttachments(manager: AttachmentManager): void {
   manager.register('simulation', async () => new SimulationAttachment());
   manager.register('coding', async () => new CodingAttachment());
 }
+

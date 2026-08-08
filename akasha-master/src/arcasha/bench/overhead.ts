@@ -85,3 +85,4 @@ export function renderOverhead(profiles: OverheadProfile[]): string {
 export function allOverheadProfiles(): OverheadProfile[] {
   return ['qwen', 'qwen-thinking', 'qwen-fast', 'qwen-auto', 'qwen-deep'].map((c) => osOverheadProfile(c as ModelConfig));
 }
+

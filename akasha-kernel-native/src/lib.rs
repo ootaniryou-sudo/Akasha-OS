@@ -138,3 +138,4 @@ fn parse_kernel_config_from_json(json: &str) -> KernelConfig {
         use_quic: get_bool("use_quic"),
     }
 }
+

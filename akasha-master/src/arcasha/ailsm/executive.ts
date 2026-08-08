@@ -161,3 +161,4 @@ export function executivesOf(g: AilsmGraph, taskId: number): Executive[] {
 export function managedProcesses(g: AilsmGraph, execId: number): number[] {
   return g.edges.filter((e) => e.from === execId && e.rel === 'manages').map((e) => e.to);
 }
+

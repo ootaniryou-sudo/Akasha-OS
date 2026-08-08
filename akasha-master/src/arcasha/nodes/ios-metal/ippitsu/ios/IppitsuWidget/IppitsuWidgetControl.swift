@@ -32,3 +32,4 @@ struct OpenAppIntent: AppIntent {
         return .result()
     }
 }
+

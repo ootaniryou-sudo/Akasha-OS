@@ -857,3 +857,4 @@ server.listen(WEB_PORT, () => {
   adv.on('error', () => console.log('  ⚠️ dns-sd が使えないため mDNS 広告をスキップ'));
   adv.on('exit', () => { /* 広告プロセス終了 (無視) */ });
 });
+

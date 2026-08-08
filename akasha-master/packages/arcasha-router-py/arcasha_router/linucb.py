@@ -64,3 +64,4 @@ class LinUCB:
 
 
 FEATURE_NAMES = ["bias", "capability", "latency", "cost", "stability", "confidence", "memory", "temperature"]
+

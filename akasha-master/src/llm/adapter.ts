@@ -129,3 +129,4 @@ export interface LLMAdapter {
   /** Release model weights and GPU resources. */
   unload(): Promise<void>;
 }
+

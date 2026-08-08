@@ -51,3 +51,4 @@ for (const d of run.decisions) {
   console.log(`[${d.role}] -> ${d.nodeId} (score=${d.score.toFixed(3)}, latency=${d.latencyMs}ms)`);
 }
 console.log(`検証: ${run.verifications.filter(v => v.passed).length}/${run.verifications.length} PASS`);
+

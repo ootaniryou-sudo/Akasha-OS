@@ -455,3 +455,4 @@ export function runMemoryHierarchyDemo(): MemoryHierarchyDemoResult {
     currentSpan: finalExec.currentSpan,
   };
 }
+

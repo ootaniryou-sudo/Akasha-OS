@@ -37,3 +37,4 @@ export class ReflectionAttachment implements Attachment {
     return makeResult(revised, quality, this.estimatedLatency, 1, detail);
   }
 }
+

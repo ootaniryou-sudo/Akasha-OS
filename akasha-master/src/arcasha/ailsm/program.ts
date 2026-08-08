@@ -121,3 +121,4 @@ export class AiProgram {
     return codecEncode(this.assemble());
   }
 }
+

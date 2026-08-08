@@ -207,3 +207,4 @@ export function fletcher32(data: Uint8Array, offset = 0, length = data.length - 
   }
   return ((sum2 << 16) | sum1) >>> 0;
 }
+

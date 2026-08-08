@@ -53,3 +53,4 @@ class EmaLatency:
 
     def value(self) -> int:
         return round(self.ema)
+

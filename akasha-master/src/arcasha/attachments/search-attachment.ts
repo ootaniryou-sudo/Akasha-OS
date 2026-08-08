@@ -46,3 +46,4 @@ export class SearchAttachment implements Attachment {
     ]);
   }
 }
+

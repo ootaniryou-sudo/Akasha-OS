@@ -83,3 +83,4 @@ export const ERRORS = {
 export function capabilityFulfills(required: AbiType[], capability: CapabilityAbi): boolean {
   return required.every((t) => capability.supports.includes(t) || capability.requires.includes(t));
 }
+

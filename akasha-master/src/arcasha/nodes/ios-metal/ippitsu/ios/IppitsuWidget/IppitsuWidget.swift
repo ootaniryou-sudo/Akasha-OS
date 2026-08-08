@@ -223,3 +223,4 @@ struct IppitsuWidget: Widget {
         ])
     }
 }
+

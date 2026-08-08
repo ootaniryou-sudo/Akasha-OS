@@ -81,3 +81,4 @@ export function renderExternalBenchmarks(rows: BenchResultRow[]): string {
   lines.push(`${'ALL'.padEnd(16)} ${ov.join(' ')}`);
   return lines.join('\n');
 }
+

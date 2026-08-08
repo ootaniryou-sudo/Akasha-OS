@@ -45,3 +45,4 @@ export class MockModelClient implements ModelClient {
     return this.texts[prompt] ?? `[mock ${nodeId}] ${prompt.slice(0, 40)}`;
   }
 }
+
