@@ -7,7 +7,8 @@ jspm_packages/
 dist/
 build/
 out/
-**/target/ # Rustのビルド成果物（どの階層でも無視）
+# Rustのビルド成果物（どの階層でも無視）
+**/target/
 
 # ログファイル
 npm-debug.log*
