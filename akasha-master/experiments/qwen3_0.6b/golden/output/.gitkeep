@@ -1,3 +1,0 @@
-# EXP-0000 Golden Output
-# This directory is populated by running: python golden/run_golden.py
-# Output files are git-ignored (deterministic but large).

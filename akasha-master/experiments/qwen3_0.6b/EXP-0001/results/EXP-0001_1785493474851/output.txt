@@ -1,4 +1,0 @@
- - LeetCode
-Write a Python factorial function.
-LeetCode
-Problem
