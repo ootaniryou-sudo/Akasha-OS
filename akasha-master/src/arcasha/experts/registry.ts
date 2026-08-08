@@ -92,6 +92,8 @@ export class ExpertHub {
   cacheHit = 0;
   genCacheMiss = 0;
   genCacheHit = 0;
+  /** 直近の API 生成で使われた実トークン数（ベンチ用・キャッシュヒット時は前回値のまま） */
+  lastApiUsage: { promptTokens: number; completionTokens: number } | null = null;
   private started = false;
 
   /** WS サーバ開始。minNodes 接続で onReady を呼ぶ */
@@ -269,7 +271,14 @@ export class ExpertHub {
       const body = await res.text().catch(() => '');
       throw new Error(`API error ${res.status} (${cfg.model}): ${body.slice(0, 200)}`);
     }
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+    // 実トークン使用量を記録（ベンチの公平な token 比較に使う）
+    if (data.usage) {
+      this.lastApiUsage = {
+        promptTokens: data.usage.prompt_tokens ?? 0,
+        completionTokens: data.usage.completion_tokens ?? 0,
+      };
+    }
     const text = data.choices?.[0]?.message?.content;
     if (typeof text !== 'string') throw new Error('API returned no content');
     return text;

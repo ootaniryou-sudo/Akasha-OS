@@ -21,6 +21,10 @@ export async function runCli(argv: string[]): Promise<string> {
       await main(argv[1]);
       return `arcasha benchmark: done（reports/benchmark/ に kind=simulation の report.json/csv/md を生成）`;
     }
+    case 'apibench': {
+      const { runApiBenchCli } = await import('./bench/api-bench-cli.js');
+      return await runApiBenchCli();
+    }
     case 'policy': {
       const { runPolicyLearningDemo } = await import('./attachments/decision-log.js');
       return runPolicyLearningDemo();

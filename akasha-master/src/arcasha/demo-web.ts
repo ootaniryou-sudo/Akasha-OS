@@ -774,10 +774,13 @@ const server = http.createServer((req, res) => {
     req.on('data', (c) => { body += c; });
     req.on('end', async () => {
       try {
-        const { text, deviceId } = JSON.parse(body);
+        const { text, deviceId, forceDelegate, maxTokens } = JSON.parse(body);
         if (!text) { sendJson(400, { error: 'text required' }); return; }
         const targetId = deviceId ? String(deviceId) : nextNodeId();
-        const ex = await aiosExecute(aios, String(text), targetId);
+        const ex = await aiosExecute(aios, String(text), targetId, {
+          forceDelegate: forceDelegate === true,
+          maxTokens: maxTokens ? Number(maxTokens) : undefined,
+        });
         pushRecent({
           text: String(text),
           driverId: ex.driverId,

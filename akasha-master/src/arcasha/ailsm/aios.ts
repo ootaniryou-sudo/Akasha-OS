@@ -138,17 +138,49 @@ async function fallbackExecute(
  * AI OS でタスクを実行。CALL は実デバイス（RemoteDriver）へ委譲され、
  * 実実行の観測（latency / 成功）を CapabilityLearner が学習する。
  * 決定論コンパイラが解釈できないタスクは Stage-2 フォールバックで実機LLMへ委譲。
+ *
+ * opts.forceDelegate=true のときは、ローカル解決が可能と判定されたタスクでも
+ * 必ず実機LLM（general）へ委譲する。これは公平な API 比較ベンチのため
+ * （同じ問題を同じモデルで解かせる）に使う。
+ * opts.maxTokens を指定すると、委譲先 RemoteDriver の生成上限を変更する
+ * （デフォルト 64 のままだと長い回答が途中で切れるため、ベンチでは baseline と揃える）。
  */
-export async function aiosExecute(aios: AiOs, text: string, deviceId?: string): Promise<AiosExecution> {
+export async function aiosExecute(
+  aios: AiOs,
+  text: string,
+  deviceId?: string,
+  opts?: { forceDelegate?: boolean; maxTokens?: number },
+): Promise<AiosExecution> {
   syncAiOs(aios); // 現在接続中の実機を DeviceTree / RemoteDriver へ反映してからルーティング
   const { booted, client } = aios;
   const nodes = client.listNodes();
   const target = deviceId ?? routeCall(booted.deviceTree, nodes.length > 0 ? nodes[0].nodeId : undefined);
+  // maxTokens 指定時は、そのデバイスの RemoteDriver を指定上限で作り直す
+  if (opts?.maxTokens && target && aios.remoteDrivers.has(target)) {
+    aios.remoteDrivers.set(
+      target,
+      new RemoteDriver(`remote:${target}`, `Qwen@${target}`, aios.client, {
+        deviceId: target,
+        maxTokens: opts.maxTokens,
+      }),
+    );
+  }
   const resolver = (expert: string): ExpertDriver | undefined => driverFor(aios, target, expert);
   let ex: AiosExecution;
   try {
     const base = await execute(text, booted, resolver);
-    ex = { ...base, deviceId: target ?? null, learned: base.driverId !== null, fallback: false };
+    // ローカル解決に失敗した場合（ドライバ未使用 & resolvedValue なし）も委譲する。
+    // 例: 「バナナ3本とりんご2個…合計は？」は math と解釈されるが、
+    //     決定論コンパイラが値を出せない → そのまま null を返すのではなく
+    //     実機 LLM（general）へ Stage-2 フォールバックして回答させる。
+    const localFailed =
+      base.driverId === null &&
+      (base.trace.resolvedValue === null || base.trace.resolvedValue === undefined);
+    if (opts?.forceDelegate || localFailed) {
+      ex = await fallbackExecute(aios, text, target, new AilsmError(opts?.forceDelegate ? 'forced delegate (benchmark)' : 'local resolution failed: no value'));
+    } else {
+      ex = { ...base, deviceId: target ?? null, learned: base.driverId !== null, fallback: false };
+    }
   } catch (e) {
     if (!(e instanceof AilsmError)) throw e;
     ex = await fallbackExecute(aios, text, target, e);
