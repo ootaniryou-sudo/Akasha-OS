@@ -1,4 +1,4 @@
-## 概要（Summary）
+# 概要（Summary）
 
 <!-- この PR で何をするのか簡潔に（1〜3文） -->
 
@@ -11,9 +11,10 @@
 ## 動作確認（Verification）
 
 - [ ] `npm run build`（akasha-master）
-- [ ] `npm run ailsm:selftest`（509 件 pass）
+- [ ] `npm run ailsm:selftest`（実測値: ___ 件 pass）
 - [ ] `npm run ailsm:golden`
 - [ ] `npm run ailsa:selftest`
+- [ ] `cargo check`（akasha-kernel-native）
 - [ ] 実機 / 実 API で確認（該当する場合）
 
 <!-- 実行したコマンドと結果を記載。実測値は偽装しない -->

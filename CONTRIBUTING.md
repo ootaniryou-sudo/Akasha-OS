@@ -61,26 +61,36 @@ cd ../akasha-client-web && npm install && npm run build
 > **ブランチ戦略**: 新機能・変更は必ず feature ブランチを経由して main へマージします（main への直接コミットは原則禁止）。CodeRabbit による自動レビューが PR ごとに走ります。
 
 1. `main` から feature ブランチを作成します:
+
    ```bash
    git checkout main && git pull
    git checkout -b feat/<概要>        # 例: feat/api-parallel-bench
    ```
+
 2. 開発・テスト・コミットを feature ブランチ上で行います。
-3. プッシュして PR を作成します:
-   ```bash
-   git push origin feat/<概要>
-   ```
-4. PR には [テンプレート](.github/pull_request_template.md) に従って概要・変更内容・動作確認（build / selftest の実測結果）を記載します。
-5. CodeRabbit のレビューに対応し、必要なら修正を追加コミットします。
-6. レビュー完了後、main へ **squash merge** し、ローカルも更新します:
-   ```bash
-   git checkout main && git pull
-   ```
-7. 動作確認は以下を feature ブランチ上で実行してから PR を出します:
+
+3. 動作確認を feature ブランチ上で実行します（PR 作成前に必須）:
+
    - `npm run build`（akasha-master）
    - `npm run ailsm:selftest`
    - `npm run ailsm:golden` / `npm run ailsa:selftest`
    - `cargo check`（akasha-kernel-native）
+
+4. プッシュして PR を作成します:
+
+   ```bash
+   git push origin feat/<概要>
+   ```
+
+5. PR には [テンプレート](.github/pull_request_template.md) に従って概要・変更内容・動作確認（build / selftest の実測結果）を記載します。
+
+6. CodeRabbit のレビューに対応し、必要なら修正を追加コミットします。
+
+7. レビュー完了後、main へ **squash merge** し、ローカルも更新します:
+
+   ```bash
+   git checkout main && git pull
+   ```
 
 ### CodeRabbit
 

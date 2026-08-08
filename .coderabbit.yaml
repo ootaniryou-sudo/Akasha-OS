@@ -1,6 +1,7 @@
 # CodeRabbit 設定
 # ドキュメント: https://docs.coderabbit.ai/
-# リポジトリ直下の .coderabbit.yaml が GitHub 上の設定より優先される。
+# リポジトリ直下の .coderabbit.yaml は Repository Settings（UI）より優先される。
+# ただし Organization Global Overrides と Enterprise の Workspace Global Overrides は上位。
 
 language: ja-JP
 
@@ -15,7 +16,6 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
-    base: main
   path_instructions:
     - path: akasha-master/src/arcasha/bench/**/*.ts
       instructions: |
