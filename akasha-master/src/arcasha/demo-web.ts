@@ -179,8 +179,14 @@ const html = `<!DOCTYPE html>
       <input id="http-url" type="text" placeholder="HTTPデバイス URL (例: http://192.168.1.10:8080)" style="flex:2;min-width:220px;background:#0e141b;border:1px solid #24313f;border-radius:8px;color:var(--ink);font:inherit;padding:10px 12px;outline:none" />
       <button id="add-http" class="secondary" style="flex:1;min-width:120px">+ HTTP接続</button>
     </div>
+    <div class="input-row" style="flex-wrap:wrap;margin-top:8px">
+      <input id="api-url" type="text" placeholder="外部API base URL (例: https://api.openai.com / http://localhost:11434/v1)" style="flex:2;min-width:200px;background:#0e141b;border:1px solid #24313f;border-radius:8px;color:var(--ink);font:inherit;padding:10px 12px;outline:none" />
+      <input id="api-key" type="password" placeholder="API Key（ローカルのみ・保存しない）" style="flex:1;min-width:140px;background:#0e141b;border:1px solid #24313f;border-radius:8px;color:var(--ink);font:inherit;padding:10px 12px;outline:none" />
+      <input id="api-model" type="text" placeholder="model (gpt-4o-mini)" style="flex:1;min-width:120px;background:#0e141b;border:1px solid #24313f;border-radius:8px;color:var(--ink);font:inherit;padding:10px 12px;outline:none" />
+      <button id="add-api" class="secondary" style="flex:1;min-width:120px">+ API接続</button>
+    </div>
     <div id="device-status" style="color:var(--mute);font-size:12px;margin-top:8px;min-height:16px"></div>
-    <div class="sub" style="margin-top:6px">実機 (iPad/iPhone) はアプリ起動で自動接続 / モックは Web 起動時に 3 台自動起動（--no-mock で無効）</div>
+    <div class="sub" style="margin-top:6px">実機 (iPad/iPhone) はアプリ起動で自動接続 / モックは Web 起動時に 3 台自動起動（--no-mock で無効）/ 外部 API は OpenAI 互換（API Key はブラウザ内のみ・保存しない）</div>
   </div>
 
   <div class="card">
@@ -296,6 +302,30 @@ $('add-http').addEventListener('click', async () => {
   } catch (e) { deviceStatus('❌ ' + e); }
 });
 httpUrlEl.addEventListener('keydown', e => { if (e.key === 'Enter') $('add-http').click(); });
+
+// ─── 外部 API 接続（OpenAI 互換）───────────────────────────────────
+const apiUrlEl = $('api-url');
+const apiKeyEl = $('api-key');
+const apiModelEl = $('api-model');
+$('add-api').addEventListener('click', async () => {
+  const url = apiUrlEl.value.trim();
+  if (!url) { deviceStatus('⚠️ 外部 API の base URL を入力してください'); return; }
+  const apiKey = apiKeyEl.value.trim();
+  const model = apiModelEl.value.trim() || 'gpt-4o-mini';
+  try {
+    const r = await fetch('/api/device/connect', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'api', url, apiKey, model }),
+    });
+    const d = await r.json();
+    deviceStatus(d.ok
+      ? '✅ 外部 API ' + d.nodeId + ' を接続しました (' + d.model + ' @ ' + d.url + (d.hasApiKey ? ' / keyあり' : ' / keyなし') + ')'
+      : '❌ ' + (d.error || '接続失敗'));
+    if (d.ok) { apiUrlEl.value = ''; apiKeyEl.value = ''; }
+    refreshNodes(); refreshInfo();
+  } catch (e) { deviceStatus('❌ ' + e); }
+});
+apiUrlEl.addEventListener('keydown', e => { if (e.key === 'Enter') $('add-api').click(); });
 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -551,7 +581,8 @@ const server = http.createServer((req, res) => {
     req.on('data', (c) => { body += c; });
     req.on('end', () => {
       try {
-        const { type, nodeId, url: baseUrl, modelId } = JSON.parse(body);
+        const parsed = JSON.parse(body) as { type?: string; nodeId?: string; url?: string; modelId?: string; apiKey?: string; model?: string };
+        const { type, nodeId, url: baseUrl, modelId } = parsed;
         if (type === 'mock') {
           const id = nodeId && String(nodeId).trim() ? String(nodeId).trim() : `mock-${Date.now() % 10000}`;
           const ok = hub.addMockNode(id, modelId ? String(modelId) : undefined);
@@ -561,8 +592,18 @@ const server = http.createServer((req, res) => {
           if (!baseUrl || !String(baseUrl).trim()) { sendJson(400, { ok: false, error: 'url required for http device' }); return; }
           const ok = hub.addHttpNode(id, String(baseUrl).trim(), modelId ? String(modelId) : undefined);
           sendJson(ok ? 200 : 409, ok ? { ok, nodeId: id, type: 'http', url: String(baseUrl).trim() } : { ok: false, error: `node ${id} already exists` });
+        } else if (type === 'api') {
+          // 外部 API（OpenAI 互換・API キー認証）を Expert として登録
+          const id = nodeId && String(nodeId).trim() ? String(nodeId).trim() : `api-${Date.now() % 10000}`;
+          if (!baseUrl || !String(baseUrl).trim()) { sendJson(400, { ok: false, error: 'url required for api node' }); return; }
+          const apiKey = (parsed.apiKey as string) ?? '';
+          const model = (parsed.model as string) || 'gpt-4o-mini';
+          const ok = hub.addApiNode(id, String(baseUrl).trim(), apiKey, model);
+          sendJson(ok ? 200 : 409, ok
+            ? { ok, nodeId: id, type: 'api', url: String(baseUrl).trim(), model, hasApiKey: apiKey.length > 0 }
+            : { ok: false, error: `node ${id} already exists` });
         } else {
-          sendJson(400, { ok: false, error: 'type must be "mock" or "http"' });
+          sendJson(400, { ok: false, error: 'type must be "mock", "http" or "api"' });
         }
       } catch (e) {
         sendJson(400, { ok: false, error: String(e) });

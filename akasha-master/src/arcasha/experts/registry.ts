@@ -81,6 +81,8 @@ export class ExpertHub {
   readonly peerLog: PeerMessage[] = [];
   /** HTTP デバイス（llama.cpp server 等）: nodeId → baseUrl */
   readonly httpNodes = new Map<string, string>();
+  /** 外部 API ノード（OpenAI 互換・API キー認証）: nodeId → 設定 */
+  readonly apiNodes = new Map<string, { baseUrl: string; apiKey: string; model: string }>();
   /** モックノード（WS 不要の決定論フェイク） */
   readonly mockNodes = new Set<string>();
   private sockets = new Map<string, WebSocket>();
@@ -183,6 +185,14 @@ export class ExpertHub {
       this.genCacheMiss++;
       return text;
     }
+    // 外部 API ノード（OpenAI 互換・API キー認証）
+    const apiCfg = this.apiNodes.get(nodeId);
+    if (apiCfg) {
+      const text = await this.apiGenerate(apiCfg, prompt, maxTokens);
+      this.genCache.set(key, text);
+      this.genCacheMiss++;
+      return text;
+    }
     // モックノード（WS 不要の決定論フェイク）
     if (this.mockNodes.has(nodeId)) {
       const family = nodeId.split('-').pop() || 'mock';
@@ -236,6 +246,35 @@ export class ExpertHub {
     return text;
   }
 
+  /**
+   * 外部 API（OpenAI 互換 /v1/chat/completions・API キー認証）を呼ぶ。
+   * baseUrl 例: https://api.openai.com  /  https://api.deepseek.com  /  http://localhost:11434/v1
+   * （apiKey は Authorization: Bearer ヘッダーで送る）
+   */
+  private async apiGenerate(cfg: { baseUrl: string; apiKey: string; model: string }, prompt: string, maxTokens: number): Promise<string> {
+    const url = cfg.baseUrl.replace(/\/+$/, '');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (cfg.apiKey) headers['Authorization'] = `Bearer ${cfg.apiKey}`;
+    const res = await fetch(`${url}/v1/chat/completions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: cfg.model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens,
+        temperature: 0,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`API error ${res.status} (${cfg.model}): ${body.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const text = data.choices?.[0]?.message?.content;
+    if (typeof text !== 'string') throw new Error('API returned no content');
+    return text;
+  }
+
   private sendCompute(
     ws: WebSocket,
     requestId: string,
@@ -275,6 +314,7 @@ export class ExpertHub {
       this.sockets.delete(nodeId);
     }
     this.httpNodes.delete(nodeId);
+    this.apiNodes.delete(nodeId);
     this.mockNodes.delete(nodeId);
     const idx = this.experts.findIndex((e) => e.nodeId === nodeId);
     if (idx >= 0) this.experts.splice(idx, 1);
@@ -285,6 +325,46 @@ export class ExpertHub {
   }
 
   // ─── Web コンソールからのデバイス接続（WS 不要）────────────────
+
+  /**
+   * 外部 API（OpenAI 互換・API キー認証）を能力ノードとして登録。
+   * baseUrl 例: https://api.openai.com / https://api.deepseek.com / http://localhost:11434/v1
+   * →「API も Expert になる」（ローカルモデルに限らず外部知能も同じ能力ノード）
+   */
+  addApiNode(nodeId: string, baseUrl: string, apiKey: string, model = 'gpt-4o-mini'): boolean {
+    if (this.experts.some((e) => e.nodeId === nodeId)) return false;
+    const now = Date.now();
+    const sim = simMetric(nodeId);
+    this.nodeDetails.set(nodeId, {
+      platform: 'api',
+      device: 'External API',
+      backend: 'openai-compatible',
+      precision: 'auto',
+      baseUrl,
+      model,
+      hasApiKey: apiKey.length > 0,
+      capabilities: { general: 0.95, knowledge: 0.95 },
+    });
+    this.nodeMetrics.set(nodeId, {
+      batteryPct: 100,
+      rttMs: sim.rttMs,
+      powerMw: 100, // 外部 API はローカル電力消費がほぼ無い
+      connectedAt: now,
+      lastSeenAt: now,
+      source: 'sim',
+    });
+    this.experts.push({
+      nodeId,
+      modelId: model,
+      family: 'api',
+      paramsM: 0,
+      memoryGB: 0,
+      temperature: 0.6,
+    });
+    this.apiNodes.set(nodeId, { baseUrl, apiKey, model });
+    console.log(`  ✅ api expert ${nodeId} (${model} @ ${baseUrl}) → ${this.assignCaravan(nodeId)}`);
+    return true;
+  }
 
   /** モックノードを直接登録（Web 起動時に自動で試せる基盤） */
   addMockNode(nodeId: string, modelId = 'HuggingFaceTB/SmolLM2-135M-Instruct'): boolean {
