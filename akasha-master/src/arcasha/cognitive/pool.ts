@@ -16,6 +16,12 @@ export interface PoolExpert {
   outputType: string; // 出力データ型
   cost: number;       // 0-1 推定コスト
   latencyMs: number;  // 推定レイテンシ
+  /**
+   * 実モデル実行（任意）。指定されれば Cognitive Runtime はこの関数を呼ぶ。
+   * 未指定なら決定論の genIr() で IR を生成する（Simulation）。
+   * →「Cognitive Graph の仕組み」と「実モデルを接続した状態」を同一インターフェースで扱える。
+   */
+  execute?: (opts: { task: string; input?: { key: string; value: string } }) => Promise<{ ir: string; ms: number; ok: boolean }>;
 }
 
 /** AI Pool — タスクが来るまで誰も所属しない */

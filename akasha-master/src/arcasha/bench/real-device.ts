@@ -72,10 +72,12 @@ export async function runRealDeviceBenchmarkMeasured(
     devices: string[]; // 接続中の実機ノード ID（Hub の expert 一覧）
     generate: (nodeId: string, prompt: string, maxTokens?: number) => Promise<{ text: string; ms: number; tokens: number }>;
     suites?: BenchSuite[];
-    getMetric?: (nodeId: string) => { batteryPct: number; rttMs: number; powerMw: number; source: string } | undefined;
+    getMetric?: (nodeId: string) => { batteryPct: number; rttMs: number; powerMw: number; source: string; temperatureC?: number | null } | undefined;
+    /** 正答判定（実測）。無ければ accuracy は null（応答あり ≠ 正解 なので偽装しない）。 */
+    evaluate?: (nodeId: string, prompt: string, output: string, reference: string) => boolean;
   },
 ): Promise<RealDeviceBenchmarkResult> {
-  const { devices, generate } = opts;
+  const { devices, generate, evaluate } = opts;
   const suites = opts.suites ?? ALL_BENCH_SUITES.filter((s) => REAL_DEVICE_PROFILE.suites.includes(s.id));
   if (devices.length === 0) {
     return {
@@ -101,26 +103,28 @@ export async function runRealDeviceBenchmarkMeasured(
             const r = await generate(device, sample.prompt, 64);
             totalMs += r.ms;
             totalTokens += r.tokens;
-            // 正答判定: 品質モデルではなく、実機出力を難易度基準で評価（決定論）
-            // 実機の出力は真偽判定が難しいため、品質近似を実機 latency で重み付けせず、
-            // サンプル難易度に対する実機の応答有無を正答とする（応答あり = pass）。
-            const responded = r.text.trim().length > 0;
-            if (responded) passCount++;
+            // 正答判定: evaluate が注入されている場合のみ accuracy を算出。
+            // 「応答があった = 正解」とはしない（数値を偽装しない）。
+            if (evaluate) {
+              if (evaluate(device, sample.prompt, r.text, sample.reference)) passCount++;
+            }
             sampleCount++;
           } catch {
             // 実機エラーはそのサンプルをスキップ
           }
         }
         const m = opts.getMetric?.(device);
-        const acc = sampleCount > 0 ? passCount / sampleCount : 0;
+        // accuracy は evaluate が無ければ null（実測できない項目は入れる値を偽装しない）
+        const acc = evaluate && sampleCount > 0 ? passCount / sampleCount : null;
         rows.push({
           device,
           suite: suite.id,
           config,
           latencyMs: sampleCount > 0 ? Math.round(totalMs / sampleCount) : null,
           powerMw: m?.powerMw ?? null,
-          temperatureC: m ? 36 + ((m.rttMs ?? 20) % 5) : null,
-          accuracy: sampleCount > 0 ? acc : null,
+          // 温度は実測できる場合のみ（getMetric に temperatureC がある場合）。無ければ null。
+          temperatureC: m?.temperatureC ?? null,
+          accuracy: acc,
           tokens: sampleCount > 0 ? Math.round(totalTokens / sampleCount) : null,
           memoryMb: null,
           status: sampleCount > 0 ? 'measured' : 'not-connected',
@@ -135,7 +139,9 @@ export async function runRealDeviceBenchmarkMeasured(
     devices,
     rows,
     note: rows.some((r) => r.status === 'measured')
-      ? '実機実測（Hub 経由で実機 LLM に各サンプルを実行）。Simulation と区別して報告します。'
+      ? (evaluate
+          ? '実機実測（Hub 経由で実機 LLM に各サンプルを実行 + 正答判定を実施）。Simulation と区別して報告します。'
+          : '実機実測（Hub 経由で実機 LLM に各サンプルを実行）。accuracy は正答判定が未指定のため null（「応答あり ≠ 正解」なので偽装しない）。温度も実測不能のため null。')
       : 'デバイスは登録されていますが、実機 LLM への実行が全て失敗しました（実行環境を確認してください）。',
   };
 }

@@ -21,6 +21,9 @@ import { encodeProgram } from './ailsa/encoder.js';
 import { runComparisonBenchmark } from './ailsm/comparison.js';
 import { runScalingExperiment, renderScaling } from './ailsm/experiment.js';
 import { runRealDeviceBenchmarkMeasured } from './bench/real-device.js';
+import { AI_POOL, type PoolExpert } from './cognitive/pool.js';
+import { composeTeam } from './cognitive/capability-graph.js';
+import { runCognitive, renderCognitive } from './cognitive/runtime.js';
 
 let WS_PORT = Number(process.env.PORT ?? 8080);
 let WEB_PORT = Number(process.env.WEB_PORT ?? 4173);
@@ -60,6 +63,13 @@ function nextNodeId(): string | undefined {
   const n = nodes[rrCursor % nodes.length];
   rrCursor++;
   return n.nodeId;
+}
+
+/** 決定論ハッシュ（ノード選択などで再現可能に使う） */
+function hashOf(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
 }
 
 // ─── AI OS 本体（Phase 1.2: Hub が AI OS の init になる）────────────────
@@ -588,6 +598,54 @@ const server = http.createServer((req, res) => {
           },
         });
         sendJson(200, r);
+      } catch (e) {
+        sendJson(400, { ok: false, error: String(e) });
+      }
+    });
+    return;
+  }
+
+  // ─── Cognitive Graph API（実モデル接続 / シミュレーション）────────
+  if (url.pathname === '/api/cognitive' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', async () => {
+      try {
+        const { text } = JSON.parse(body);
+        if (!text) { sendJson(400, { ok: false, error: 'text required' }); return; }
+
+        // 実モデルノード（WS 実機 + HTTP デバイス）。モックのみ除外。
+        // →「Expert = 必ずしもローカル LLM ではない」（API / 実機 / クラウドも能力ノード）
+        const realNodes = hub.experts.filter((e) => !hub.mockNodes.has(e.nodeId));
+        const usedReal = realNodes.length > 0;
+
+        // AI Pool の各 Expert に「実モデル実行」を注入する
+        // （実機/API があれば hub.generate で実行、無ければ execute なし = 決定論 genIr シミュレーション）
+        const pool: PoolExpert[] = AI_POOL.map((e) => {
+          if (!usedReal) return e;
+          const nodeId = realNodes[Math.floor(Math.abs(hashOf(e.id + text)) % realNodes.length)].nodeId;
+          return {
+            ...e,
+            execute: async ({ task, input }) => {
+              const t0 = Date.now();
+              // 実モデルへ: その Expert の役割と入力を自然言語プロンプトに載せて生成させる
+              const prompt = `[${e.role} expert] 入力: ${input?.value ?? '(なし)'} / タスク: ${task} → 出力（${e.outputType} として 1 行で）:`;
+              const out = await hub.generate(nodeId, prompt, 48);
+              const ms = Date.now() - t0;
+              return { ir: `${e.outputType}: ${out.trim().slice(0, 120)}`, ms, ok: out.trim().length > 0 };
+            },
+          };
+        });
+
+        const team = composeTeam(pool, String(text));
+        const r = await runCognitive(team, String(text));
+        sendJson(200, {
+          ok: true,
+          usedReal, // true = 実モデル接続 / false = 決定論シミュレーション
+          deviceIds: usedReal ? realNodes.map((n) => n.nodeId) : [],
+          result: r,
+          text: renderCognitive(r),
+        });
       } catch (e) {
         sendJson(400, { ok: false, error: String(e) });
       }

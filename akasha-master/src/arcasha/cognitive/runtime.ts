@@ -72,6 +72,11 @@ function genIr(expert: PoolExpert, task: string, input: SharedMemoryEntry | unde
 /**
  * 一時的認知ネットワークの実行:
  * 各 Expert が共有メモリから入力型を読み、出力型（IR）を共有メモリに書き込む。
+ *
+ * 実行は 2 系統:
+ *   - Expert.execute が指定されていれば「実モデル / API / 実機」で実行
+ *   - 未指定なら決定論の genIr()（Simulation）で実行
+ * これにより「Cognitive Graph の仕組み」と「実モデル接続」を同じランタイムで扱える。
  */
 export async function runCognitive(team: ComposedTeam, task: string): Promise<CognitiveRunResult> {
   const memory: SharedMemoryEntry[] = [];
@@ -81,11 +86,32 @@ export async function runCognitive(team: ComposedTeam, task: string): Promise<Co
   for (const member of team.members) {
     // 共有メモリから入力型の最新値を読む（全員が見られる）
     const input = [...memory].reverse().find((m) => m.key === member.inputType);
-    let h = 0;
-    const s = task + member.id;
-    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-    const ms = member.latencyMs + (h % 40);
-    const ir = genIr(member, task, input);
+    let ms: number;
+    let ir: string;
+
+    if (member.execute) {
+      // 実モデル / API / 実機 で実行（Expert が IR を返す）
+      const r = await member.execute({
+        task,
+        input: input ? { key: input.key, value: input.value } : undefined,
+      });
+      ms = r.ms;
+      ir = r.ir;
+      if (!r.ok) {
+        // 実行失敗: エラーを示す IR を共有メモリに残し、このメンバーをスキップ扱いにする
+        memory.push({ key: member.outputType, value: `error: ${ir.slice(0, 60)}`, by: member.id, at: Date.now() });
+        steps.push({ expert: member.id, inputKey: member.inputType, outputKey: member.outputType, ir: `error: ${ir.slice(0, 40)}`, ms });
+        continue;
+      }
+    } else {
+      // Simulation（決定論）: 型付き IR をハッシュから生成
+      let h = 0;
+      const s = task + member.id;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      ms = member.latencyMs + (h % 40);
+      ir = genIr(member, task, input);
+    }
+
     memory.push({ key: member.outputType, value: ir, by: member.id, at: Date.now() });
     steps.push({ expert: member.id, inputKey: member.inputType, outputKey: member.outputType, ir, ms });
   }
