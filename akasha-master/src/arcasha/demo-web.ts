@@ -9,7 +9,12 @@
  * 使い方:
  *   npx tsx src/arcasha/demo-web.ts               # WS:8080 / Web:4173
  *   npx tsx src/arcasha/demo-web.ts --port 8080 --web-port 4173
+ *
+ * 環境変数 / .env:
+ *   DEEPSEEK_API_KEY / DEEPSEEK_API_BASE / DEEPSEEK_MODEL を設定すると
+ *   DeepSeek を能力ノードとして自動接続する（ARKASHA_AUTO_API=deepseek）
  */
+import 'dotenv/config';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -54,6 +59,22 @@ for (let i = 0; i < mockCount; i++) {
   hub.addMockNode(id);
 }
 if (mockCount > 0) console.log(`  🧪 モックノード ${mockCount} 台を自動起動（--no-mock で無効）`);
+
+// ─── 外部 API 自動接続（.env / 環境変数）────────────────────────────
+// DEEPSEEK_API_KEY が設定されていれば DeepSeek を能力ノードとして自動登録する。
+// ARCASHA_AUTO_API=deepseek または DEEPSEEK_API_KEY の存在で有効化。
+const autoApi = process.env.ARCASHA_AUTO_API ?? '';
+const hasDeepSeekKey = !!(process.env.DEEPSEEK_API_KEY ?? '');
+if (autoApi.includes('deepseek') || hasDeepSeekKey) {
+  const key = process.env.DEEPSEEK_API_KEY ?? '';
+  const base = process.env.DEEPSEEK_API_BASE ?? 'https://api.deepseek.com';
+  const model = process.env.DEEPSEEK_MODEL ?? 'deepseek-chat';
+  const nodeId = 'api-deepseek';
+  if (key || !/^https:\/\//.test(base)) { // キー必須（Ollama 等のローカルはキー不要）
+    hub.addApiNode(nodeId, base, key, model);
+    console.log(`  ☁️ 外部 API 自動接続: ${nodeId} (${model} @ ${base})`);
+  }
+}
 
 // ノードをラウンドロビンで選択（複数端末に分散 → 役職の偏りが可視化される）
 let rrCursor = 0;
