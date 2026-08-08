@@ -58,11 +58,44 @@ cd ../akasha-client-web && npm install && npm run build
 
 ## Pull Request Process
 
-1. Fork the repo and create your branch from `main`.
-2. If you've added code, add tests where possible.
-3. Ensure `npm run build` (akasha-master) or `cargo check` (kernel) passes.
-4. Update the README if you've changed APIs.
-5. Submit a PR with a clear description.
+> **ブランチ戦略**: 新機能・変更は必ず feature ブランチを経由して main へマージします（main への直接コミットは原則禁止）。CodeRabbit による自動レビューが PR ごとに走ります。
+
+1. `main` から feature ブランチを作成します:
+
+   ```bash
+   git checkout main && git pull
+   git checkout -b feat/<概要>        # 例: feat/api-parallel-bench
+   ```
+
+2. 開発・テスト・コミットを feature ブランチ上で行います。
+
+3. 動作確認を feature ブランチ上で実行します（PR 作成前に必須・リポジトリ直下から）:
+
+   - `npm run build`
+   - `npm run selftest`
+   - `npm run golden` / `npm run ailsa:selftest`
+   - `cargo check`（akasha-kernel-native）
+
+4. プッシュして PR を作成します:
+
+   ```bash
+   git push origin feat/<概要>
+   ```
+
+5. PR には [テンプレート](.github/pull_request_template.md) に従って概要・変更内容・動作確認（build / selftest の実測結果）を記載します。
+
+6. CodeRabbit のレビューに対応し、必要なら修正を追加コミットします。
+
+7. レビュー完了後、main へ **squash merge** し、ローカルも更新します:
+
+   ```bash
+   git checkout main && git pull
+   ```
+
+### CodeRabbit
+
+- PR 作成時に [CodeRabbit](https://www.coderabbit.ai/) が自動レビューします（`.coderabbit.yaml` で設定）。
+- レビューコメントは PR の会話に自動投稿され、`@coderabbitai` にメンションすることで対話・修正提案を受けられます。
 
 ## Community Channels
 
