@@ -1,0 +1,640 @@
+{
+  "experiment": "EXP-0003",
+  "description": "Heterogeneous Experts: Belief(Node, Task) learning",
+  "timestamp": "2026-08-01T11:35:42.278Z",
+  "config": {
+    "observe_per_task": 3,
+    "fixed_profile": {
+      "qwen": {
+        "coding": 0.85,
+        "math": 0.75
+      },
+      "smollm": {
+        "coding": 0.7,
+        "math": 0.65
+      },
+      "gemma": {
+        "coding": 0.8,
+        "math": 0.85
+      }
+    },
+    "weights": {
+      "cap": 0.5,
+      "lat": 0.15,
+      "stab": 0.35
+    }
+  },
+  "experts": [
+    {
+      "node_id": "node-qwen",
+      "model_id": "Qwen/Qwen3-0.6B",
+      "family": "qwen"
+    },
+    {
+      "node_id": "node-smollm",
+      "model_id": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "family": "smollm"
+    },
+    {
+      "node_id": "node-gemma",
+      "model_id": "unsloth/gemma-3-1b-it",
+      "family": "gemma"
+    }
+  ],
+  "metrics": {
+    "fixed": {
+      "routing_accuracy": 0.2,
+      "avg_eval": 0.475
+    },
+    "belief": {
+      "routing_accuracy": 0.6,
+      "avg_eval": 0.67
+    }
+  },
+  "final_belief": {
+    "node-qwen": {
+      "coding": {
+        "mu": 0.3,
+        "n": 8,
+        "confidence": 0.632,
+        "effective": 0.19
+      },
+      "math": {
+        "mu": 0.525,
+        "n": 8,
+        "confidence": 0.632,
+        "effective": 0.332
+      }
+    },
+    "node-smollm": {
+      "coding": {
+        "mu": 0.525,
+        "n": 8,
+        "confidence": 0.632,
+        "effective": 0.332
+      },
+      "math": {
+        "mu": 0.75,
+        "n": 8,
+        "confidence": 0.632,
+        "effective": 0.474
+      }
+    },
+    "node-gemma": {
+      "coding": {
+        "mu": 0.3,
+        "n": 8,
+        "confidence": 0.632,
+        "effective": 0.19
+      },
+      "math": {
+        "mu": 0.812,
+        "n": 8,
+        "confidence": 0.632,
+        "effective": 0.513
+      }
+    }
+  },
+  "trajectory": [
+    {
+      "step": 7,
+      "phase": "verify",
+      "capability": "coding",
+      "prompt": "Create a Python class for a bank account with deposit and withdraw methods.",
+      "scores": {
+        "node-qwen": 0.2,
+        "node-smollm": 0.6,
+        "node-gemma": 0.4
+      },
+      "fixedChoice": "node-qwen",
+      "beliefChoice": "node-smollm",
+      "oracle": "node-smollm",
+      "fixedScore": 0.2,
+      "beliefScore": 0.6,
+      "belief": {
+        "node-qwen": {
+          "coding": {
+            "mu": 0.3,
+            "n": 4,
+            "confidence": 0.393
+          },
+          "math": {
+            "mu": 0.367,
+            "n": 3,
+            "confidence": 0.313
+          }
+        },
+        "node-smollm": {
+          "coding": {
+            "mu": 0.5,
+            "n": 4,
+            "confidence": 0.393
+          },
+          "math": {
+            "mu": 0.7,
+            "n": 3,
+            "confidence": 0.313
+          }
+        },
+        "node-gemma": {
+          "coding": {
+            "mu": 0.3,
+            "n": 4,
+            "confidence": 0.393
+          },
+          "math": {
+            "mu": 0.9,
+            "n": 3,
+            "confidence": 0.313
+          }
+        }
+      }
+    },
+    {
+      "step": 8,
+      "phase": "verify",
+      "capability": "coding",
+      "prompt": "Write a Python function that checks if a string is a palindrome.",
+      "scores": {
+        "node-qwen": 0.4,
+        "node-smollm": 0.6,
+        "node-gemma": 0.4
+      },
+      "fixedChoice": "node-qwen",
+      "beliefChoice": "node-smollm",
+      "oracle": "node-smollm",
+      "fixedScore": 0.4,
+      "beliefScore": 0.6,
+      "belief": {
+        "node-qwen": {
+          "coding": {
+            "mu": 0.32,
+            "n": 5,
+            "confidence": 0.465
+          },
+          "math": {
+            "mu": 0.367,
+            "n": 3,
+            "confidence": 0.313
+          }
+        },
+        "node-smollm": {
+          "coding": {
+            "mu": 0.52,
+            "n": 5,
+            "confidence": 0.465
+          },
+          "math": {
+            "mu": 0.7,
+            "n": 3,
+            "confidence": 0.313
+          }
+        },
+        "node-gemma": {
+          "coding": {
+            "mu": 0.32,
+            "n": 5,
+            "confidence": 0.465
+          },
+          "math": {
+            "mu": 0.9,
+            "n": 3,
+            "confidence": 0.313
+          }
+        }
+      }
+    },
+    {
+      "step": 9,
+      "phase": "verify",
+      "capability": "coding",
+      "prompt": "Implement a function to sort a list of integers using bubble sort.",
+      "scores": {
+        "node-qwen": 0.2,
+        "node-smollm": 0.8,
+        "node-gemma": 0.2
+      },
+      "fixedChoice": "node-qwen",
+      "beliefChoice": "node-smollm",
+      "oracle": "node-smollm",
+      "fixedScore": 0.2,
+      "beliefScore": 0.8,
+      "belief": {
+        "node-qwen": {
+          "coding": {
+            "mu": 0.3,
+            "n": 6,
+            "confidence": 0.528
+          },
+          "math": {
+            "mu": 0.367,
+            "n": 3,
+            "confidence": 0.313
+          }
+        },
+        "node-smollm": {
+          "coding": {
+            "mu": 0.567,
+            "n": 6,
+            "confidence": 0.528
+          },
+          "math": {
+            "mu": 0.7,
+            "n": 3,
+            "confidence": 0.313
+          }
+        },
+        "node-gemma": {
+          "coding": {
+            "mu": 0.3,
+            "n": 6,
+            "confidence": 0.528
+          },
+          "math": {
+            "mu": 0.9,
+            "n": 3,
+            "confidence": 0.313
+          }
+        }
+      }
+    },
+    {
+      "step": 10,
+      "phase": "verify",
+      "capability": "coding",
+      "prompt": "Write a Python function to find the maximum element in an array.",
+      "scores": {
+        "node-qwen": 0.2,
+        "node-smollm": 0.4,
+        "node-gemma": 0.2
+      },
+      "fixedChoice": "node-qwen",
+      "beliefChoice": "node-smollm",
+      "oracle": "node-smollm",
+      "fixedScore": 0.2,
+      "beliefScore": 0.4,
+      "belief": {
+        "node-qwen": {
+          "coding": {
+            "mu": 0.286,
+            "n": 7,
+            "confidence": 0.583
+          },
+          "math": {
+            "mu": 0.367,
+            "n": 3,
+            "confidence": 0.313
+          }
+        },
+        "node-smollm": {
+          "coding": {
+            "mu": 0.543,
+            "n": 7,
+            "confidence": 0.583
+          },
+          "math": {
+            "mu": 0.7,
+            "n": 3,
+            "confidence": 0.313
+          }
+        },
+        "node-gemma": {
+          "coding": {
+            "mu": 0.286,
+            "n": 7,
+            "confidence": 0.583
+          },
+          "math": {
+            "mu": 0.9,
+            "n": 3,
+            "confidence": 0.313
+          }
+        }
+      }
+    },
+    {
+      "step": 11,
+      "phase": "verify",
+      "capability": "coding",
+      "prompt": "Implement a function that counts word frequency in a string.",
+      "scores": {
+        "node-qwen": 0.4,
+        "node-smollm": 0.4,
+        "node-gemma": 0.4
+      },
+      "fixedChoice": "node-qwen",
+      "beliefChoice": "node-smollm",
+      "oracle": "node-qwen",
+      "fixedScore": 0.4,
+      "beliefScore": 0.4,
+      "belief": {
+        "node-qwen": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.367,
+            "n": 3,
+            "confidence": 0.313
+          }
+        },
+        "node-smollm": {
+          "coding": {
+            "mu": 0.525,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.7,
+            "n": 3,
+            "confidence": 0.313
+          }
+        },
+        "node-gemma": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.9,
+            "n": 3,
+            "confidence": 0.313
+          }
+        }
+      }
+    },
+    {
+      "step": 12,
+      "phase": "verify",
+      "capability": "math",
+      "prompt": "Calculate the derivative of f(x) = x^3 + 2x^2 - 5x + 1",
+      "scores": {
+        "node-qwen": 0.25,
+        "node-smollm": 1,
+        "node-gemma": 1
+      },
+      "fixedChoice": "node-gemma",
+      "beliefChoice": "node-smollm",
+      "oracle": "node-smollm",
+      "fixedScore": 1,
+      "beliefScore": 1,
+      "belief": {
+        "node-qwen": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.338,
+            "n": 4,
+            "confidence": 0.393
+          }
+        },
+        "node-smollm": {
+          "coding": {
+            "mu": 0.525,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.775,
+            "n": 4,
+            "confidence": 0.393
+          }
+        },
+        "node-gemma": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.925,
+            "n": 4,
+            "confidence": 0.393
+          }
+        }
+      }
+    },
+    {
+      "step": 13,
+      "phase": "verify",
+      "capability": "math",
+      "prompt": "Find the sum of all even numbers from 1 to 100.",
+      "scores": {
+        "node-qwen": 0.95,
+        "node-smollm": 1,
+        "node-gemma": 0.45
+      },
+      "fixedChoice": "node-gemma",
+      "beliefChoice": "node-smollm",
+      "oracle": "node-smollm",
+      "fixedScore": 0.45,
+      "beliefScore": 1,
+      "belief": {
+        "node-qwen": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.46,
+            "n": 5,
+            "confidence": 0.465
+          }
+        },
+        "node-smollm": {
+          "coding": {
+            "mu": 0.525,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.82,
+            "n": 5,
+            "confidence": 0.465
+          }
+        },
+        "node-gemma": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.83,
+            "n": 5,
+            "confidence": 0.465
+          }
+        }
+      }
+    },
+    {
+      "step": 14,
+      "phase": "verify",
+      "capability": "math",
+      "prompt": "What is the area of a circle with radius 5?",
+      "scores": {
+        "node-qwen": 0.7,
+        "node-smollm": 0.7,
+        "node-gemma": 0.7
+      },
+      "fixedChoice": "node-gemma",
+      "beliefChoice": "node-smollm",
+      "oracle": "node-qwen",
+      "fixedScore": 0.7,
+      "beliefScore": 0.7,
+      "belief": {
+        "node-qwen": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.5,
+            "n": 6,
+            "confidence": 0.528
+          }
+        },
+        "node-smollm": {
+          "coding": {
+            "mu": 0.525,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.8,
+            "n": 6,
+            "confidence": 0.528
+          }
+        },
+        "node-gemma": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.808,
+            "n": 6,
+            "confidence": 0.528
+          }
+        }
+      }
+    },
+    {
+      "step": 15,
+      "phase": "verify",
+      "capability": "math",
+      "prompt": "Solve for x: 2x^2 + 3x - 5 = 0",
+      "scores": {
+        "node-qwen": 1,
+        "node-smollm": 1,
+        "node-gemma": 0.95
+      },
+      "fixedChoice": "node-qwen",
+      "beliefChoice": "node-smollm",
+      "oracle": "node-qwen",
+      "fixedScore": 1,
+      "beliefScore": 1,
+      "belief": {
+        "node-qwen": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.571,
+            "n": 7,
+            "confidence": 0.583
+          }
+        },
+        "node-smollm": {
+          "coding": {
+            "mu": 0.525,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.829,
+            "n": 7,
+            "confidence": 0.583
+          }
+        },
+        "node-gemma": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.828,
+            "n": 7,
+            "confidence": 0.583
+          }
+        }
+      }
+    },
+    {
+      "step": 16,
+      "phase": "verify",
+      "capability": "math",
+      "prompt": "Compute the value of log base 10 of 1000.",
+      "scores": {
+        "node-qwen": 0.2,
+        "node-smollm": 0.2,
+        "node-gemma": 0.7
+      },
+      "fixedChoice": "node-smollm",
+      "beliefChoice": "node-smollm",
+      "oracle": "node-gemma",
+      "fixedScore": 0.2,
+      "beliefScore": 0.2,
+      "belief": {
+        "node-qwen": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.525,
+            "n": 8,
+            "confidence": 0.632
+          }
+        },
+        "node-smollm": {
+          "coding": {
+            "mu": 0.525,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.75,
+            "n": 8,
+            "confidence": 0.632
+          }
+        },
+        "node-gemma": {
+          "coding": {
+            "mu": 0.3,
+            "n": 8,
+            "confidence": 0.632
+          },
+          "math": {
+            "mu": 0.812,
+            "n": 8,
+            "confidence": 0.632
+          }
+        }
+      }
+    }
+  ]
+}

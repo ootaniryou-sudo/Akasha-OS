@@ -1,0 +1,166 @@
+{
+  "experiment": "EXP-0002F",
+  "description": "Shadow Expert Feedback (Main + Shadow verification)",
+  "timestamp": "2026-08-01T07:28:43.230Z",
+  "config": {
+    "threshold": 0.5
+  },
+  "completed": 10,
+  "total_ms": 24982,
+  "avg_overlap": 0.886,
+  "accept_count": 9,
+  "flag_count": 1,
+  "accept_rate": 90,
+  "nodes": [
+    {
+      "node_id": "node-onnx",
+      "backend": "onnx",
+      "precision": "fp16",
+      "static_stability": 0.992,
+      "dynamic_agreement": 0.743,
+      "main_roles": 10,
+      "shadow_roles": 0
+    },
+    {
+      "node_id": "node-torch-fp16",
+      "backend": "pytorch",
+      "precision": "fp16",
+      "static_stability": 0.95,
+      "dynamic_agreement": 1,
+      "main_roles": 0,
+      "shadow_roles": 10
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "req-0000",
+      "prompt": "Write a Python function to calculate fac",
+      "capability": "coding",
+      "main_node": "node-onnx",
+      "shadow_node": "node-torch-fp16",
+      "main_tokens": 32,
+      "shadow_tokens": 32,
+      "overlap_pct": 1,
+      "verdict": "ACCEPT ✅",
+      "main_ms": 1831.1,
+      "shadow_ms": 1387.7
+    },
+    {
+      "request_id": "req-0001",
+      "prompt": "What is the integral of x^2 from 0 to 1?",
+      "capability": "math",
+      "main_node": "node-onnx",
+      "shadow_node": "node-torch-fp16",
+      "main_tokens": 32,
+      "shadow_tokens": 32,
+      "overlap_pct": 1,
+      "verdict": "ACCEPT ✅",
+      "main_ms": 1345.7,
+      "shadow_ms": 950.6
+    },
+    {
+      "request_id": "req-0002",
+      "prompt": "Implement a binary search algorithm in P",
+      "capability": "coding",
+      "main_node": "node-onnx",
+      "shadow_node": "node-torch-fp16",
+      "main_tokens": 32,
+      "shadow_tokens": 32,
+      "overlap_pct": 1,
+      "verdict": "ACCEPT ✅",
+      "main_ms": 1326.2,
+      "shadow_ms": 903.1
+    },
+    {
+      "request_id": "req-0003",
+      "prompt": "Solve the equation: 3x + 7 = 22",
+      "capability": "math",
+      "main_node": "node-onnx",
+      "shadow_node": "node-torch-fp16",
+      "main_tokens": 32,
+      "shadow_tokens": 32,
+      "overlap_pct": 1,
+      "verdict": "ACCEPT ✅",
+      "main_ms": 1403.7,
+      "shadow_ms": 1125.4
+    },
+    {
+      "request_id": "req-0004",
+      "prompt": "Write a function that reverses a linked ",
+      "capability": "coding",
+      "main_node": "node-onnx",
+      "shadow_node": "node-torch-fp16",
+      "main_tokens": 32,
+      "shadow_tokens": 32,
+      "overlap_pct": 0.85,
+      "verdict": "ACCEPT ✅",
+      "main_ms": 1420.6,
+      "shadow_ms": 930.6
+    },
+    {
+      "request_id": "req-0005",
+      "prompt": "What is 15% of 340?",
+      "capability": "math",
+      "main_node": "node-onnx",
+      "shadow_node": "node-torch-fp16",
+      "main_tokens": 32,
+      "shadow_tokens": 32,
+      "overlap_pct": 1,
+      "verdict": "ACCEPT ✅",
+      "main_ms": 1352,
+      "shadow_ms": 912.2
+    },
+    {
+      "request_id": "req-0006",
+      "prompt": "Create a Python class for a bank account",
+      "capability": "coding",
+      "main_node": "node-onnx",
+      "shadow_node": "node-torch-fp16",
+      "main_tokens": 32,
+      "shadow_tokens": 32,
+      "overlap_pct": 1,
+      "verdict": "ACCEPT ✅",
+      "main_ms": 1358.5,
+      "shadow_ms": 948
+    },
+    {
+      "request_id": "req-0007",
+      "prompt": "Calculate the derivative of f(x) = x^3 +",
+      "capability": "math",
+      "main_node": "node-onnx",
+      "shadow_node": "node-torch-fp16",
+      "main_tokens": 32,
+      "shadow_tokens": 32,
+      "overlap_pct": 0.875,
+      "verdict": "ACCEPT ✅",
+      "main_ms": 1663.7,
+      "shadow_ms": 1241
+    },
+    {
+      "request_id": "req-0008",
+      "prompt": "Explain machine learning briefly.",
+      "capability": "general",
+      "main_node": "node-onnx",
+      "shadow_node": "node-torch-fp16",
+      "main_tokens": 32,
+      "shadow_tokens": 32,
+      "overlap_pct": 0.684,
+      "verdict": "ACCEPT ✅",
+      "main_ms": 1482.4,
+      "shadow_ms": 980
+    },
+    {
+      "request_id": "req-0009",
+      "prompt": "What is the capital of Japan?",
+      "capability": "general",
+      "main_node": "node-onnx",
+      "shadow_node": "node-torch-fp16",
+      "main_tokens": 32,
+      "shadow_tokens": 32,
+      "overlap_pct": 0.45,
+      "verdict": "FLAG ⚠️ (0.45)",
+      "main_ms": 1505,
+      "shadow_ms": 912.9
+    }
+  ]
+}

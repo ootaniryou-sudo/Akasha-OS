@@ -1,0 +1,98 @@
+<!DOCTYPE html><html><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>ArcAsha Node</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#0f0;font:13px monospace;padding:10px}
+.card{background:#111;border:1px solid #222;padding:8px;margin:5px 0;border-radius:4px;word-break:break-all}
+.pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:#0f0;animation:pulse 2s infinite;margin-right:6px;vertical-align:middle}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
+button{display:block;width:100%;padding:14px;margin:10px 0;background:#0a0;color:#000;border:none;border-radius:4px;font:bold 14px monospace;cursor:pointer;-webkit-appearance:none}
+button:active{background:#0c0}
+button:disabled{background:#333;color:#666}
+input{width:100%;padding:10px;margin:5px 0;background:#111;color:#0f0;border:1px solid #333;border-radius:3px;font:13px monospace}
+</style></head><body>
+
+<h1>🧠 ArcAsha</h1>
+<div><span class="pulse" id="dot"></span><span id="status" style="color:#f80">Disconnected</span></div>
+
+<div class="card" id="info"></div>
+
+<input id="url" value="ws://192.168.0.17:8080" placeholder="ws://IP:8080">
+<button id="btn" onclick="go()">🔗 Connect</button>
+
+<div class="card" id="log"></div>
+
+<script>
+var $=function(id){return document.getElementById(id)};
+var info=$('info'),logEl=$('log'),stat=$('status'),dot=$('dot'),btn=$('btn');
+var ws=null;
+
+function L(m,c){var d=document.createElement('div');d.innerHTML='<span style="color:'+(c||'#0f0')+'">'+m+'</span>';logEl.insertBefore(d,logEl.firstChild)}
+
+// Device info
+info.innerHTML=[
+  '<b>iPhone 12 mini</b>',
+  'iOS '+ (navigator.userAgent.match(/OS (\d+_\d+)/)||['','?'])[1].replace('_','.'),
+  'Cores: '+(navigator.hardwareConcurrency||'?'),
+  'WebGPU: '+(navigator.gpu?'YES':'NO'),
+].join(' | ');
+
+function go(){
+  if(ws){ws.close();ws=null;stat.textContent='Disconnected';stat.style.color='#f80';dot.style.background='#f80';btn.textContent='🔗 Connect';btn.disabled=false;return}
+
+  var url=$('url').value.trim();
+  if(!url){L('No URL','#f00');return}
+
+  btn.disabled=true;btn.textContent='⏳ Connecting...';
+  stat.textContent='Connecting...';stat.style.color='#f80';
+
+  L('Connecting: '+url,'#0af');
+  ws=new WebSocket(url);
+
+  ws.onopen=function(){
+    L('✅ TCP+WS connected!','#0f0');
+    stat.textContent='Registering...';stat.style.color='#0af';
+
+    // Send register immediately
+    var reg={type:'register',node:{id:'iphone12mini',platform:'iOS',device:'iPhone13,0',role:'lightweight-relay',cores:4}};
+    L('📝 Sending: '+JSON.stringify(reg),'#0af');
+    ws.send(JSON.stringify(reg));
+  };
+
+  ws.onmessage=function(e){
+    try{
+      var m=JSON.parse(e.data);
+      L('📥 '+e.data.slice(0,120),'#ff0');
+
+      if(m.type==='register_ack'){
+        stat.textContent='Connected ✅';stat.style.color='#0f0';dot.style.background='#0f0';
+        btn.textContent='🔌 Disconnect';btn.disabled=false;
+        L('✅ REGISTERED! Nodes: '+m.connected_nodes,'#0f0');
+      }
+
+      if(m.type==='compute'){
+        L('📥 COMPUTE: '+m.request_id+' "'+(m.prompt||'').slice(0,30)+'"','#0af');
+        // Reply as passthrough
+        ws.send(JSON.stringify({type:'result',request_id:m.request_id,
+          tokens:[],text:'[iphone12mini passthrough]',
+          timing:{tokenize_ms:0,prefill_ms:0,decode_ms:0,total_ms:0},
+          metadata:{node_id:'iphone12mini',model_id:'none',backend:'none',precision:'n/a',platform:'iOS',role:'lightweight'}}));
+        L('📤 Sent passthrough reply','#f80');
+      }
+    }catch(ex){L('❌ Parse: '+ex.message,'#f00')}
+  };
+
+  ws.onclose=function(ev){
+    L('🔌 Closed: code='+ev.code+' reason='+(ev.reason||'none'),'#f80');
+    stat.textContent='Disconnected';stat.style.color='#f80';dot.style.background='#f80';
+    btn.textContent='🔗 Connect';btn.disabled=false;
+    ws=null;
+  };
+
+  ws.onerror=function(ev){
+    L('❌ WebSocket ERROR','#f00');
+    console.error('WS error',ev);
+  };
+}
+</script></body></html>

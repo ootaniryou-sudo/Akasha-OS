@@ -1,0 +1,125 @@
+{
+  "experiment": "EXP-0002F.2",
+  "description": "Recovery Dynamics & Hysteresis (asymmetric α)",
+  "timestamp": "2026-08-01T07:58:54.737Z",
+  "config": {
+    "alpha_degrade": 0.3,
+    "alpha_recover": 0.9,
+    "alpha_symmetric": 0.6,
+    "threshold": 0.5
+  },
+  "phase_a": {
+    "prompts": 8,
+    "avg_overlap": 0.966
+  },
+  "phase_b": {
+    "prompts": 8,
+    "avg_overlap": 1
+  },
+  "metrics": {
+    "degradation_rate": 0.0112,
+    "recovery_rate": 0.0064,
+    "hysteresis_ratio": 0.567,
+    "recovery_half_life_reqs": 7,
+    "recovery_time_95_reqs": -1,
+    "false_recovery_rate": 0
+  },
+  "stability_trajectory": [
+    {
+      "phase": "A",
+      "request": "A-000",
+      "overlap": 1,
+      "stability": 1
+    },
+    {
+      "phase": "A",
+      "request": "A-001",
+      "overlap": 1,
+      "stability": 1
+    },
+    {
+      "phase": "A",
+      "request": "A-002",
+      "overlap": 1,
+      "stability": 1
+    },
+    {
+      "phase": "A",
+      "request": "A-003",
+      "overlap": 1,
+      "stability": 1
+    },
+    {
+      "phase": "A",
+      "request": "A-004",
+      "overlap": 0.85,
+      "stability": 0.895
+    },
+    {
+      "phase": "A",
+      "request": "A-005",
+      "overlap": 1,
+      "stability": 0.968
+    },
+    {
+      "phase": "A",
+      "request": "A-006",
+      "overlap": 1,
+      "stability": 0.99
+    },
+    {
+      "phase": "A",
+      "request": "A-007",
+      "overlap": 0.875,
+      "stability": 0.91
+    },
+    {
+      "phase": "B",
+      "request": "B-000",
+      "overlap": 1,
+      "stability": 0.919
+    },
+    {
+      "phase": "B",
+      "request": "B-001",
+      "overlap": 1,
+      "stability": 0.927
+    },
+    {
+      "phase": "B",
+      "request": "B-002",
+      "overlap": 1,
+      "stability": 0.934
+    },
+    {
+      "phase": "B",
+      "request": "B-003",
+      "overlap": 1,
+      "stability": 0.941
+    },
+    {
+      "phase": "B",
+      "request": "B-004",
+      "overlap": 1,
+      "stability": 0.947
+    },
+    {
+      "phase": "B",
+      "request": "B-005",
+      "overlap": 1,
+      "stability": 0.952
+    },
+    {
+      "phase": "B",
+      "request": "B-006",
+      "overlap": 1,
+      "stability": 0.957
+    },
+    {
+      "phase": "B",
+      "request": "B-007",
+      "overlap": 1,
+      "stability": 0.961
+    }
+  ]
+}

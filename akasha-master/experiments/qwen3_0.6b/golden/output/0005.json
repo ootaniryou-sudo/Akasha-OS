@@ -1,0 +1,63 @@
+{
+  "index": 5,
+  "prompt": "Explain what a neural network is.",
+  "input_token_ids": [
+    840,
+    20772,
+    1128,
+    264,
+    29728,
+    3922,
+    374,
+    13
+  ],
+  "input_token_count": 8,
+  "output_token_ids": [
+    3555,
+    374,
+    279,
+    6672,
+    1948,
+    264,
+    29728,
+    3922,
+    323,
+    264,
+    61722,
+    94710,
+    30,
+    3555,
+    374,
+    279,
+    6672,
+    1948,
+    264,
+    29728,
+    3922,
+    323,
+    264,
+    5538,
+    6832,
+    1614,
+    30,
+    3555,
+    374,
+    279,
+    6672,
+    1948
+  ],
+  "output_token_count": 32,
+  "decoded_text": " What is the difference between a neural network and a perceptron? What is the difference between a neural network and a deep learning model? What is the difference between",
+  "timing_ms": {
+    "tokenize": 0.713,
+    "generate": 1238.532,
+    "total": 1239.245
+  },
+  "params": {
+    "max_new_tokens": 32,
+    "temperature": 0.0,
+    "do_sample": false,
+    "top_p": 1.0,
+    "thinking": false
+  }
+}

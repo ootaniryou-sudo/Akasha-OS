@@ -1,0 +1,12 @@
+{
+  "name": "akasha-attachment-code",
+  "version": "1.0.0",
+  "description": "ArcAsha Code Attachment — example implementation",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "start": "tsx index.ts"
+  },
+  "keywords": ["akasha", "attachment", "code", "expert", "ai"],
+  "license": "MIT"
+}

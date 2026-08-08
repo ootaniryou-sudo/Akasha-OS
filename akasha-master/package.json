@@ -1,0 +1,45 @@
+{
+  "name": "akasha-os",
+  "version": "1.0.0",
+  "description": "Akasha — AI Operating System for Modular Reasoning and Runtime Intelligence",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "arcasha": "dist/arcasha/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:edge": "esbuild src/edge/worker-inference.ts --bundle --outfile=public/worker-inference.js --format=esm --target=es2022 --platform=browser",
+    "build:all": "npm run build && npm run build:edge",
+    "start": "node dist/index.js",
+    "dev": "npm run build && node dist/index.js",
+    "edge": "npm run build:edge && npx --yes serve public -p 4173",
+    "demo:hub": "tsx src/arcasha/demo-hub.ts",
+    "demo:web": "tsx src/arcasha/demo-web.ts",
+    "demo:mock-node": "tsx src/arcasha/demo-mock-node.ts",
+    "ailsa:selftest": "tsx src/arcasha/ailsa/selftest.ts",
+    "ailsm:selftest": "tsx src/arcasha/ailsm/selftest.ts",
+    "ailsm:golden": "tsx src/arcasha/ailsm/golden.ts",
+    "ailsm:visualize": "tsx src/arcasha/ailsm/visualize.ts",
+    "benchmark": "tsx src/arcasha/bench/cli.ts",
+    "arcasha": "tsx src/arcasha/cli.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
+    "dotenv": "^17.4.2",
+    "marked": "^18.0.9",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "@webgpu/types": "^0.1.71",
+    "esbuild": "^0.28.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

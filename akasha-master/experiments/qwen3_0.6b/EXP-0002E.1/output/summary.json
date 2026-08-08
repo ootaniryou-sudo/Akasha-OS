@@ -1,0 +1,37 @@
+{
+  "experiment": "EXP-0002E.1",
+  "description": "Weight Sensitivity Analysis (Composite Score)",
+  "timestamp": "2026-08-01",
+  "method": "pure calculation (no inference)",
+  "sweep": "weight(stability) = 0.0 ~ 1.0",
+  "stability": { "fp16": 0.992, "bf16": 0.791 },
+  "scenarios": [
+    {
+      "name": "A: Equal capability (EXP-0002E)",
+      "capability": { "fp16": 0.95, "bf16": 0.95 },
+      "critical_point_w_stab": 0.0,
+      "default_w0.3_winner": "FP16",
+      "note": "Stability is only differentiator. FP16 wins for any w>0. Trivially robust."
+    },
+    {
+      "name": "B: BF16 slightly higher capability",
+      "capability": { "fp16": 0.90, "bf16": 0.98 },
+      "critical_point_w_stab": 0.185,
+      "default_w0.3_winner": "FP16",
+      "note": "Stability must exceed 0.185 to prefer FP16. Measures cost of instability."
+    },
+    {
+      "name": "C: BF16 much higher capability",
+      "capability": { "fp16": 0.80, "bf16": 0.99 },
+      "critical_point_w_stab": 0.351,
+      "default_w0.3_winner": "BF16",
+      "note": "Requires w>0.351 to overcome capability gap. Unstable-but-strong node is worth routing."
+    }
+  ],
+  "key_findings": [
+    "Default w_stab=0.3 is ABOVE critical point for small capability gaps (B: 0.185)",
+    "Default w_stab=0.3 is BELOW critical point for large capability gaps (C: 0.351)",
+    "Current weight has natural 'capability-first, then stability' behavior",
+    "Sensitivity analysis quantifies stability's influence range"
+  ]
+}

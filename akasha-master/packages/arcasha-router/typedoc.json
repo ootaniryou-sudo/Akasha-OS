@@ -1,0 +1,16 @@
+{
+  "name": "arcasha-api-docs",
+  "entryPoints": [
+    "packages/core/src/index.ts",
+    "packages/belief/src/index.ts",
+    "packages/router/src/index.ts",
+    "packages/orchestrator/src/index.ts"
+  ],
+  "out": "docs/api",
+  "name": "ArcAsha API Reference",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "readme": "docs/API_README.md",
+  "tsconfig": "tsconfig.json"
+}

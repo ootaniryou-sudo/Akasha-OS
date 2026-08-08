@@ -1,0 +1,74 @@
+{
+  "experiment": "EXP-0003D",
+  "n_seeds": 30,
+  "method_stats": {
+    "fixed": {
+      "mean": 13.277,
+      "std": 2.224,
+      "ci95_lo": 12.446,
+      "ci95_hi": 14.107
+    },
+    "ucb_partial": {
+      "mean": 19.858,
+      "std": 2.2,
+      "ci95_lo": 19.036,
+      "ci95_hi": 20.679
+    },
+    "ucb_shadow": {
+      "mean": 17.803,
+      "std": 2.249,
+      "ci95_lo": 16.963,
+      "ci95_hi": 18.643
+    },
+    "linucb_partial": {
+      "mean": 17.377,
+      "std": 2.324,
+      "ci95_lo": 16.509,
+      "ci95_hi": 18.244
+    },
+    "linucb_shadow": {
+      "mean": 11.686,
+      "std": 2.132,
+      "ci95_lo": 10.89,
+      "ci95_hi": 12.482
+    }
+  },
+  "paired_tests": {
+    "ucb_partial": {
+      "vs": "fixed",
+      "mean_diff": 6.581,
+      "p": 1.862645149230957e-09,
+      "cohens_d": 2.095,
+      "cliffs_delta": 0.951
+    },
+    "ucb_shadow": {
+      "vs": "fixed",
+      "mean_diff": 4.527,
+      "p": 5.474694795938565e-06,
+      "cohens_d": 1.276,
+      "cliffs_delta": 0.831
+    },
+    "linucb_partial": {
+      "vs": "fixed",
+      "mean_diff": 4.1,
+      "p": 1.359397478992296e-05,
+      "cohens_d": 1.238,
+      "cliffs_delta": 0.786
+    },
+    "linucb_shadow": {
+      "vs": "fixed",
+      "mean_diff": -1.591,
+      "p": 3.904104232788086e-05,
+      "cohens_d": -0.878,
+      "cliffs_delta": -0.429
+    },
+    "linucb_shadow_vs_ucb_shadow": {
+      "vs": "ucb_shadow",
+      "mean_diff": -6.118,
+      "p": 1.862645149230957e-09,
+      "cohens_d": -2.159,
+      "cliffs_delta": -0.942
+    }
+  },
+  "note": "Seeds = workload randomization (task order / prompt / initial arm order). LLM outputs deterministic (T=0) and cached."
+}

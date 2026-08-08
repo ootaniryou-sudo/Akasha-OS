@@ -1,0 +1,93 @@
+{
+  "runId": "EXP-0001_1785493476924",
+  "experimentId": "EXP-0001",
+  "timestamp": "2026-07-31T10:24:36.924Z",
+  "gitCommit": "unknown",
+  "environment": {
+    "os": "darwin 25.5.0 arm64",
+    "cpu": "Apple M3",
+    "ram": "16 GB",
+    "gpu": "unknown",
+    "nodeVersion": "v24.4.1"
+  },
+  "config": {
+    "experimentId": "EXP-0001",
+    "description": "Single-node Qwen inference — prompt 7 (direct adapter)",
+    "tags": [
+      "single-node",
+      "qwen",
+      "onnx-community/Qwen3-0.6B-ONNX",
+      "llm-adapter"
+    ],
+    "extra": {
+      "promptIndex": 7
+    }
+  },
+  "input": {
+    "prompt": "機械学習とは何ですか？",
+    "promptTokenIds": [
+      100482,
+      100071,
+      47764,
+      101619,
+      126238,
+      98749,
+      131938,
+      11319
+    ],
+    "topK": 50
+  },
+  "output": {
+    "tokenIds": [
+      100482,
+      100071,
+      47764,
+      101619,
+      15767,
+      100466,
+      136045,
+      131938,
+      11319,
+      100482,
+      100071,
+      47764
+    ],
+    "text": "機械学習の目的は何ですか？機械学",
+    "tokenTimingsMs": [
+      41.89195833333118,
+      41.89195833333118,
+      41.89195833333118,
+      41.89195833333118,
+      41.89195833333118,
+      41.89195833333118,
+      41.89195833333118,
+      41.89195833333118,
+      41.89195833333118,
+      41.89195833333118,
+      41.89195833333118,
+      41.89195833333118
+    ],
+    "latencyBreakdown": {
+      "tokenizeMs": 0.06654100000741892,
+      "prefillMs": 75.40552499999612,
+      "decodeMsTotal": 427.297974999978,
+      "totalMs": 502.7710420000076
+    }
+  },
+  "metrics": {
+    "totalMs": 505.3760839999886,
+    "tokenizeMs": 0.06654100000741892,
+    "prefillMs": 75.40552499999612,
+    "decodeMs": 427.297974999978,
+    "tokensPerSecond": 23.744693070992792,
+    "promptTokens": 8,
+    "outputTokens": 12
+  },
+  "goldenComparison": {
+    "tokenMatchRate": 0.375,
+    "exactMatch": false,
+    "diffs": [
+      "length: akasha=12 golden=32"
+    ]
+  }
+}

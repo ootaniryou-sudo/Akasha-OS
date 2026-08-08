@@ -1,0 +1,56 @@
+{
+  "experiment": "EXP-0003C.2",
+  "measured": {
+    "marginal_rate_at_120": {
+      "fixed": 0.021142857142857248,
+      "qlearn": 0.16742857142857123,
+      "ucb": 0.09885714285714302,
+      "thompson": 0.03828571428571457
+    }
+  },
+  "fits": {
+    "fixed": {
+      "model": "power",
+      "params": [
+        0.18008816097374988,
+        0.7496739786415589
+      ],
+      "r2": 0.971620298532773,
+      "exp_r2": 0.9719843056622532
+    },
+    "qlearn": {
+      "model": "power",
+      "params": [
+        0.2774137278149517,
+        0.9435520251272164
+      ],
+      "r2": 0.9943506695141162,
+      "exp_r2": 0.9946660768235284
+    },
+    "ucb": {
+      "model": "power",
+      "params": [
+        0.2698207353406804,
+        0.8293040961692313
+      ],
+      "r2": 0.989926793262418,
+      "exp_r2": 0.9899259153509703
+    },
+    "thompson": {
+      "model": "power",
+      "params": [
+        0.18691014960235214,
+        0.8618606517939358
+      ],
+      "r2": 0.9868687214755237,
+      "exp_r2": 0.9921753571520822
+    }
+  },
+  "estimated": {
+    "qlearn": null,
+    "ucb": null,
+    "thompson": null,
+    "note": "N* are ESTIMATES from power-law curve fitting. None cross Fixed asymptotically because Fixed has the lowest growth exponent b.",
+    "feedback_asymmetry": "Fixed uses full-information feedback (all nodes observed every step for the oracle); bandit learners use partial feedback (chosen arm only)."
+  }
+}

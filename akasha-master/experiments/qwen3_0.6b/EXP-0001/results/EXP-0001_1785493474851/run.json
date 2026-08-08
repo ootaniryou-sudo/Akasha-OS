@@ -1,0 +1,95 @@
+{
+  "runId": "EXP-0001_1785493474851",
+  "experimentId": "EXP-0001",
+  "timestamp": "2026-07-31T10:24:34.851Z",
+  "gitCommit": "unknown",
+  "environment": {
+    "os": "darwin 25.5.0 arm64",
+    "cpu": "Apple M3",
+    "ram": "16 GB",
+    "gpu": "unknown",
+    "nodeVersion": "v24.4.1"
+  },
+  "config": {
+    "experimentId": "EXP-0001",
+    "description": "Single-node Qwen inference — prompt 3 (direct adapter)",
+    "tags": [
+      "single-node",
+      "qwen",
+      "onnx-community/Qwen3-0.6B-ONNX",
+      "llm-adapter"
+    ],
+    "extra": {
+      "promptIndex": 3
+    }
+  },
+  "input": {
+    "prompt": "Write a Python factorial function.",
+    "promptTokenIds": [
+      7985,
+      264,
+      13027,
+      52962,
+      729,
+      13
+    ],
+    "topK": 50
+  },
+  "output": {
+    "tokenIds": [
+      481,
+      1967,
+      89260,
+      198,
+      7985,
+      264,
+      13027,
+      52962,
+      729,
+      624,
+      2304,
+      89260,
+      198,
+      31198
+    ],
+    "text": " - LeetCode\nWrite a Python factorial function.\nLeetCode\nProblem",
+    "tokenTimingsMs": [
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054,
+      48.04837800000054
+    ],
+    "latencyBreakdown": {
+      "tokenizeMs": 0.10633300000336021,
+      "prefillMs": 100.90159380000114,
+      "decodeMsTotal": 571.7756982000064,
+      "totalMs": 672.7843750000175
+    }
+  },
+  "metrics": {
+    "totalMs": 672.9530000000086,
+    "tokenizeMs": 0.10633300000336021,
+    "prefillMs": 100.90159380000114,
+    "decodeMs": 571.7756982000064,
+    "tokensPerSecond": 20.80383028235229,
+    "promptTokens": 6,
+    "outputTokens": 14
+  },
+  "goldenComparison": {
+    "tokenMatchRate": 0.4375,
+    "exactMatch": false,
+    "diffs": [
+      "length: akasha=14 golden=32"
+    ]
+  }
+}

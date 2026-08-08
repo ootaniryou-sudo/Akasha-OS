@@ -1,0 +1,22 @@
+{
+  "config": {
+    "experimentId": "EXP-0001",
+    "description": "Single-node Qwen inference — prompt 5 (direct adapter)",
+    "tags": [
+      "single-node",
+      "qwen",
+      "onnx-community/Qwen3-0.6B-ONNX",
+      "llm-adapter"
+    ],
+    "extra": {
+      "promptIndex": 5
+    }
+  },
+  "environment": {
+    "os": "darwin 25.5.0 arm64",
+    "cpu": "Apple M3",
+    "ram": "16 GB",
+    "gpu": "unknown",
+    "nodeVersion": "v24.4.1"
+  }
+}

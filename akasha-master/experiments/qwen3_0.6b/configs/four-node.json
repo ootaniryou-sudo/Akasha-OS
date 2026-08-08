@@ -1,0 +1,50 @@
+{
+  "experiment": "EXP-0002",
+  "description": "Four-node Qwen3-0.6B on Akasha-OS (future)",
+  "status": "planned",
+  "node_count": 4,
+  "model": {
+    "id": "Qwen/Qwen3-0.6B",
+    "param_count": 600000000,
+    "dtype": "fp16",
+    "device": "auto"
+  },
+  "nodes": [
+    {
+      "node_id": 1,
+      "cluster_id": 0,
+      "role": "HEAD",
+      "adapter": "QwenAdapter",
+      "expert_type": "general",
+      "hardware": { "device": "auto", "max_memory_mb": 4096 }
+    },
+    {
+      "node_id": 2,
+      "cluster_id": 1,
+      "role": "HEAD",
+      "adapter": "QwenAdapter",
+      "expert_type": "math",
+      "hardware": { "device": "auto", "max_memory_mb": 4096 }
+    },
+    {
+      "node_id": 3,
+      "cluster_id": 2,
+      "role": "HEAD",
+      "adapter": "QwenAdapter",
+      "expert_type": "code",
+      "hardware": { "device": "auto", "max_memory_mb": 4096 }
+    },
+    {
+      "node_id": 4,
+      "cluster_id": 3,
+      "role": "HEAD",
+      "adapter": "QwenAdapter",
+      "expert_type": "reasoning",
+      "hardware": { "device": "auto", "max_memory_mb": 4096 }
+    }
+  ],
+  "akasha": {
+    "path": "full",
+    "note": "Four nodes with specialized expert types. Tests Eye of Wisdom routing + parallel expert execution."
+  }
+}

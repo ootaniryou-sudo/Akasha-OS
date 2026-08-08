@@ -1,0 +1,103 @@
+{
+  "experiment": "EXP-0003C.1",
+  "description": "Contextual Bandit (UCB/Thompson) Router — sample scaling",
+  "timestamp": "2026-08-01T16:31:16.545Z",
+  "config": {
+    "total_steps": 60,
+    "checkpoints": [
+      24,
+      50,
+      60
+    ],
+    "phases": [
+      "baseline",
+      "latency",
+      "capjump"
+    ],
+    "eta": 0.3,
+    "epsilon": 0.15,
+    "ucb_c": 2,
+    "reward": {
+      "q": 1,
+      "lat": 0.1,
+      "cost": 0.1,
+      "stab": 0.1
+    },
+    "fixed_w": {
+      "q": 0.6,
+      "lat": 0.2,
+      "cost": 0.05,
+      "stab": 0.15
+    }
+  },
+  "experts": [
+    {
+      "node_id": "node-qwen",
+      "model_id": "Qwen/Qwen3-0.6B",
+      "family": "qwen"
+    },
+    {
+      "node_id": "node-smollm",
+      "model_id": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "family": "smollm"
+    },
+    {
+      "node_id": "node-gemma",
+      "model_id": "unsloth/gemma-3-1b-it",
+      "family": "gemma"
+    }
+  ],
+  "checkpoints": [
+    {
+      "samples": 24,
+      "cumRegret": {
+        "fixed": 1.7000000000000002,
+        "qlearn": 7.85,
+        "ucb": 2.8499999999999996,
+        "thompson": 2.8
+      }
+    },
+    {
+      "samples": 50,
+      "cumRegret": {
+        "fixed": 2.9499999999999997,
+        "qlearn": 12.95,
+        "ucb": 6.15,
+        "thompson": 4.8
+      }
+    },
+    {
+      "samples": 60,
+      "cumRegret": {
+        "fixed": 2.9499999999999997,
+        "qlearn": 16.45,
+        "ucb": 7.15,
+        "thompson": 5.35
+      }
+    }
+  ],
+  "final_ucb": {
+    "q": [
+      0.541,
+      0.891,
+      0.571
+    ],
+    "n": [
+      12,
+      35,
+      13
+    ]
+  },
+  "final_thompson": {
+    "alpha": [
+      5.582,
+      38.836,
+      5.989
+    ],
+    "beta": [
+      3.418,
+      8.164,
+      4.011
+    ]
+  }
+}
