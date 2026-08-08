@@ -10,9 +10,11 @@
 
 ## 動作確認（Verification）
 
-- [ ] `npm run build`（akasha-master）
-- [ ] `npm run ailsm:selftest`（実測値: ___ 件 pass）
-- [ ] `npm run ailsm:golden`
+> ルート（リポジトリ直下）から実行します。
+
+- [ ] `npm run build`
+- [ ] `npm run selftest`（実測値: ___ 件 pass）
+- [ ] `npm run golden`
 - [ ] `npm run ailsa:selftest`
 - [ ] `cargo check`（akasha-kernel-native）
 - [ ] 実機 / 実 API で確認（該当する場合）

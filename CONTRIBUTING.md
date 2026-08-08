@@ -69,11 +69,11 @@ cd ../akasha-client-web && npm install && npm run build
 
 2. 開発・テスト・コミットを feature ブランチ上で行います。
 
-3. 動作確認を feature ブランチ上で実行します（PR 作成前に必須）:
+3. 動作確認を feature ブランチ上で実行します（PR 作成前に必須・リポジトリ直下から）:
 
-   - `npm run build`（akasha-master）
-   - `npm run ailsm:selftest`
-   - `npm run ailsm:golden` / `npm run ailsa:selftest`
+   - `npm run build`
+   - `npm run selftest`
+   - `npm run golden` / `npm run ailsa:selftest`
    - `cargo check`（akasha-kernel-native）
 
 4. プッシュして PR を作成します:
