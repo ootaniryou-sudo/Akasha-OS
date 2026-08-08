@@ -100,3 +100,4 @@ El punto más novedoso: el SO puede **explicar por qué** se usaron Reflection /
 
 ## Licencia
 MIT — ver `LICENSE`.
+

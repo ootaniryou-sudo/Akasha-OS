@@ -67,3 +67,4 @@ export class AttachmentMonitor {
     return lines.join('\n');
   }
 }
+

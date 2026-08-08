@@ -122,3 +122,4 @@ sequenceDiagram
 - `AI_REASONING.md` — Executive / Meta Executive / Expert Evolution
 - `AI_ATTACHMENTS.md` — Attachment 層 / Thinking Modes
 - `AI_VALIDATION.md` — Simulation vs Real Device / Validation A-F
+

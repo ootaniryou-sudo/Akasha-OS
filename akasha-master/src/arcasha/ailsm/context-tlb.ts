@@ -76,3 +76,4 @@ export function translateSpan(
   tlb.store(contextId, pageId, spanKind, ids);
   return { hit: false, spanIds: ids };
 }
+

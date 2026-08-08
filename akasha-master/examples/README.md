@@ -41,3 +41,4 @@ npx tsx examples/quickstart.ts
 - **Layer 3: Intelligence Attachments** — 高度推論・議論・創造（プラグイン）
 
 詳細はリポジトリルートの仕様書（`AI_VALIDATION.md` / `AI_ATTACHMENTS.md` / `AI_REASONING.md`）を参照。
+

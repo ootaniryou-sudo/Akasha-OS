@@ -114,3 +114,4 @@ npx tsx experiments/qwen3_0.6b/EXP-0002D.1/run_master.ts --port 8080
 Full results: [`output/summary.json`](output/summary.json)
 
 Depends on: EXP-0002D (Adaptive Capability), EXP-0002C (Capability-Aware Routing)
+

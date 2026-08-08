@@ -41,3 +41,4 @@ export function poolExpert(id: string): PoolExpert {
   if (!e) throw new Error(`AI Pool に ${id} がいません`);
   return e;
 }
+

@@ -12,3 +12,4 @@ struct ConfigurationAppIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource { "一筆メモ" }
     static var description: LocalizedStringResource { "AI分析による優先順位でメモを表示します" }
 }
+

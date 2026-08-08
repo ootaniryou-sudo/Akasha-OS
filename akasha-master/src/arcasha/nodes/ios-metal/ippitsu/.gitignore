@@ -48,3 +48,4 @@ app.*.map.json
 ios/arcasha_llama/llama.cpp/
 # バンドル用 GGUF モデル (download_model.sh で取得)
 assets/models/*.gguf
+

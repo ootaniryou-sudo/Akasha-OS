@@ -270,3 +270,4 @@ python experiments/qwen3_0.6b/EXP-0002F.1/run_node_pytorch.py \
 ```
 
 Depends on: EXP-0002F.1 (Cross-Backend Shadow), EXP-0002F.2 (Hysteresis), EXP-0002E (Composite Score)
+

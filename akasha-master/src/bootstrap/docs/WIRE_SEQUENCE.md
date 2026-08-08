@@ -82,3 +82,4 @@
 3. RESULT の EXPECTED_US はエッジ報告の GPU µs。RTT は TIMESTAMP_US エコーからマスター側で算出。
 4. データプレーンはバイナリ固定ヘッダ (JSON 禁止)。48B ヘッダ + f32 ペイロードは
    WebGPU アップロード用にゼロコピー可能。
+

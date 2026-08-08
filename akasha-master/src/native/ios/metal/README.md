@@ -80,3 +80,4 @@ print(response)
 - **Tokenizer**: Basic vocabulary only. Full Qwen3 BPE tokenizer runs in TypeScript.
 - **MPSGraph integration**: Uses MPSMatrixMultiplication for core ops. Full MPSGraph compute graph planned.
 - **Model weight loading**: Weights must be pre-loaded into MTLBuffers from GGUF.
+

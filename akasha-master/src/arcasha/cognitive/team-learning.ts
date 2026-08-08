@@ -63,3 +63,4 @@ export function renderTeamLearning(l: TeamLearner): string {
     .map((r) => `  ${r.teamKey.padEnd(32)} success ${(r.successRate * 100).toFixed(0)}% · n=${r.samples} · q=${r.avgQuality.toFixed(2)}`)
     .join('\n');
 }
+

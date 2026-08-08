@@ -31,3 +31,4 @@ ws.onmessage=function(e){try{var m=JSON.parse(e.data);if(m.type==='compute'){car
 ws.onclose=function(){stat.textContent='Disconnected';stat.style.color='#f80';dot.style.background='#f80';card('WS','Closed — reload page','#f80')};
 ws.onerror=function(){stat.textContent='Error';stat.style.color='#f00'};
 </script></body></html>
+

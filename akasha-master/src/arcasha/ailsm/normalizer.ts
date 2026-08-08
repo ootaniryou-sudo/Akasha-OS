@@ -157,3 +157,4 @@ export function normalize(text: string, tokens: Token[]): NormalizedInput {
     confidence,
   };
 }
+

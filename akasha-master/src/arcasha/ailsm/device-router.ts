@@ -103,3 +103,4 @@ export async function distributedFault(
   const text = await client.generate(deviceId, `このページを読んで要約してください: ${pageText.slice(0, 200)}`, 32);
   return { text, fromDevice: deviceId, ms: Date.now() - t0 };
 }
+

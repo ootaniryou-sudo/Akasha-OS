@@ -177,3 +177,4 @@ export function renderThinkingBenchmark(rows: ThinkingBenchmarkRow[]): string {
   }
   return lines.join('\n');
 }
+

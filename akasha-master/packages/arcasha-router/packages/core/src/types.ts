@@ -74,3 +74,4 @@ export interface Decomposition {
   /** サブタスクを並列実行するか */
   parallel?: boolean;
 }
+

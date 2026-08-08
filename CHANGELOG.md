@@ -82,3 +82,4 @@ Expert Runtime / Kernel / AVM / ODAR / Device Tree
 - **v1.1**: 実機ベンチ（iPhone/iPad/Mac 同一ベンチ実測）・追試環境の充実
 - **v1.2**: ポリシー改善・最適化（Decision Log の大規模学習）
 - **v2.0**: 新しい研究テーマ（分散推論 / 自己改善機構）
+

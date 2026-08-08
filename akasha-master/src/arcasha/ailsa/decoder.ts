@@ -63,3 +63,4 @@ export function decodeProgram(bytes: Uint8Array): Instruction[] {
   }
   return out;
 }
+

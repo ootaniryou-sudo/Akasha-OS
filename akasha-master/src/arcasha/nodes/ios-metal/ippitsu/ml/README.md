@@ -86,3 +86,4 @@ Input (n-gram binary vector, max 5000 features)
 - パラメータ数: 約65万（超軽量）
 - 推論速度: iPhone で 1ms 未満
 - モデルサイズ: 量子化後 数十KB 〜 数百KB（5MB以下）
+

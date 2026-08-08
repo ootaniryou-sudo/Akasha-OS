@@ -16,3 +16,4 @@ const p = new BayesianBelief({ mu: 0.62, n: 3 }); // 事前分布シード (Clos
 - `EmaLatency` (α=0.3) — レイテンシ平滑化
 
 > MIT License — ArcAsha.
+

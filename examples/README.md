@@ -28,3 +28,4 @@ npx tsx examples/attachment-math/index.ts
 - 旧 v1 の `plugin-*` サンプル（`AkashaExpertPlugin`）は本層に置き換え（`src/plugin/` は削除）
 
 詳細はリポジトリルートの仕様書（`AI_ATTACHMENTS.md` / `AI_REASONING.md`）を参照。
+

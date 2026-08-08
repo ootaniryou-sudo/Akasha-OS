@@ -100,3 +100,4 @@ function renderBenchmarkText(b: BenchResult): string {
   lines.push(`Speedup        : ${t.speedup.toFixed(2)}x`);
   return lines.join('\n');
 }
+

@@ -105,3 +105,4 @@ pub extern "C" fn akasha_kernel_will_expire() {
     log::warn!("[ios-ffi] background task expiring — checkpointing...");
     // In production: save inference state to disk, close GPU handles gracefully.
 }
+

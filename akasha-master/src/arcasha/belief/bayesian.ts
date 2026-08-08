@@ -72,3 +72,4 @@ export class EmaLatency {
     return Math.round(this.ema);
   }
 }
+

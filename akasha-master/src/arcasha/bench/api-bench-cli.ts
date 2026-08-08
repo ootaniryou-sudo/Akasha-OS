@@ -98,3 +98,4 @@ export async function runApiBenchCli(): Promise<string> {
   console.log(text);
   return 'arcasha apibench: done（kind=real-api・実測・同一プロセス）';
 }
+

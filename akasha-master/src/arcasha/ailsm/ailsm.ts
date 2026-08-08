@@ -157,3 +157,4 @@ function kindById(g: AilsmGraph, id: number): string {
   const n = g.nodes.find((x) => x.id === id);
   return n ? nodeKindLabel(n.kind) : '?';
 }
+

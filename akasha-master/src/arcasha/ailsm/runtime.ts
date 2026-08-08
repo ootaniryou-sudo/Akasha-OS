@@ -141,3 +141,4 @@ export function run(text: string, level: 0 | 1 | 2 | 3 = 2): RuntimeTrace {
 
   return { text, graph, steps, events, needsExpert: false, resolvedValue: null, processId, threadId };
 }
+

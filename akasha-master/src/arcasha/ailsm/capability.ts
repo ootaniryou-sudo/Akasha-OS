@@ -42,3 +42,4 @@ export function inferCapability(g: AilsmGraph): CapabilityInference {
     confidence: Math.min(1, 0.5 + signals * 0.1),
   };
 }
+

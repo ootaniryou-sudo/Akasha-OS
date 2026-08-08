@@ -103,3 +103,4 @@ export function renderTimeline(events: TraceEvent[]): string {
   }
   return lines.join('\n');
 }
+

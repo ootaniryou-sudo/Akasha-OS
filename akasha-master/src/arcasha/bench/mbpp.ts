@@ -23,3 +23,4 @@ export const mbppSuite: BenchSuite = {
     s('b10', 'ネストした辞書の値を再帰的に合計する関数 deep_sum を実装せよ', '再帰', 0.65),
   ],
 };
+

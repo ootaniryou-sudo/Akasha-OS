@@ -105,3 +105,4 @@ export class AttachmentManager {
     return mergeResults(label, ids.map((id) => results[id]));
   }
 }
+

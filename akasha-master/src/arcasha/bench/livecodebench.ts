@@ -23,3 +23,4 @@ export const livecodebenchSuite: BenchSuite = {
     s('l10', '平面グラフの最大独立集合の近似を実装せよ', '近似アルゴリズム', 0.98),
   ],
 };
+

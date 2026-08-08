@@ -139,3 +139,4 @@ export function renderApiCompare(r: ApiCompareResult): string {
   lines.push(`※ 同一モデル・同一問題・実測。ArcAsha のオーバーヘッドは (ArcAsha - baseline) で示される。`);
   return lines.join('\n');
 }
+

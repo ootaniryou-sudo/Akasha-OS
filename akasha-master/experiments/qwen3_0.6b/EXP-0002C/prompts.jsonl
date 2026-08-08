@@ -8,3 +8,4 @@
 {"prompt": "Calculate the derivative of f(x) = x^3 + 2x^2 - 5x + 1", "capability": "math"}
 {"prompt": "Explain machine learning briefly.", "capability": "general"}
 {"prompt": "What is the capital of Japan?", "capability": "general"}
+

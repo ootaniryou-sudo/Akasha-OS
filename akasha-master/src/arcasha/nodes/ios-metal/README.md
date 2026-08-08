@@ -111,3 +111,4 @@ cp build-ios-device/ggml/src/ggml-metal/Release-iphoneos/libggml-metal.a ../lib/
 
 - アプリ: MIT (ArcAsha / Akasha-OS)
 - llama.cpp / ggml: MIT (ベンダード静的ビルドとして同梱)
+

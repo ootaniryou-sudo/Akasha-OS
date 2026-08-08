@@ -148,3 +148,4 @@ EXP-0003:         2〜4 Expert Collaboration
 > **ArcAsha は Apple 専用 OS にならない。**
 
 Apple Backend は ArcAsha Runtime の抽象化層の下に位置する。CUDA / CPU / WebGPU と同列のバックエンドであり、ArcAsha のコアロジック（Routing, Scheduling, Memory Fabric, Fault Tolerance）はバックエンド非依存のまま維持する。
+

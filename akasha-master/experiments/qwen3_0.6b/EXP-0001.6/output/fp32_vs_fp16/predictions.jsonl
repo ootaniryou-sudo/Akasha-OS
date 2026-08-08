@@ -3198,3 +3198,4 @@
 {"pos": 29, "token_a": 128687, "token_b": 128687, "top1_match": true, "logit_margin_a": 4.114414, "logit_margin_b": 4.109375, "diverged_at_t_plus_1": false, "diverged_at_t_plus_3": null, "diverged_at_t_plus_5": null, "diverged_at_t_plus_10": null}
 {"pos": 30, "token_a": 104552, "token_b": 104552, "top1_match": true, "logit_margin_a": 2.322657, "logit_margin_b": 2.328125, "diverged_at_t_plus_1": false, "diverged_at_t_plus_3": null, "diverged_at_t_plus_5": null, "diverged_at_t_plus_10": null}
 {"pos": 31, "token_a": 9370, "token_b": 9370, "top1_match": true, "logit_margin_a": 0.695183, "logit_margin_b": 0.703125, "diverged_at_t_plus_1": null, "diverged_at_t_plus_3": null, "diverged_at_t_plus_5": null, "diverged_at_t_plus_10": null}
+

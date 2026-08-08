@@ -94,3 +94,4 @@ Score(node) = w_cap·Capability + w_lat·Latency + w_stab·Stability
 Full results: [`output/summary.json`](output/summary.json)
 
 Depends on: EXP-0001 (Stability), EXP-0002A (Latency), EXP-0002D.1 (Confidence)
+

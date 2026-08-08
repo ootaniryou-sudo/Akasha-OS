@@ -140,3 +140,4 @@ export function spansOf(g: AilsmGraph, pageId: number): SpanObject[] {
 export function spansOfKind(g: AilsmGraph, pageId: number, kind: SpanKind): SpanObject[] {
   return spansOf(g, pageId).filter((s) => s.kind === kind);
 }
+

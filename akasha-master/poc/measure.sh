@@ -79,3 +79,4 @@ for ip in "${EDGES[@]}"; do
   echo "  $ip → avg RTT: ${AVG_RTT}ms"
 done
 echo "══════════════════════════════════════════════"
+

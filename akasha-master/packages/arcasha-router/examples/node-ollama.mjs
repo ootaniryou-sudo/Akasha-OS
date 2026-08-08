@@ -60,3 +60,4 @@ for (const d of run.decisions) {
 }
 console.log(`検証: ${run.verifications.filter(v => v.passed).length}/${run.verifications.length} PASS`);
 console.log('\n学習重み:', controller.weights().map(w => w.toFixed(3)).join(', '));
+

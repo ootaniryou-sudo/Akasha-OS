@@ -205,3 +205,4 @@ Math → ContextID 52 → Page17 → Equation# をキャッシュ
 - Cursor=391 / Attention=Equation#5 で途中再開可能
 
 これで ArcAsha は **AI 向けコンパイラ・OS・メモリ管理・実行基盤** を含む一貫したアーキテクチャになる。
+

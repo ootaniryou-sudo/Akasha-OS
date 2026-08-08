@@ -130,3 +130,4 @@ IR は後から変更すると Compiler / Executor / Runtime / Visualizer / Expe
 ---
 
 *この仕様は「ArcAsha」から独立して利用・論文化できる。*
+

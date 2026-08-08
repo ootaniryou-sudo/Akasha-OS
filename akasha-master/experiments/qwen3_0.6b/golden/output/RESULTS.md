@@ -100,3 +100,4 @@ golden/output/
 1. **EXP-0001**: Compare Akasha QwenAdapter output against these golden files
 2. **Model consideration**: Evaluate if base model is sufficient for Expert Node purposes, or if instruct variant is needed
 3. **Prompt engineering**: For base models, consider few-shot prompting or chat template wrapping
+

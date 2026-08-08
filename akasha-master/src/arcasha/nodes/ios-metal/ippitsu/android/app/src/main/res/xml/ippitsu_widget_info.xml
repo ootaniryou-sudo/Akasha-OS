@@ -12,3 +12,4 @@
     android:widgetCategory="home_screen"
     android:description="一筆メモを優先順位順に表示">
 </appwidget-provider>
+

@@ -128,3 +128,4 @@ npx tsx src/arcasha/index.ts
 - UCB-Shadow (素朴な報酬最大化) が最低品質 — 0003E の「安くて弱いモデルに誘惑される」危険を再現
 - 3 seeds で完全一致 = **決定論** (T=0 + キャッシュ) の実証
 - 既存フレームワークとの位置づけ: [`docs/COMPARISON.md`](docs/COMPARISON.md)
+

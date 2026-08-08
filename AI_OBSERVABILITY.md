@@ -91,3 +91,4 @@ arcashaMs  = ロードトークン × PER_TOKEN_MS + Fault 数 × FAULT_MS
 ---
 
 *計測器が揃うと、ArcAsha は「設計・実行・計測・評価まで一貫した AI システム基盤」として完成度が一段上がる。*
+

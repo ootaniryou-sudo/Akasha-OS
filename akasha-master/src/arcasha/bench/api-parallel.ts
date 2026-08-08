@@ -258,3 +258,4 @@ export function renderApiParallel(r: ApiParallelResult): string {
   lines.push('※ kind=real-api（実測）。外部 API の並列限界はレート制限・接続数で変わりうる。');
   return lines.join('\n');
 }
+

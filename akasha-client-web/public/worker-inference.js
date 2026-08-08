@@ -465,3 +465,4 @@ void ensureGpu().then(() => {
 });
 if (statsTimer != null) clearInterval(statsTimer);
 statsTimer = self.setInterval(() => postStats(), STATS_MS);
+

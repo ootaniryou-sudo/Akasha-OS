@@ -117,3 +117,4 @@ export function renderOasis(o: KnowledgeOasis, role: OasisRole = 'master'): stri
   }
   return lines.join('\n');
 }
+

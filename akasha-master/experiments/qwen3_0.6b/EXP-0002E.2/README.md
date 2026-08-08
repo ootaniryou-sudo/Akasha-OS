@@ -72,3 +72,4 @@ Full results: [`output/summary.json`](output/summary.json)
 > ルーティングは二段階（Pareto Filter → Composite Score）にすべき。
 
 Depends on: EXP-0002E (Composite Score), EXP-0002E.1 (Decision Boundary)
+

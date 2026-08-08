@@ -45,3 +45,4 @@ export function analyze(b: AilsmBuilder): SemanticResult {
 
   return { graph: g, issues };
 }
+

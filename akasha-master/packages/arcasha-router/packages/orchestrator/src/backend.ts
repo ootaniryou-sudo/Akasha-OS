@@ -15,3 +15,4 @@ export interface ComputeBackend {
   /** 生テキスト生成 (LLM Planner 用, 任意) */
   generate?(nodeId: string, prompt: string, maxTokens?: number): Promise<string>;
 }
+

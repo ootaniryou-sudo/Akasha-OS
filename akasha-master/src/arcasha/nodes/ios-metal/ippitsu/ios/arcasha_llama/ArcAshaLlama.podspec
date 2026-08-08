@@ -30,3 +30,4 @@ Pod::Spec.new do |s|
     'OTHER_LDFLAGS'               => '$(inherited) -ObjC',
   }
 end
+

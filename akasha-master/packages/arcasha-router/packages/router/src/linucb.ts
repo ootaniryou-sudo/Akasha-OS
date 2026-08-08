@@ -73,3 +73,4 @@ export class LinUCB {
 
 /** 学習済み重みの可視化 (論文用) */
 export const FEATURE_NAMES = ['bias', 'capability', 'latency', 'cost', 'stability', 'confidence', 'memory', 'temperature'];
+

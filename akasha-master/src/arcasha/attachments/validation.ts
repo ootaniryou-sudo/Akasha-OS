@@ -167,3 +167,4 @@ export async function runValidationDemo(): Promise<string> {
   const robot = runRobotSimulation();
   return [renderModeValidation(mode), renderAblation(ablation), renderRobotSimulation(robot)].join('\n\n');
 }
+

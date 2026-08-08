@@ -173,3 +173,4 @@ Measures logit agreement (top-1/5/10 overlap, KL divergence, logit margin) acros
 1. **EXP-0001-JS-Golden**: Generate a JS/ONNX-specific golden reference (run the same model twice — should be self-consistent)
 2. **EXP-0001-Akasha-Path**: Test the full Akasha path (--akasha flag) using the JS adapter
 3. **EXP-0002**: Multi-node with standardized runtime
+

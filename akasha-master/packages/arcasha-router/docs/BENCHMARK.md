@@ -52,3 +52,4 @@ npx tsx src/arcasha/benchmark/run_benchmark.ts --seed 0 --seed 1 --seed 2
 cd packages/arcasha-router && npm test
 cd ../arcasha-router-py && python demo.py
 ```
+

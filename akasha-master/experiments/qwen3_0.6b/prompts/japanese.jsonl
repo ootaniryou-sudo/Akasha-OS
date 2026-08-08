@@ -1,3 +1,4 @@
 {"prompt": "こんにちは、元気ですか？", "max_new_tokens": 15, "temperature": 0.0, "top_p": 1.0}
 {"prompt": "日本の首都はどこですか？", "max_new_tokens": 10, "temperature": 0.0, "top_p": 1.0}
 {"prompt": "機械学習について簡単に説明してください。", "max_new_tokens": 25, "temperature": 0.0, "top_p": 1.0}
+

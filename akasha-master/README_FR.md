@@ -100,3 +100,4 @@ Le point le plus nouveau : l'OS peut **expliquer pourquoi** Reflection / Plannin
 
 ## Licence
 MIT — voir `LICENSE`.
+

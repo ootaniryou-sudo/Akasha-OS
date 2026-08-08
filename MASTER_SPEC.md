@@ -211,3 +211,4 @@ The project began as a **distributed expert intelligence fabric** vision (v1):
 > Many independent ~0.6B models coordinated by an intelligent runtime into a ~6.7T aggregate-parameter system — "Expert Fabric", "Heart of Wisdom", "Eye of Wisdom".
 
 That vision remains the long-term *scale* ambition, but the implemented architecture (v1.0+) deliberately focuses on the **OS layer**: how to manage, explain, and learn reasoning on small models. The naming system retains the v1 world-view names as lore (see `NAMING.md`), while the formal names reflect the implemented runtime.
+

@@ -300,3 +300,4 @@ export async function runScientificReport(): Promise<string> {
     renderModelComparison(f),
   ].join('\n');
 }
+

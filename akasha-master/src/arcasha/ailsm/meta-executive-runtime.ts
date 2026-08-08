@@ -304,3 +304,4 @@ export function renderMetaExecutive(r: MetaExecutiveResult): string {
   lines.push(`FINAL  : ${r.finalText ?? '(なし)'}`);
   return lines.join('\n');
 }
+

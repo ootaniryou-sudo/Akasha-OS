@@ -57,3 +57,4 @@ splice/remove でき、状態同期が不要になる。
 - 同一 nodeId の二重登録は **先行所有者を FAIL_DUP_REGISTER で追い出してから再束縛** —
   1 nodeId = 1 生存 ctx を保証 (inflightBench/byRole の汚染を防止)。
 - 冪等な再 REGISTER (同一ソケット・同一 nodeId) は no-op。
+

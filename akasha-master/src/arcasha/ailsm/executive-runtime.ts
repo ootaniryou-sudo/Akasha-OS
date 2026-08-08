@@ -504,3 +504,4 @@ export function renderExecutive(r: ExecutiveResult): string {
 export function executiveChildren(g: AilsmGraph, parentId: number): Hypothesis[] {
   return childrenOf(g, parentId);
 }
+

@@ -87,3 +87,4 @@ export function parseSubtasks(task: Task, lines: string[]): Subtask[] {
       prompt: x.line.replace(/^\[(coding|math|reasoning)\]\s*/i, ''),
     }));
 }
+

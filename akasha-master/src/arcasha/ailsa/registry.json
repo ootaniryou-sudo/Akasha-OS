@@ -86,3 +86,4 @@
     { "name": "SYSCALL_UPDATE_CAPABILITY", "opcode": 138, "category": "syscall", "dialect": "base", "description": "syscall: 能力更新" }
   ]
 }
+

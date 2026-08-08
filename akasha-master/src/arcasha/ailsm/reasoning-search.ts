@@ -301,3 +301,4 @@ export function renderSearch(r: SearchResult): string {
 export function searchChildren(g: AilsmGraph, parentId: number): Hypothesis[] {
   return childrenOf(g, parentId);
 }
+

@@ -71,3 +71,4 @@ export function renderAttachmentBenchmark(rows: AttachmentBenchmarkRow[]): strin
   lines.push(`BEST QUALITY : ${best.mode} (quality=${best.quality.toFixed(2)})`);
   return lines.join('\n');
 }
+

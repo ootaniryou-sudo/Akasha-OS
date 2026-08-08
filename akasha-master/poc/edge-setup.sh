@@ -64,3 +64,4 @@ echo ""
 echo " Next steps on master PC:"
 echo "   ./poc/measure.sh <this-device-ip>"
 echo "══════════════════════════════════════════════"
+

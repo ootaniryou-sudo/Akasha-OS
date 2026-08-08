@@ -100,3 +100,4 @@ export function findOracle(results: Record<string, EvalResult>): string {
 export function formatResult(r: EvalResult): string {
   return `[${r.nodeId}] score=${r.score.toFixed(3)} lat=${r.latencyMs}ms: ${r.text.slice(0, 60).replace(/\n/g, ' ')}`;
 }
+

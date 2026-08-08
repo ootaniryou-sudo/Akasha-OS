@@ -100,3 +100,4 @@ Der neuartigste Punkt: Das OS kann **erklären, warum** Reflection / Planning / 
 
 ## Lizenz
 MIT — siehe `LICENSE`.
+

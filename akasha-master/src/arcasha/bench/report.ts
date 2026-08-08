@@ -129,3 +129,4 @@ export async function writeReports(dir: string, rows: BenchResultRow[], overhead
   }
   return files;
 }
+

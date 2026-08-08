@@ -98,3 +98,4 @@ Math IR + Search IR + Planner IR  →  単一 AILSA プログラム
 ---
 
 *この仕様は「ArcAsha」から独立して利用・論文化できる。*
+

@@ -51,3 +51,4 @@ Layer 1  Fast Runtime（Kernel / AVM / Expert Runtime / ODAR / Device Tree — �
 - **v1.1**: Real Device 実測データ（6 指標）
 - **v1.2**: Decision Log 大規模学習（100 万件規模の OS ポリシー学習）
 - **v2.0**: 分散推論（iPhone + iPad + Mac 同時探索）
+

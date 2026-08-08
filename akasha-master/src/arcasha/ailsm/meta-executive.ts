@@ -168,3 +168,4 @@ export function metaExecutivesOf(g: AilsmGraph, taskId: number): MetaExecutive[]
   }
   return out.sort((a, b) => a.id - b.id);
 }
+

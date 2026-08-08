@@ -26,3 +26,4 @@ def evaluate_with(node, task, text, latency_ms):
 def run_async(coro):
     """Small helper to run the async shadow loop from sync code."""
     return asyncio.run(coro)
+

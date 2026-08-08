@@ -332,3 +332,4 @@ Reflect が失敗から自己改善する。**Belief はそのすべての判断
 ---
 
 *ArcAsha v0.1 — Belief-Driven AI Orchestration. Paper: 10.5281/zenodo.21755612*
+

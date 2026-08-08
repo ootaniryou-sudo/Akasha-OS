@@ -78,3 +78,4 @@ extension IppitsuWidgetAttributes.ContentState {
     IppitsuWidgetAttributes.ContentState.smiley
     IppitsuWidgetAttributes.ContentState.starEyes
 }
+

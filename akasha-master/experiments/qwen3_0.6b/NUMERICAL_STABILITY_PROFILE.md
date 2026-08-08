@@ -187,3 +187,4 @@ For task with sensitivity = THROUGHPUT:
 | MEDIUM | General conversation, summarization | top1_agreement > 0.95 |
 | LOW | Casual chat, brainstorming | top5_overlap > 4.0 |
 | THROUGHPUT | Batch processing, non-critical | precision_efficiency > 1.3 |
+

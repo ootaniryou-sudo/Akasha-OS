@@ -71,3 +71,4 @@ echo ""
 echo "🎉 全端末にインストール完了!"
 echo "   端末でアプリを起動 → モデルをロード → ハブ URL (ws://<MacのLAN IP>:8080) を入力 → 接続"
 echo "   ノードIDは端末ごとに変えること (例: node-ios-ipad / node-ios-iphone15)"
+

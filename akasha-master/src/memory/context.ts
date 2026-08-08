@@ -265,3 +265,4 @@ export function hashTokenIds(tokenIds: number[]): string {
   }
   return hash.toString(16).padStart(8, '0');
 }
+

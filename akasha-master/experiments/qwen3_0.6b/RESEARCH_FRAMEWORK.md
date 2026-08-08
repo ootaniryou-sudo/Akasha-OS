@@ -94,3 +94,4 @@ EXP-0002E     →  Composite Score integrates all dimensions
 EXP-0002E.1   →  Weight Space: decision boundary
 EXP-0002E.2   →  Objective Space: Pareto frontier, two-stage design
 ```
+

@@ -24,3 +24,4 @@ if [ "$SIZE" != "$EXPECTED" ]; then
   exit 1
 fi
 echo "✅ 完了: $OUT ($(du -h "$OUT" | cut -f1))"
+

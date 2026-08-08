@@ -95,3 +95,4 @@ export function objectType(obj: string): AilsmType {
     default: return 'unknown';
   }
 }
+

@@ -71,3 +71,4 @@ export function isPass(quality: number): boolean {
 export function configName(config: ModelConfig): string {
   return MODEL_CONFIGS.find((c) => c.id === config)?.name ?? config;
 }
+

@@ -183,3 +183,4 @@ class IppitsuWidgetProvider : HomeWidgetProvider() {
         val category: String // "reminder", "important", "normal", "memo"
     )
 }
+

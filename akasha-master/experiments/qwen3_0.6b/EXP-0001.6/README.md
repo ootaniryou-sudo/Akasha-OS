@@ -172,3 +172,4 @@ If `logit_margin < threshold` robustly predicts future divergence:
 - **ArcAsha Router**: adds Numerical Reliability as a routing dimension
 - **Shadow policy**: adaptive Shadow mode selection based on runtime margin
 - **Paper material**: "Predicting Numerical Divergence in Distributed LLM Inference"
+

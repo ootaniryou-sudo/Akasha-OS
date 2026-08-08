@@ -190,3 +190,4 @@ Natural Language
 ---
 
 *この仕様は「ArcAsha」から独立して利用・論文化できる。*
+

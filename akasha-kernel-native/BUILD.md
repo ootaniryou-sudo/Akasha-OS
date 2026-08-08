@@ -243,3 +243,4 @@ kernel/
         ├── ios.rs              # iOS バックグラウンドタスク + C FFI エクスポート
         └── desktop.rs          # デスクトップ no-op
 ```
+

@@ -21,3 +21,4 @@ ctrl.seedBeliefsFromMemory(task);                            // 記憶 → 事�
 - `Reflector` (Self Reflection) / `PlanGenerator` + `TreeSearch` (Emergent Planning)
 
 > 研究: Zenodo 10.5281/zenodo.21755612 — MIT License.
+

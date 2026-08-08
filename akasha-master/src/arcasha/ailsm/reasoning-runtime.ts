@@ -267,3 +267,4 @@ export function renderReasoning(r: ReasoningResult): string {
   lines.push(`Expert : ${r.expertCalls} calls / Processes: ${r.processes}`);
   return lines.join('\n');
 }
+

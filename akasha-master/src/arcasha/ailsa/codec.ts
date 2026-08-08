@@ -55,3 +55,4 @@ export { validateProgram, validateInstruction } from './validator.js';
 export { CodecError } from './encoder.js';
 export type { Instruction, SlotValue } from './encoder.js';
 export type { ValidationResult, ValidationIssue } from './validator.js';
+

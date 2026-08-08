@@ -70,3 +70,4 @@ if __name__ == "__main__":
     print(f"LinUCB-Shadow cumulative regret @60 = {total:.3f}  (期待値: 0.000)")
     assert total < 1.0, "TS 版と同じく LinUCB-S は最良 Oracle を選択するはず"
     print("PASS ✅ (TS とクロス言語再現)")
+

@@ -96,3 +96,4 @@ export function pageMemory(g: AilsmGraph, pageSize = 8): MemoryPage[] {
 export function loadPage(pages: MemoryPage[], pageId: number): MemoryPage | undefined {
   return pages.find((p) => p.page === pageId);
 }
+

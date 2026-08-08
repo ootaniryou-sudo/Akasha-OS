@@ -195,3 +195,4 @@ kernel void kv_cache_update(
   kv_cache_k[offset] = new_k[tid];
   kv_cache_v[offset] = new_v[tid];
 }
+

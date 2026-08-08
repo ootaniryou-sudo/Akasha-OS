@@ -113,3 +113,4 @@ pub extern "system" fn Java_com_akasha_kernel_AkashaKernel_nativeStopInference(
 ) {
     log::info!("[jni] nativeStopInference called from Kotlin");
 }
+

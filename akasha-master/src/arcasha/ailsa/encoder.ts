@@ -98,3 +98,4 @@ export function encodeProgram(program: Instruction[]): Uint8Array {
   }
   return out;
 }
+

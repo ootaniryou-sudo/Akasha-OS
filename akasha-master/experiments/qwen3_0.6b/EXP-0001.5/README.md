@@ -165,3 +165,4 @@ EXP-0002: Multi-node with standardized runtime
 1. **ArcAsha Runtime 設計の基礎データ** — どのバックエンド・精度の組み合わせが同一トークンを保証するか
 2. **Shadow 戦略の定量根拠** — Exact Shadow の要件、Independent Shadow の許容範囲
 3. **論文レベルの分析材料** — 「分散推論における数値精度の影響」は未開拓領域
+

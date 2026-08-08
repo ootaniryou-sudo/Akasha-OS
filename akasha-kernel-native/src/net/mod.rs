@@ -83,3 +83,4 @@ pub const MAX_DATAGRAM_FLOATS: usize = 350;
 pub const fn frame_count(total_floats: usize) -> usize {
     (total_floats + MAX_DATAGRAM_FLOATS - 1) / MAX_DATAGRAM_FLOATS
 }
+

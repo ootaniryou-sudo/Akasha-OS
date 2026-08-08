@@ -478,3 +478,4 @@ function printResults(records: StepRecord[], cumStatic: number, cumAdaptive: num
 }
 
 main().catch((e) => { console.error('Fatal:', e); process.exit(1); });
+

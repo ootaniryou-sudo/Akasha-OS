@@ -102,3 +102,4 @@ export class AiPerf {
     return lines.join('\n');
   }
 }
+

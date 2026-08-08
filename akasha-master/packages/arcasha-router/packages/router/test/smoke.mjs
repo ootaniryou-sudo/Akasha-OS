@@ -73,3 +73,4 @@ console.log('  Random        =', rnd.toFixed(3));
 const ok = lin < rnd && lin < ucb && lin >= 0;
 console.log(ok ? '\nPASS: LinUCB-Shadow < baselines ✅' : '\nFAIL ❌');
 process.exit(ok ? 0 : 1);
+

@@ -78,3 +78,4 @@ export interface Decomposition {
   /** EXP-0005C: サブタスクを並列実行するか */
   parallel?: boolean;
 }
+

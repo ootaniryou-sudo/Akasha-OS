@@ -428,3 +428,4 @@ const DEFAULT_MODEL: ModelSpec = {
   vocabSize: 151936,
   bytesPerParam: 2, // FP16
 };
+

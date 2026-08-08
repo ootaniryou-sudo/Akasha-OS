@@ -51,3 +51,4 @@ export async function routeTask(task, runLocal: (node, task) => Promise<{ score,
 
 - WebLLM: https://github.com/mlc-ai/web-llm
 - Transformers.js (WebGPU): https://huggingface.co/docs/transformers.js
+

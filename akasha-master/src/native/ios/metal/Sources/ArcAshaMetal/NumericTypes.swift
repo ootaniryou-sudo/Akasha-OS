@@ -83,3 +83,4 @@ enum NumericTypes {
     return Float(bitPattern: sign | (exp << 23) | (mant16 << 13))
   }
 }
+

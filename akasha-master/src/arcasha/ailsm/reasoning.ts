@@ -246,3 +246,4 @@ export function childrenOf(g: AilsmGraph, parentId: number): Hypothesis[] {
 export function markExpanded(g: AilsmGraph, hypothesisId: number): { graph: AilsmGraph } {
   return { graph: mutate(g, new Map([[hypothesisId, { expanded: true }]])) };
 }
+

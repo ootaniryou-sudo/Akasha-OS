@@ -54,3 +54,4 @@ export class DebateAttachment implements Attachment {
     ]);
   }
 }
+

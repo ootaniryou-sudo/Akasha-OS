@@ -152,3 +152,4 @@ Context Fault → Kernel → Device Tree → ページ取得（実デバイス�
 ---
 
 *次のステップ: 実機（iPhone/iPad）への実委譲確認 → Phase 3（100 Expert スケール）*
+

@@ -154,3 +154,4 @@ loop();
 
 // Keep HEADER_SIZE referenced for tree-shaking clarity in build
 void HEADER_SIZE;
+

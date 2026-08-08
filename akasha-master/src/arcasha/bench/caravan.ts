@@ -76,3 +76,4 @@ export function renderCaravanBenchmark(rows: CaravanBenchRow[]): string {
   lines.push('> ルーティングは Master → Caravan → Device の 2 ホップ、探索コストは「キャラバン数 + 10」に圧縮（kind=simulation）。');
   return lines.join('\n');
 }
+

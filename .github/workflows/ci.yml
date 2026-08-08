@@ -35,3 +35,4 @@ jobs:
 
       - name: AILSA selftest
         run: npm run ailsa:selftest
+

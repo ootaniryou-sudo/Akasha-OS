@@ -143,3 +143,4 @@ function renderExplanationLines(e: DecisionExplanation): string[] {
   lines.push(`  Expected Gain : +${(e.totalExpectedGain * 100).toFixed(0)}%`);
   return lines;
 }
+

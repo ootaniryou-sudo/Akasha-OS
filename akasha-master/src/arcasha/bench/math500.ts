@@ -23,3 +23,4 @@ export const math500Suite: BenchSuite = {
     s('m10', 'ポアンカレ予想の解決に用いた手法を説明せよ', 'リッチフロー', 0.95),
   ],
 };
+

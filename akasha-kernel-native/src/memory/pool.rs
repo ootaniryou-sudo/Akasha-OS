@@ -210,3 +210,4 @@ mod tests {
         assert_eq!(pool.slot(s), &data[..]);
     }
 }
+

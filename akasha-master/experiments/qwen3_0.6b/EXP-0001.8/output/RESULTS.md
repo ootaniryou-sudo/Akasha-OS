@@ -31,3 +31,4 @@ The measured Numerical Stability Profile for Apple Silicon MPS is:
 - **bf16**: stability = 0.7912, speed = 1.30×, reproducible ✅
 
 These values can be used as **static node profiles** in the ArcAsha Router.
+

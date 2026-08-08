@@ -49,3 +49,4 @@ const ok3 = rr.finalRun.decisions.length > 0;
 const allOk = ok1 && ok2 && ok3;
 console.log(allOk ? '\nPASS: arcasha-orchestrator ✅' : '\nFAIL ❌');
 process.exit(allOk ? 0 : 1);
+

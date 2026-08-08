@@ -78,3 +78,4 @@ SPSC lock-free rings over `SharedArrayBuffer`:
 Deadline = `EWMA(latency_us) + margin_us` (default margin **+2000 µs**).
 On breach, the same binary tensor is fan-out to a shadow node (`Flag.SHADOW`).
 First `RESULT` wins; the loser is dropped (idempotent `txId`).
+

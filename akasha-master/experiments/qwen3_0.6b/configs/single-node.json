@@ -32,3 +32,4 @@
     "note": "Default mode calls QwenAdapter.generate() directly. Use --akasha flag for full Akasha path (Master → Router → Binary Protocol → Node → Qwen)."
   }
 }
+

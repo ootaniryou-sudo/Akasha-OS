@@ -18,3 +18,4 @@ router.observe(ctx); // Full-Information 更新
 - 再エクスポート: `arcasha-belief` (BayesianBelief 等) + `arcasha-core` (computeRewards 等)
 
 > 研究: Zenodo 10.5281/zenodo.21755612 — MIT License.
+

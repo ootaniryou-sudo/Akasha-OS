@@ -78,3 +78,4 @@ export function mergeResults(id: string, results: AttachmentResult[], sep = ' ')
     detail: [`MERGE(${id}): ${results.length} 結果を統合（最良品質 ${results.reduce((m, r) => Math.max(m, r.quality), 0).toFixed(2)}）`, ...results.flatMap((r) => r.detail)],
   };
 }
+
